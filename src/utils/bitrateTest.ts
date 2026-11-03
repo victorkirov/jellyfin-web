@@ -164,6 +164,14 @@ const detectBitrateInternal = (api: Api, tests: BitrateTest[], index: number, cu
  * @returns {number} Normalized bitrate
  */
 const detectBitrateWithEndpointInfo = (api: Api, endpointInfo: EndPointInfo) => {
+    // On the local network the detected bitrate is raised to at least LAN_BITRATE anyway,
+    // so skip downloading the test files
+    if (endpointInfo.IsInNetwork) {
+        lastDetectedBitrate = LAN_BITRATE;
+        lastDetectedBitrateTime = Date.now();
+        return Promise.resolve(LAN_BITRATE);
+    }
+
     return detectBitrateInternal(
         api,
         [
@@ -185,12 +193,6 @@ const detectBitrateWithEndpointInfo = (api: Api, endpointInfo: EndPointInfo) => 
     ).then(result => {
         const bitrateInMbps = (result / 1048576).toFixed(2);
         console.debug(`[bitratetest] bitrate detected as ${bitrateInMbps} Mbps`);
-        if (endpointInfo.IsInNetwork) {
-            result = Math.max(result || 0, LAN_BITRATE);
-
-            lastDetectedBitrate = result;
-            lastDetectedBitrateTime = Date.now();
-        }
         return result;
     });
 };
