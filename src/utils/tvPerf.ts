@@ -42,10 +42,6 @@ if (IO) {
     };
 }
 
-window.addEventListener('error', (event) => {
-    send('error', (event.message || 'unknown') + ' @ ' + (event.filename || '').split('/').pop() + ':' + event.lineno + ':' + event.colno);
-});
-
 let lastTick = now();
 setInterval(() => {
     const tick = now();
