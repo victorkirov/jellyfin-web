@@ -201,8 +201,14 @@ function updateHeaderUserButton(src) {
 function updateClock() {
     if (layoutManager.tv) {
         currentTimeText.classList.remove('hide');
+        let lastMinute;
         setInterval(function() {
-            currentTimeText.innerText = datetime.getDisplayTime(new Date());
+            const now = new Date();
+            // Formatting the time is slow on low-end TVs, so only update it when the minute changes
+            if (now.getMinutes() !== lastMinute) {
+                lastMinute = now.getMinutes();
+                currentTimeText.innerText = datetime.getDisplayTime(now);
+            }
         }, 1000);
     } else {
         currentTimeText.classList.add('hide');
