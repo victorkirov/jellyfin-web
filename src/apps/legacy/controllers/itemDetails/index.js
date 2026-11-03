@@ -21,7 +21,7 @@ import mediaInfo from 'components/mediainfo/mediainfo';
 import layoutManager from 'components/layoutManager';
 import listView from 'components/listview/listview';
 import loading from 'components/loading/loading';
-import ItemDetailsMetadataList from 'components/itemDetails/ItemDetailsMetadataList';
+import ItemDetailsMetadataGroup from 'components/itemDetails/ItemDetailsMetadataGroup';
 import { playbackManager } from 'components/playback/playbackmanager';
 import { appRouter } from 'components/router/appRouter';
 import itemShortcuts from 'components/shortcuts';
@@ -1013,22 +1013,11 @@ function renderDetails(page, instance, item, apiClient, context) {
     if (itemDetailsGroup) {
         itemDetailsGroup.innerHTML = '';
 
-        const metadataTypes = [
-            PersonKind.Author,
-            PersonKind.Creator,
-            PersonKind.Director,
-            PersonKind.Writer,
-            BaseItemKind.Studio,
-            BaseItemKind.Genre
-        ];
+        const renderTarget = document.createElement('div');
+        const unmountMethod = renderComponent(ItemDetailsMetadataGroup, { item, context: inferContext(item) }, renderTarget);
 
-        for (const type of metadataTypes) {
-            const renderTarget = document.createElement('div');
-            const unmountMethod = renderComponent(ItemDetailsMetadataList, { type, item, context: inferContext(item) }, renderTarget);
-
-            instance._unmount.push(unmountMethod);
-            itemDetailsGroup.appendChild(renderTarget);
-        }
+        instance._unmount.push(unmountMethod);
+        itemDetailsGroup.appendChild(renderTarget);
     }
 
     renderItemCollections(page, item, apiClient, context);
