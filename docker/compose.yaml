@@ -1,0 +1,10 @@
+services:
+  jellyfin-web-tv:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8097:80"
+    environment:
+      JELLYFIN_UPSTREAM: http://192.168.2.81:8096
+    restart: unless-stopped
