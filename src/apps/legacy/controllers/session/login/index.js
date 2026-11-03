@@ -1,5 +1,5 @@
 import createDOMPurify from 'dompurify';
-import markdownIt from 'markdown-it';
+import { getMarkdown } from 'utils/markdown';
 
 import { AppFeature } from 'constants/appFeature';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
@@ -302,8 +302,7 @@ export default function (view, params) {
         apiClient.getJSON(apiClient.getUrl('Branding/Configuration')).then(function (options) {
             const loginDisclaimer = view.querySelector('.loginDisclaimer');
 
-            // eslint-disable-next-line sonarjs/disabled-auto-escaping
-            loginDisclaimer.innerHTML = domPurify.sanitize(markdownIt({ html: true }).render(options.LoginDisclaimer || ''));
+            loginDisclaimer.innerHTML = domPurify.sanitize(getMarkdown().render(options.LoginDisclaimer || ''));
 
             for (const elem of loginDisclaimer.querySelectorAll('a')) {
                 elem.rel = 'noopener noreferrer';
