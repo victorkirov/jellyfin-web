@@ -36,7 +36,6 @@ import { MediaError } from 'types/mediaError';
 import { getMediaError } from 'utils/mediaError';
 import { bindSkipSegment } from './skipsegment.ts';
 import * as bitrateTest from 'utils/bitrateTest';
-import { mark } from 'utils/tvPerf';
 
 const UNLIMITED_ITEMS = -1;
 
@@ -2114,7 +2113,6 @@ export class PlaybackManager {
         self.getItemsForPlayback = getItemsForPlayback;
 
         self.play = async function (options) {
-            mark('play-start');
             normalizePlayOptions(options);
 
             if (self._currentPlayer) {
@@ -2159,7 +2157,6 @@ export class PlaybackManager {
             // getAdditionalParts returns an array of arrays of items, so flatten it
             items = items.flat();
 
-            mark('play-items-ready', items.length);
             return playWithIntros(items, options);
         };
 
@@ -2407,12 +2404,8 @@ export class PlaybackManager {
                         loading.show();
                     }
                 })
-                .then(() => {
-                    mark('play-interceptors-done');
-                    return detectBitrate(item, mediaType);
-                })
+                .then(() => detectBitrate(item, mediaType))
                 .then((bitrate) => {
-                    mark('play-bitrate', bitrate);
                     return playAfterBitrateDetect(bitrate, item, playOptions, onPlaybackStartedFn, prevSource)
                         .catch(onPlaybackRejection);
                 })
@@ -2687,12 +2680,7 @@ export class PlaybackManager {
             const isLiveTv = [BaseItemKind.TvChannel, BaseItemKind.LiveTvChannel].includes(item.Type);
             const getSourceItem = isLiveTv ? Promise.resolve(null) : apiClient.getItem(apiClient.getCurrentUserId(), mediaSourceId || item.Id);
 
-            const deviceProfilePromise = player.getDeviceProfile(item).then((profile) => {
-                mark('play-device-profile');
-                return profile;
-            });
-            return Promise.all([promise, deviceProfilePromise, apiClient.getCurrentUser(), getSourceItem]).then(function (responses) {
-                mark('play-sources-ready');
+            return Promise.all([promise, player.getDeviceProfile(item), apiClient.getCurrentUser(), getSourceItem]).then(function (responses) {
                 const deviceProfile = responses[1];
                 const user = responses[2];
                 const sourceItem = responses[3];
@@ -2748,7 +2736,6 @@ export class PlaybackManager {
                 }
 
                 return getPlaybackMediaSource(player, apiClient, deviceProfile, item, mediaSourceId, options).then(async (mediaSource) => {
-                    mark('play-media-source', mediaSource.SupportsDirectPlay ? 'direct' : 'transcode');
                     if (trackOptions.DefaultSecondarySubtitleStreamIndex != null) {
                         mediaSource.DefaultSecondarySubtitleStreamIndex = trackOptions.DefaultSecondarySubtitleStreamIndex;
                     }
@@ -2780,9 +2767,7 @@ export class PlaybackManager {
                     playerData.maxStreamingBitrate = maxBitrate;
                     playerData.streamInfo = streamInfo;
 
-                    mark('player-play');
                     return player.play(streamInfo).then(function () {
-                        mark('player-started');
                         loading.hide();
                         onPlaybackStartedFn();
                         onPlaybackStarted(player, playOptions, streamInfo, mediaSource);
