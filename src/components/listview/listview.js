@@ -6,7 +6,7 @@
 
 import DOMPurify from 'dompurify';
 import escapeHtml from 'escape-html';
-import { getMarkdown } from 'utils/markdown';
+import { renderMarkdown } from 'utils/markdown';
 
 import { ItemAction } from 'constants/itemAction';
 
@@ -196,7 +196,7 @@ export function getListViewHtml(options) {
         const item = items[i];
 
         const safeOverviewHtml = item.Overview ?
-            DOMPurify.sanitize(getMarkdown().render(item.Overview)) :
+            DOMPurify.sanitize(renderMarkdown(item.Overview)) :
             '';
 
         let html = '';

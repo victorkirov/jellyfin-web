@@ -5,7 +5,7 @@ import { getLibraryApi } from '@jellyfin/sdk/lib/utils/api/library-api';
 import { intervalToDuration } from 'date-fns';
 import DOMPurify from 'dompurify';
 import escapeHtml from 'escape-html';
-import { getMarkdown } from 'utils/markdown';
+import { renderMarkdown } from 'utils/markdown';
 import isEqual from 'lodash-es/isEqual';
 
 import { appHost } from 'components/apphost';
@@ -930,7 +930,7 @@ function renderOverview(page, item) {
     const overviewElements = page.querySelectorAll('.overview');
 
     if (overviewElements.length > 0) {
-        const overview = DOMPurify.sanitize(getMarkdown().render(item.Overview || ''));
+        const overview = DOMPurify.sanitize(renderMarkdown(item.Overview || ''));
 
         if (overview) {
             for (const overviewElemnt of overviewElements) {

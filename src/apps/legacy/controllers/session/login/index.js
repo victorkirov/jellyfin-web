@@ -1,5 +1,5 @@
 import createDOMPurify from 'dompurify';
-import { getMarkdown } from 'utils/markdown';
+import { renderMarkdown } from 'utils/markdown';
 
 import { AppFeature } from 'constants/appFeature';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
@@ -302,7 +302,7 @@ export default function (view, params) {
         apiClient.getJSON(apiClient.getUrl('Branding/Configuration')).then(function (options) {
             const loginDisclaimer = view.querySelector('.loginDisclaimer');
 
-            loginDisclaimer.innerHTML = domPurify.sanitize(getMarkdown().render(options.LoginDisclaimer || ''));
+            loginDisclaimer.innerHTML = domPurify.sanitize(renderMarkdown(options.LoginDisclaimer || ''));
 
             for (const elem of loginDisclaimer.querySelectorAll('a')) {
                 elem.rel = 'noopener noreferrer';
