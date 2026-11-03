@@ -2,7 +2,6 @@ import { Api } from '@jellyfin/sdk';
 import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
 import type { BaseItemPerson } from '@jellyfin/sdk/lib/generated-client/models/base-item-person';
 import { ImageType } from '@jellyfin/sdk/lib/generated-client/models/image-type';
-import { getImageApi } from '@jellyfin/sdk/lib/utils/api/image-api';
 
 import { appRouter } from 'components/router/appRouter';
 import layoutManager from 'components/layoutManager';
@@ -15,6 +14,7 @@ import { getDataAttributes } from 'utils/items';
 import { ItemKind } from 'types/base/models/item-kind';
 import { ItemMediaKind } from 'types/base/models/item-media-kind';
 import { ensureArray } from 'utils/array';
+import { getItemImageUrl } from 'utils/image';
 
 import type { NullableNumber, NullableString } from 'types/base/common/shared/types';
 import type { ItemDto } from 'types/base/models/item-dto';
@@ -47,7 +47,7 @@ export function getCardLogoUrl(
     }
 
     if (api && imgTag && imgType && itemId) {
-        const response = getImageApi(api).getItemImageUrlById(itemId, imgType, {
+        const response = getItemImageUrl(api, itemId, imgType, {
             height: logoHeight,
             tag: imgTag
         });

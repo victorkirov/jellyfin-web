@@ -1,9 +1,9 @@
 import { Api } from '@jellyfin/sdk';
 import { ImageType } from '@jellyfin/sdk/lib/generated-client/models/image-type';
-import { getImageApi } from '@jellyfin/sdk/lib/utils/api/image-api';
 
 import { ItemDto } from 'types/base/models/item-dto';
 import { CardOptions } from 'types/cardOptions';
+import { getItemImageUrl } from 'utils/image';
 
 import { getDesiredAspect } from './builder';
 import { CardShape } from './shape';
@@ -157,7 +157,8 @@ export function getCardImageUrl({
 
         const dpr = window?.devicePixelRatio || 1;
 
-        imgUrl = getImageApi(api).getItemImageUrlById(
+        imgUrl = getItemImageUrl(
+            api,
             itemId,
             imgType,
             {

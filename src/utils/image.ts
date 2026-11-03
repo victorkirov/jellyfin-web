@@ -1,6 +1,8 @@
+import type { Api } from '@jellyfin/sdk/lib/api';
 import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collection-type';
 import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
 import type { DeviceInfoDto } from '@jellyfin/sdk/lib/generated-client/models/device-info-dto';
+import type { ImageType } from '@jellyfin/sdk/lib/generated-client/models/image-type';
 import type { SessionInfoDto } from '@jellyfin/sdk/lib/generated-client/models/session-info-dto';
 
 const BASE_DEVICE_IMAGE_URL = 'assets/img/devices/';
@@ -158,6 +160,23 @@ export function getItemTypeIcon(itemType: BaseItemKind | string | undefined, def
         default:
             return defaultIcon;
     }
+}
+
+type ImageUrlParams = Record<string, string | number | boolean | null | undefined>;
+
+/**
+ * Gets an item image url.
+ * Builds the same url as getImageApi(api).getItemImageUrlById without going through axios, which
+ * takes several milliseconds per image on low-end TVs.
+ */
+export function getItemImageUrl(api: Api, itemId: string, imageType: ImageType, params: ImageUrlParams = {}) {
+    const url = `${api.basePath}/Items/${itemId}/Images/${imageType}`;
+    const query = Object.keys(params)
+        .filter(key => params[key] != null)
+        .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(params[key]))}`)
+        .join('&');
+
+    return query ? `${url}?${query}` : url;
 }
 
 export default {
