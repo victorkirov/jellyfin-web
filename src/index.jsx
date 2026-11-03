@@ -1,5 +1,6 @@
 // Import legacy browser polyfills
 import 'lib/legacy';
+import { mark } from 'utils/tvPerf';
 
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -49,6 +50,7 @@ import './styles/detailtable.scss';
 import './styles/librarybrowser.scss';
 
 async function init() {
+    mark('init-start');
     // Log current version to console to help out with issue triage and debugging
     console.info(
         `[${__PACKAGE_JSON_NAME__}]
@@ -124,7 +126,9 @@ build: ${__JF_BUILD_VERSION__}`);
     initializeServerConnections();
 
     // Render the app
+    mark('render-start');
     await renderApp();
+    mark('render-end');
 
     // Load platform specific features
     loadPlatformFeatures();
