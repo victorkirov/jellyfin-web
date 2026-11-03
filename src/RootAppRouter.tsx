@@ -13,11 +13,12 @@ import { APP_ROUTES as LEGACY_APP_ROUTES } from 'apps/legacy/routes/routes';
 import { WIZARD_APP_ROUTES } from 'apps/wizard/routes/routes';
 import AppHeader from 'components/AppHeader';
 import Backdrop from 'components/Backdrop';
+import ColorSchemeSync from 'components/ColorSchemeSync';
 import layoutManager from 'components/layoutManager';
 import BangRedirect from 'components/router/BangRedirect';
 import { createRouterHistory } from 'components/router/routerHistory';
-import appTheme from 'themes';
-import { ThemeStorageManager } from 'themes/themeStorageManager';
+import { getTheme } from 'themes';
+import { useDocumentColorScheme } from 'themes/useDocumentColorScheme';
 
 const router = createHashRouter([
     {
@@ -46,15 +47,17 @@ export default function RootAppRouter() {
  */
 function RootAppLayout() {
     const location = useLocation();
+    const theme = getTheme(useDocumentColorScheme());
     const isNewLayoutPath = Object.values(DASHBOARD_APP_PATHS)
         .some(path => location.pathname.startsWith(`/${path}`));
 
     return (
         <ThemeProvider
-            theme={appTheme}
+            theme={theme}
             defaultMode='dark'
-            storageManager={ThemeStorageManager}
+            storageManager={null}
         >
+            <ColorSchemeSync colorScheme={theme.defaultColorScheme} />
             <Backdrop />
             <AppHeader isHidden={layoutManager.modern || isNewLayoutPath} />
 
