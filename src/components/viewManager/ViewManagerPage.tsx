@@ -6,7 +6,6 @@ import globalize from 'lib/globalize';
 import type { RestoreViewFailResponse } from 'types/viewManager';
 
 import viewManager from './viewManager';
-import { mark } from 'utils/tvPerf';
 import { AppType } from 'constants/appType';
 
 export interface ViewManagerPageProps {
@@ -67,9 +66,7 @@ const loadView = async (
     view: string,
     viewOptions: ViewOptions
 ) => {
-    mark('view-load', controller);
     const [ controllerFactory, viewHtml ] = await importController(appType, controller, view);
-    mark('view-imported', controller);
 
     viewManager.loadView({
         ...viewOptions,

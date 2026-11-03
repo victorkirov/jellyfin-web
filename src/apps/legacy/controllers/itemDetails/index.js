@@ -51,7 +51,6 @@ import 'elements/emby-scroller/emby-scroller';
 import 'elements/emby-select/emby-select';
 
 import 'styles/scrollstyles.scss';
-import { mark } from 'utils/tvPerf';
 
 /** Item types that use a list view for their children. */
 const LIST_VIEW_TYPES = [
@@ -665,7 +664,6 @@ function reloadFromItem(instance, page, params, item, user) {
     }
 
     setPeopleHeader(page, item);
-    mark('details-loading-hide');
     loading.hide();
 
     if (item.Type === 'Book' && item.CanDownload && appHost.supports(AppFeature.FileDownload)) {
@@ -1387,7 +1385,6 @@ function renderChildren(page, item) {
 
     promise = promise || apiClient.getItems(apiClient.getCurrentUserId(), query);
     promise.then(function (result) {
-        mark('children-response', result.Items.length);
         let html = '';
         let scrollX = false;
         let isList = false;
@@ -1449,7 +1446,6 @@ function renderChildren(page, item) {
                     includeParentInfoInTitle: false
                 });
             } else if (item.Type === 'Season') {
-                mark('listview-start');
                 html = listView.getListViewHtml({
                     items: result.Items,
                     showIndexNumber: false,
@@ -1489,11 +1485,8 @@ function renderChildren(page, item) {
         if (layoutManager.mobile) {
             childrenItemsContainer.classList.remove('padded-right');
         }
-        mark('children-html-built', html.length);
         childrenItemsContainer.innerHTML = html;
-        mark('children-inserted');
         imageLoader.lazyChildren(childrenItemsContainer);
-        mark('children-images-registered');
         if (item.Type == 'BoxSet') {
             const collectionItemTypes = [{
                 name: globalize.translate('Movies'),
@@ -1936,16 +1929,13 @@ export default function (view, params) {
     }
 
     function reload(instance, page, pageParams) {
-        mark('details-reload');
         loading.show();
 
         const apiClient = getApiClient();
 
         Promise.all([getPromise(apiClient, pageParams), apiClient.getCurrentUser()]).then(([item, user]) => {
             currentItem = item;
-            mark('details-item', item.Type);
             reloadFromItem(instance, page, pageParams, item, user);
-            mark('details-sync-end', item.Type);
         }).catch((error) => {
             console.error('failed to get item or current user: ', error);
         });
