@@ -47,6 +47,12 @@ const config = {
         ...THEMES_BY_ID
     },
     resolve: {
+        alias: {
+            // core-js replaces the native JSON.parse with a much slower JavaScript parser in browsers
+            // without native Symbol support (e.g. webOS 3.x) to add JSON.parse source text access,
+            // which is not used
+            [path.resolve(__dirname, 'node_modules/core-js/modules/es.json.parse.js')]: false
+        },
         extensions: ['.tsx', '.ts', '.js'],
         modules: [
             path.resolve(__dirname, 'src'),
