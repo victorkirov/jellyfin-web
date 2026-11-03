@@ -8,7 +8,7 @@ import { ApiProvider } from 'hooks/useApi';
 import { UserSettingsProvider } from 'hooks/useUserSettings';
 import { useUserTheme } from 'hooks/useUserTheme';
 import { WebConfigProvider } from 'hooks/useWebConfig';
-import appTheme from 'themes';
+import { getTheme } from 'themes';
 import { queryClient } from 'utils/query/queryClient';
 
 /**
@@ -53,6 +53,25 @@ const CustomThemeProvider: FC<PropsWithChildren> = ({ children }) => {
     );
 };
 
+/** Theme provider for the user's selected theme. */
+const UserThemeProvider: FC<PropsWithChildren> = ({ children }) => {
+    const { theme } = useUserTheme();
+
+    return (
+        <ThemeProvider
+            theme={getTheme(theme)}
+            // Disable color scheme management since we're handling it manually
+            colorSchemeNode={null}
+            storageManager={null}
+            disableStyleSheetGeneration
+        >
+            <CustomThemeProvider>
+                {children}
+            </CustomThemeProvider>
+        </ThemeProvider>
+    );
+};
+
 /** Component that provides a root context that matches the application root. */
 const RootContext: FC<PropsWithChildren> = ({ children }) => {
     return (
@@ -60,17 +79,9 @@ const RootContext: FC<PropsWithChildren> = ({ children }) => {
             <ApiProvider>
                 <UserSettingsProvider>
                     <WebConfigProvider>
-                        <ThemeProvider
-                            theme={appTheme}
-                            // Disable color scheme management since we're handling it manually
-                            colorSchemeNode={null}
-                            storageManager={null}
-                            disableStyleSheetGeneration
-                        >
-                            <CustomThemeProvider>
-                                {children}
-                            </CustomThemeProvider>
-                        </ThemeProvider>
+                        <UserThemeProvider>
+                            {children}
+                        </UserThemeProvider>
                     </WebConfigProvider>
                 </UserSettingsProvider>
             </ApiProvider>

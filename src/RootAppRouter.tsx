@@ -1,5 +1,5 @@
-import { ThemeProvider } from '@mui/material/styles';
-import React from 'react';
+import { type SupportedColorScheme, ThemeProvider, useColorScheme } from '@mui/material/styles';
+import React, { useEffect } from 'react';
 import {
     RouterProvider,
     createHashRouter,
@@ -16,8 +16,8 @@ import Backdrop from 'components/Backdrop';
 import layoutManager from 'components/layoutManager';
 import BangRedirect from 'components/router/BangRedirect';
 import { createRouterHistory } from 'components/router/routerHistory';
-import appTheme from 'themes';
-import { ThemeStorageManager } from 'themes/themeStorageManager';
+import { getTheme } from 'themes';
+import { useDocumentColorScheme } from 'themes/useDocumentColorScheme';
 
 const router = createHashRouter([
     {
@@ -44,17 +44,30 @@ export default function RootAppRouter() {
  * Layout component that renders legacy components required on all pages.
  * NOTE: The app will crash if these get removed from the DOM.
  */
+/** Switches MUI to the color scheme of the current theme. */
+function ColorSchemeSync({ colorScheme }: { colorScheme: SupportedColorScheme }) {
+    const { setColorScheme } = useColorScheme();
+
+    useEffect(() => {
+        setColorScheme(colorScheme);
+    }, [ colorScheme, setColorScheme ]);
+
+    return null;
+}
+
 function RootAppLayout() {
     const location = useLocation();
+    const theme = getTheme(useDocumentColorScheme());
     const isNewLayoutPath = Object.values(DASHBOARD_APP_PATHS)
         .some(path => location.pathname.startsWith(`/${path}`));
 
     return (
         <ThemeProvider
-            theme={appTheme}
+            theme={theme}
             defaultMode='dark'
-            storageManager={ThemeStorageManager}
+            storageManager={null}
         >
+            <ColorSchemeSync colorScheme={theme.defaultColorScheme} />
             <Backdrop />
             <AppHeader isHidden={layoutManager.modern || isNewLayoutPath} />
 
