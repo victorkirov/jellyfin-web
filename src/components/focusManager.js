@@ -1,5 +1,6 @@
 import dom from '../utils/dom';
 import scrollManager from './scrollManager';
+import { mark } from 'utils/tvPerf';
 
 const scopes = [];
 function pushScope(elem) {
@@ -258,6 +259,7 @@ function nav(activeElement, direction, container, focusableElements) {
     const sourceMidY = rect.top + (rect.height / 2);
 
     const focusable = focusableElements || container.querySelectorAll(focusableQuery);
+    mark('nav-start', direction + '/' + focusable.length);
 
     const maxDistance = Infinity;
     let minDistance = maxDistance;
@@ -380,7 +382,10 @@ function nav(activeElement, direction, container, focusableElements) {
                 nearestElement = nearestElementFocusableParent;
             }
         }
+        mark('nav-chosen');
         focus(nearestElement);
+        mark('nav-focused');
+        requestAnimationFrame(() => mark('nav-frame'));
     }
 }
 
