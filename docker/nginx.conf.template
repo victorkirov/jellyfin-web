@@ -12,13 +12,13 @@ server {
     location /web/ {
         root /usr/share/nginx/html;
         access_log off;
+        # Entry bundles (runtime.bundle.js, main.jellyfin.bundle.js) and other files keep
+        # the same name across builds, so browsers must revalidate them.
+        add_header Cache-Control "no-cache";
 
-        location ~ (index\.html|config\.json|manifest\.json|serviceworker\.js)$ {
-            add_header Cache-Control "no-cache";
-        }
-
-        location ~ \.(js|css|woff2?|ttf|png|jpg|svg|wasm)$ {
-            expires 30d;
+        # Only content-hashed files are safe to cache long term.
+        location ~ "\.[0-9a-f]{16,}\.[a-z0-9.]+$" {
+            add_header Cache-Control "public, max-age=2592000, immutable";
         }
     }
 
