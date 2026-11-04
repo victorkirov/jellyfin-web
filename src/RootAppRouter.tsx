@@ -40,10 +40,6 @@ export default function RootAppRouter() {
     return <RouterProvider router={router} />;
 }
 
-/**
- * Layout component that renders legacy components required on all pages.
- * NOTE: The app will crash if these get removed from the DOM.
- */
 /** Switches MUI to the color scheme of the current theme. */
 function ColorSchemeSync({ colorScheme }: { colorScheme: SupportedColorScheme }) {
     const { setColorScheme } = useColorScheme();
@@ -55,6 +51,10 @@ function ColorSchemeSync({ colorScheme }: { colorScheme: SupportedColorScheme })
     return null;
 }
 
+/**
+ * Layout component that renders legacy components required on all pages.
+ * NOTE: The app will crash if these get removed from the DOM.
+ */
 function RootAppLayout() {
     const location = useLocation();
     const theme = getTheme(useDocumentColorScheme());
