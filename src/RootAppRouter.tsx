@@ -1,5 +1,5 @@
-import { type SupportedColorScheme, ThemeProvider, useColorScheme } from '@mui/material/styles';
-import React, { useEffect } from 'react';
+import { ThemeProvider } from '@mui/material/styles';
+import React from 'react';
 import {
     RouterProvider,
     createHashRouter,
@@ -13,6 +13,7 @@ import { APP_ROUTES as LEGACY_APP_ROUTES } from 'apps/legacy/routes/routes';
 import { WIZARD_APP_ROUTES } from 'apps/wizard/routes/routes';
 import AppHeader from 'components/AppHeader';
 import Backdrop from 'components/Backdrop';
+import ColorSchemeSync from 'components/ColorSchemeSync';
 import layoutManager from 'components/layoutManager';
 import BangRedirect from 'components/router/BangRedirect';
 import { createRouterHistory } from 'components/router/routerHistory';
@@ -38,17 +39,6 @@ export const history = createRouterHistory(router);
 
 export default function RootAppRouter() {
     return <RouterProvider router={router} />;
-}
-
-/** Switches MUI to the color scheme of the current theme. */
-function ColorSchemeSync({ colorScheme }: { colorScheme: SupportedColorScheme }) {
-    const { setColorScheme } = useColorScheme();
-
-    useEffect(() => {
-        setColorScheme(colorScheme);
-    }, [ colorScheme, setColorScheme ]);
-
-    return null;
 }
 
 /**

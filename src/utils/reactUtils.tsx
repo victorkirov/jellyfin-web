@@ -1,9 +1,10 @@
-import { type SupportedColorScheme, ThemeProvider, useColorScheme } from '@mui/material/styles';
+import { ThemeProvider } from '@mui/material/styles';
 import { QueryClientProvider } from '@tanstack/react-query';
-import React, { type FC, type PropsWithChildren, useEffect } from 'react';
+import React, { type FC, type PropsWithChildren } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 
+import ColorSchemeSync from 'components/ColorSchemeSync';
 import { ApiProvider } from 'hooks/useApi';
 import { UserSettingsProvider } from 'hooks/useUserSettings';
 import { useUserTheme } from 'hooks/useUserTheme';
@@ -35,39 +36,21 @@ export const renderComponent = <P extends object> (
     return () => setTimeout(() => root.unmount());
 };
 
-/** Component that syncs the MUI theme with our user theme. */
-const CustomThemeProvider: FC<PropsWithChildren> = ({ children }) => {
-    const { theme } = useUserTheme();
-    const { setColorScheme } = useColorScheme();
-
-    useEffect(() => {
-        setColorScheme(theme as SupportedColorScheme);
-    }, [ theme, setColorScheme ]);
-
-    return (
-        // NOTE: Suppress warning about inconsistent return type
-        // eslint-disable-next-line react/jsx-no-useless-fragment
-        <>
-            {children}
-        </>
-    );
-};
-
 /** Theme provider for the user's selected theme. */
 const UserThemeProvider: FC<PropsWithChildren> = ({ children }) => {
     const { theme } = useUserTheme();
+    const muiTheme = getTheme(theme);
 
     return (
         <ThemeProvider
-            theme={getTheme(theme)}
+            theme={muiTheme}
             // Disable color scheme management since we're handling it manually
             colorSchemeNode={null}
             storageManager={null}
             disableStyleSheetGeneration
         >
-            <CustomThemeProvider>
-                {children}
-            </CustomThemeProvider>
+            <ColorSchemeSync colorScheme={muiTheme.defaultColorScheme} />
+            {children}
         </ThemeProvider>
     );
 };
