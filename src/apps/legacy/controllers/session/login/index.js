@@ -1,5 +1,4 @@
 import createDOMPurify from 'dompurify';
-import { renderMarkdown } from 'utils/markdown';
 
 import { AppFeature } from 'constants/appFeature';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
@@ -7,6 +6,7 @@ import { ServerConnections } from 'lib/jellyfin-apiclient';
 import { appHost } from 'components/apphost';
 import appSettings from 'scripts/settings/appSettings';
 import dom from 'utils/dom';
+import { renderMarkdown } from 'utils/markdown';
 import loading from 'components/loading/loading';
 import layoutManager from 'components/layoutManager';
 import libraryMenu from 'scripts/libraryMenu';

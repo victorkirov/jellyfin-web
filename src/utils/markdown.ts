@@ -14,7 +14,6 @@ const MARKDOWN_SYNTAX_RE = /[\n\r\0\\`*_~[\]<>#&|!]|^\s|\s$|^\d+[.)]|^[-+=]/;
  */
 function getMarkdown() {
     if (!instance) {
-        // Callers sanitize the rendered HTML with DOMPurify
         // eslint-disable-next-line sonarjs/disabled-auto-escaping
         instance = markdownIt({ html: true });
     }
@@ -25,6 +24,9 @@ function getMarkdown() {
  * Renders markdown to HTML.
  * Plain text is wrapped in a paragraph directly, with the same output as markdown-it, so the renderer is only
  * created when it is needed.
+ *
+ * Warning: HTML in the markdown source is passed through unescaped, so the rendered output must be sanitized
+ * (e.g. with DOMPurify) before it is inserted into the page.
  */
 export function renderMarkdown(text: string) {
     if (!MARKDOWN_SYNTAX_RE.test(text)) {
