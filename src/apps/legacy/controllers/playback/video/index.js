@@ -345,6 +345,11 @@ export default function (view) {
             elem.classList.remove('hide');
             elem.classList.remove('videoOsdBottom-hidden');
 
+            if (currentPlayer && currentItem) {
+                currentRuntimeTicks = playbackManager.duration(currentPlayer);
+                updateTimeDisplay(playbackManager.currentTime(currentPlayer) * 10000, currentRuntimeTicks, playbackManager.playbackStartTime(currentPlayer), playbackManager.getPlaybackRate(currentPlayer), playbackManager.getBufferedRanges(currentPlayer));
+            }
+
             if (!layoutManager.mobile) {
                 _focus(focusElement);
             }
@@ -638,7 +643,9 @@ export default function (view) {
                 const player = this;
                 currentRuntimeTicks = playbackManager.duration(player);
                 const currentTime = playbackManager.currentTime(player) * 10000;
-                updateTimeDisplay(currentTime, currentRuntimeTicks, playbackManager.playbackStartTime(player), playbackManager.getPlaybackRate(player), playbackManager.getBufferedRanges(player));
+                if (currentVisibleMenu === 'osd') {
+                    updateTimeDisplay(currentTime, currentRuntimeTicks, playbackManager.playbackStartTime(player), playbackManager.getPlaybackRate(player), playbackManager.getBufferedRanges(player));
+                }
                 const item = currentItem;
                 refreshProgramInfoIfNeeded(player, item);
                 showComingUpNextIfNeeded(player, item, currentTime, currentRuntimeTicks);
