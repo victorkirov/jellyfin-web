@@ -61,16 +61,31 @@ queryClient = new QueryClient({
 });
 
 /** Create an IndexedDB persister for react-query-persist-client. Uses idb-keyval for simplicity. */
-const createIDBPersister = (idbValidKey: IDBValidKey = 'query-cache') => ({
-    persistClient: async (client: PersistedClient) => {
-        await set(idbValidKey, client);
-    },
-    restoreClient: () => {
-        return get<PersistedClient>(idbValidKey);
-    },
-    removeClient: async () => {
-        await del(idbValidKey);
-    }
-} satisfies Persister);
+export const createIDBPersister = (idbValidKey: IDBValidKey = 'query-cache') => {
+    let pendingClient: PersistedClient | undefined;
+    let scheduledSave: Promise<void> | undefined;
+
+    return {
+        persistClient: (client: PersistedClient) => {
+            pendingClient = client;
+            if (!scheduledSave) {
+                scheduledSave = new Promise<void>(resolve => setTimeout(resolve, 1000))
+                    .then(async () => {
+                        const latestClient = pendingClient;
+                        pendingClient = undefined;
+                        scheduledSave = undefined;
+                        if (latestClient) await set(idbValidKey, latestClient);
+                    });
+            }
+            return scheduledSave;
+        },
+        restoreClient: () => get<PersistedClient>(idbValidKey),
+        removeClient: async () => {
+            // A queued save must not recreate a removed cache.
+            pendingClient = undefined;
+            await del(idbValidKey);
+        }
+    } satisfies Persister;
+};
 
 export const persister = createIDBPersister('jellyfin-query-cache');
