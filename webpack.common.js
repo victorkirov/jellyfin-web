@@ -5,7 +5,7 @@ const CopyPlugin = require('copy-webpack-plugin');
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const { DefinePlugin, IgnorePlugin } = require('webpack');
+const { ContextExclusionPlugin, DefinePlugin, IgnorePlugin } = require('webpack');
 const packageJson = require('./package.json');
 
 const Assets = [
@@ -60,6 +60,8 @@ const config = {
         ]
     },
     plugins: [
+        // Keep colocated tests out of dynamic import contexts.
+        new ContextExclusionPlugin(/\.test\./),
         new DefinePlugin({
             __COMMIT_SHA__: JSON.stringify(COMMIT_SHA),
             __JF_BUILD_VERSION__: JSON.stringify(
