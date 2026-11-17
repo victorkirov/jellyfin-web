@@ -106,12 +106,6 @@ export async function getCommands(options) {
         });
     }
 
-    if (commands.length) {
-        commands.push({
-            divider: true
-        });
-    }
-
     if (!browser.tv) {
         // Multiselect is currrently only ran on long clicks of card components
         // This disables Select on any context menu not originating from a card i.e songs
@@ -122,30 +116,6 @@ export async function getCommands(options) {
                 icon: 'library_add_check'
             });
         }
-    }
-
-    if ((item.Type === 'Timer') && user.Policy.EnableLiveTvManagement && options.cancelTimer !== false) {
-        commands.push({
-            name: globalize.translate('CancelRecording'),
-            id: 'canceltimer',
-            icon: 'cancel'
-        });
-    }
-
-    if ((item.Type === 'Recording' && item.Status === 'InProgress') && user.Policy.EnableLiveTvManagement && options.cancelTimer !== false) {
-        commands.push({
-            name: globalize.translate('CancelRecording'),
-            id: 'canceltimer',
-            icon: 'cancel'
-        });
-    }
-
-    if ((item.Type === 'SeriesTimer') && user.Policy.EnableLiveTvManagement && options.cancelTimer !== false) {
-        commands.push({
-            name: globalize.translate('CancelSeries'),
-            id: 'cancelseriestimer',
-            icon: 'cancel'
-        });
     }
 
     if (appHost.supports(AppFeature.FileDownload)) {
@@ -188,22 +158,6 @@ export async function getCommands(options) {
         });
     }
 
-    if (item.Type === 'Program' && options.record !== false) {
-        if (item.TimerId) {
-            commands.push({
-                name: globalize.translate('ManageRecording'),
-                id: 'record',
-                icon: 'fiber_manual_record'
-            });
-        } else {
-            commands.push({
-                name: globalize.translate('Record'),
-                id: 'record',
-                icon: 'fiber_manual_record'
-            });
-        }
-    }
-
     if (!browser.tv && options.share === true && itemHelper.canShare(item, user)) {
         commands.push({
             name: globalize.translate('Share'),
@@ -240,11 +194,10 @@ export async function getCommands(options) {
     return commands;
 }
 
-function getResolveFunction(resolve, commandId, changed) {
+function getResolveFunction(resolve, commandId) {
     return function () {
         resolve({
-            command: commandId,
-            updated: changed
+            command: commandId
         });
     };
 }
@@ -372,11 +325,6 @@ function executeCommand(item, id, options) {
             case 'clearQueue':
                 playbackManager.clearQueue();
                 break;
-            case 'record':
-                import('./recordingcreator/recordingcreator').then(({ default: recordingCreator }) => {
-                    recordingCreator.show(itemId, serverId).then(getResolveFunction(resolve, id, true), getResolveFunction(resolve, id));
-                });
-                break;
             case 'shuffle':
                 playbackManager.shuffle(item);
                 getResolveFunction(resolve, id)();
@@ -415,33 +363,10 @@ function executeCommand(item, id, options) {
             case 'queueallfromhere':
                 getResolveFunction(resolve, id)();
                 break;
-            case 'canceltimer':
-                deleteTimer(apiClient, item, resolve, id);
-                break;
-            case 'cancelseriestimer':
-                deleteSeriesTimer(apiClient, item, resolve, id);
-                break;
             default:
                 reject();
                 break;
         }
-    });
-}
-
-function deleteTimer(apiClient, item, resolve, command) {
-    import('./recordingcreator/recordinghelper').then(({ default: recordingHelper }) => {
-        const timerId = item.TimerId || item.Id;
-        recordingHelper.cancelTimerWithConfirmation(timerId, item.ServerId).then(function () {
-            getResolveFunction(resolve, command, true)();
-        });
-    });
-}
-
-function deleteSeriesTimer(apiClient, item, resolve, command) {
-    import('./recordingcreator/recordinghelper').then(({ default: recordingHelper }) => {
-        recordingHelper.cancelSeriesTimerWithConfirmation(item.Id, item.ServerId).then(function () {
-            getResolveFunction(resolve, command, true)();
-        });
     });
 }
 

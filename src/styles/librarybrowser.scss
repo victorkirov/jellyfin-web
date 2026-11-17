@@ -1005,24 +1005,6 @@ div.itemDetailGalleryLink.defaultCardBackground {
     margin-top: 0;
 }
 
-.recordingFields button {
-    flex-shrink: 0;
-
-    [dir="ltr"] & {
-        margin-left: 0;
-        margin-right: 0.5em;
-    }
-
-    [dir="rtl"] & {
-        margin-right: 0;
-        margin-left: 0.5em;
-    }
-}
-
-.mainDetailButtons.hide + .recordingFields {
-    margin-top: 1.5em !important;
-}
-
 .detailButton {
     display: flex;
     flex-direction: column;

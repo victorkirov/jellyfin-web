@@ -172,14 +172,6 @@ function getLandingScreenOptions(type) {
             {
                 name: globalize.translate('Recordings'),
                 value: LibraryTab.Recordings
-            },
-            {
-                name: globalize.translate('Schedule'),
-                value: LibraryTab.Schedule
-            },
-            {
-                name: globalize.translate('Series'),
-                value: LibraryTab.SeriesTimers
             }
         );
     } else if (type === 'homevideos') {

@@ -1,10 +1,8 @@
 /**
  * "Shortcut" action handlers for BaseItems.
  */
-import { EventType } from 'constants/eventType';
 import { ItemAction } from 'constants/itemAction';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
-import Events from 'utils/events';
 import { PLAYLIST_PLAYBACK_FIELDS } from 'utils/query/playlistFields';
 
 import { playbackManager } from './playback/playbackmanager';
@@ -12,7 +10,6 @@ import inputManager from '../scripts/inputManager';
 import { appRouter } from './router/appRouter';
 import globalize from '../lib/globalize';
 import dom from '../utils/dom';
-import recordingHelper from './recordingcreator/recordinghelper';
 import toast from './toast/toast';
 import * as userSettings from '../scripts/settings/userSettings';
 
@@ -75,12 +72,6 @@ function playAllFromHere(card, serverId, queue) {
     }
 }
 
-function showProgramDialog(item) {
-    import('./recordingcreator/recordingcreator').then(({ default:recordingCreator }) => {
-        recordingCreator.show(item.Id, item.ServerId);
-    });
-}
-
 function getItem(button) {
     button = dom.parentWithAttribute(button, 'data-id');
     const serverId = button.getAttribute('data-serverid');
@@ -96,18 +87,6 @@ function getItem(button) {
         return apiClient.getLiveTvSeriesTimer(id);
     }
     return apiClient.getItem(apiClient.getCurrentUserId(), id);
-}
-
-function notifyRefreshNeeded(childElement, itemsContainer) {
-    itemsContainer = itemsContainer || dom.parentWithAttribute(childElement, 'is', 'emby-itemscontainer');
-
-    if (itemsContainer) {
-        // Legacy webcomponent: directly call a method on the items container if it exists.
-        itemsContainer.notifyRefreshNeeded(true);
-    } else {
-        // React component: trigger a global event that the items container listens for.
-        Events.trigger(document, EventType.REFRESH_NEEDED, [childElement]);
-    }
 }
 
 function showContextMenu(card, options = {}) {
@@ -137,8 +116,6 @@ function showContextMenu(card, options = {}) {
             .then(result => {
                 if (result.command === 'playallfromhere' || result.command === 'queueallfromhere') {
                     executeAction(card, options.positionTo, result.command);
-                } else if (result.updated) {
-                    notifyRefreshNeeded(card, options.itemsContainer);
                 }
             })
             .catch(() => { /* no-op */ });
@@ -180,11 +157,8 @@ function showPlayMenu(card, target) {
 function executeAction(card, target, action) {
     target = target || card;
 
-    let id = card.getAttribute('data-id');
-
-    if (!id) {
+    if (!card.getAttribute('data-id')) {
         card = dom.parentWithAttribute(card, 'data-id');
-        id = card.getAttribute('data-id');
     }
 
     const item = getItemInfoFromCard(card);
@@ -208,9 +182,6 @@ function executeAction(card, target, action) {
                 context: card.getAttribute('data-context'),
                 parentId: card.getAttribute('data-parentid')
             });
-            break;
-        case ItemAction.ProgramDialog:
-            showProgramDialog(item);
             break;
         case ItemAction.InstantMix:
             playbackManager.instantMix({
@@ -261,9 +232,6 @@ function executeAction(card, target, action) {
         case ItemAction.SetPlaylistIndex:
             playbackManager.setCurrentPlaylistItem(card.getAttribute('data-playlistitemid'));
             break;
-        case ItemAction.Record:
-            onRecordCommand(serverId, id, type, card.getAttribute('data-timerid'), card.getAttribute('data-seriestimerid'));
-            break;
         case ItemAction.Menu: {
             const options = target.getAttribute('data-playoptions') === 'false' ?
                 {
@@ -309,13 +277,6 @@ function playTrailer(item) {
     });
 }
 
-function onRecordCommand(serverId, id, type, timerId, seriesTimerId) {
-    if (type === 'Program' || timerId || seriesTimerId) {
-        const programId = type === 'Program' ? id : null;
-        recordingHelper.toggleRecording(serverId, programId, timerId, seriesTimerId);
-    }
-}
-
 export function onClick(e) {
     const card = dom.parentWithClass(e.target, 'itemAction');
 
@@ -343,7 +304,7 @@ export function onClick(e) {
 function onCommand(e) {
     const cmd = e.detail.command;
 
-    if (cmd === 'play' || cmd === 'resume' || cmd === 'record' || cmd === 'menu' || cmd === 'info') {
+    if (cmd === 'play' || cmd === 'resume' || cmd === 'menu' || cmd === 'info') {
         const target = e.target;
         const card = dom.parentWithClass(target, 'itemAction') || dom.parentWithAttribute(target, 'data-id');
 

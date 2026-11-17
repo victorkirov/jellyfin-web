@@ -36,7 +36,6 @@ import { renderComponent } from 'utils/reactUtils';
 import { download } from 'scripts/fileDownloader';
 import libraryMenu from 'scripts/libraryMenu';
 import * as userSettings from 'scripts/settings/userSettings';
-import Dashboard from 'utils/dashboard';
 import Events from 'utils/events';
 import { getItemBackdropImageUrl } from 'utils/jellyfin-apiclient/backdropImage';
 import { OutboundWebSocketMessageType } from '@jellyfin/sdk/lib/websocket';
@@ -72,10 +71,6 @@ function getPromise(apiClient, params) {
         return apiClient.getItem(apiClient.getCurrentUserId(), id);
     }
 
-    if (params.seriesTimerId) {
-        return apiClient.getLiveTvSeriesTimer(params.seriesTimerId);
-    }
-
     if (params.genre) {
         return apiClient.getGenre(params.genre, apiClient.getCurrentUserId());
     }
@@ -109,8 +104,6 @@ function getContextMenuOptions(item, user, button) {
         playAllFromHere: false,
         queueAllFromHere: false,
         positionTo: button,
-        cancelTimer: false,
-        record: false,
         shuffle: false,
         instantMix: false,
         user: user,
@@ -137,59 +130,6 @@ function getProgramScheduleHtml(items, action = 'none') {
 function getSelectedMediaSource(page, mediaSources) {
     const mediaSourceId = page.querySelector('.selectSource').value;
     return mediaSources.filter(m => m.Id === mediaSourceId)[0];
-}
-
-function renderSeriesTimerSchedule(page, apiClient, seriesTimerId) {
-    apiClient.getLiveTvTimers({
-        UserId: apiClient.getCurrentUserId(),
-        ImageTypeLimit: 1,
-        SortBy: 'StartDate',
-        EnableTotalRecordCount: false,
-        EnableUserData: false,
-        SeriesTimerId: seriesTimerId,
-        Fields: 'ChannelInfo,ChannelImage'
-    }).then(function (result) {
-        if (result.Items.length && result.Items[0].SeriesTimerId != seriesTimerId) {
-            result.Items = [];
-        }
-
-        const html = getProgramScheduleHtml(result.Items);
-        const scheduleTab = page.querySelector('#seriesTimerSchedule');
-        scheduleTab.innerHTML = html;
-        imageLoader.lazyChildren(scheduleTab);
-    });
-}
-
-function renderTimerEditor(page, item, apiClient, user) {
-    if (item.Type !== 'Recording' || !user.Policy.EnableLiveTvManagement || !item.TimerId || item.Status !== 'InProgress') {
-        hideAll(page, 'btnCancelTimer');
-        return;
-    }
-
-    hideAll(page, 'btnCancelTimer', true);
-}
-
-function renderSeriesTimerEditor(page, item, apiClient, user) {
-    if (item.Type !== 'SeriesTimer') {
-        hideAll(page, 'btnCancelSeriesTimer');
-        return;
-    }
-
-    if (user.Policy.EnableLiveTvManagement) {
-        import('components/recordingcreator/seriesrecordingeditor').then(({ default: seriesRecordingEditor }) => {
-            seriesRecordingEditor.embed(item, apiClient.serverId(), {
-                context: page.querySelector('.seriesRecordingEditor')
-            });
-        });
-
-        page.querySelector('#seriesTimerScheduleSection').classList.remove('hide');
-        hideAll(page, 'btnCancelSeriesTimer', true);
-        renderSeriesTimerSchedule(page, apiClient, item.Id);
-        return;
-    }
-
-    page.querySelector('#seriesTimerScheduleSection').classList.add('hide');
-    hideAll(page, 'btnCancelSeriesTimer');
 }
 
 function renderTrackSelections(page, instance, item, forceReload) {
@@ -573,8 +513,6 @@ function reloadFromItem(instance, page, params, item, user) {
     renderDetails(page, instance, item, apiClient, params.context);
     renderTrackSelections(page, instance, item);
 
-    renderSeriesTimerEditor(page, item, apiClient, user);
-    renderTimerEditor(page, item, apiClient, user);
     setInitialCollapsibleState(page, item, apiClient, params.context, user);
     const canPlay = reloadPlayButtons(page, item);
 
@@ -586,7 +524,6 @@ function reloadFromItem(instance, page, params, item, user) {
         hideAll(page, 'mainDetailButtons');
     }
 
-    showRecordingFields(instance, page, item, user);
     itemContextMenu.getCommands(getContextMenuOptions(item, user)).then(commands => {
         if (commands.length) {
             hideAll(page, 'btnMoreCommands', true);
@@ -689,26 +626,6 @@ function renderLogo(page, item, apiClient) {
         imageLoader.setLazyImage(detailLogo, url);
     } else {
         detailLogo.classList.add('hide');
-    }
-}
-
-function showRecordingFields(instance, page, item, user) {
-    if (!instance.currentRecordingFields) {
-        const recordingFieldsElement = page.querySelector('.recordingFields');
-
-        if (item.Type == 'Program' && user.Policy.EnableLiveTvManagement) {
-            import('components/recordingcreator/recordingfields').then(({ default: RecordingFields }) => {
-                instance.currentRecordingFields = new RecordingFields({
-                    parent: recordingFieldsElement,
-                    programId: item.Id,
-                    serverId: item.ServerId
-                });
-                recordingFieldsElement.classList.remove('hide');
-            });
-        } else {
-            recordingFieldsElement.classList.add('hide');
-            recordingFieldsElement.innerHTML = '';
-        }
     }
 }
 
@@ -963,7 +880,7 @@ function renderMiscInfo(page, item) {
             subtitles: false
         });
 
-        if (miscInfo.innerHTML && item.Type !== 'SeriesTimer') {
+        if (miscInfo.innerHTML) {
             miscInfo.classList.remove('hide');
         } else {
             miscInfo.classList.add('hide');
@@ -977,7 +894,7 @@ function renderMiscInfo(page, item) {
             interactive: true
         });
 
-        if (miscInfo.innerHTML && item.Type !== 'SeriesTimer') {
+        if (miscInfo.innerHTML) {
             miscInfo.classList.remove('hide');
         } else {
             miscInfo.classList.add('hide');
@@ -1644,7 +1561,7 @@ function renderSeriesSchedule(page, item) {
             page.querySelector('#seriesScheduleSection').classList.add('hide');
         }
 
-        const html = getProgramScheduleHtml(result.Items, 'programdialog');
+        const html = getProgramScheduleHtml(result.Items, 'link');
         const scheduleTab = page.querySelector('#seriesScheduleList');
         scheduleTab.innerHTML = html;
         imageLoader.lazyChildren(scheduleTab);
@@ -2011,22 +1928,6 @@ export default function (view, params) {
         playbackManager.shuffle(currentItem);
     }
 
-    function onCancelSeriesTimerClick() {
-        import('components/recordingcreator/recordinghelper').then(({ default: recordingHelper }) => {
-            recordingHelper.cancelSeriesTimerWithConfirmation(currentItem.Id, currentItem.ServerId).then(function () {
-                Dashboard.navigate('livetv');
-            });
-        });
-    }
-
-    function onCancelTimerClick() {
-        import('components/recordingcreator/recordinghelper').then(({ default: recordingHelper }) => {
-            recordingHelper.cancelTimer(ServerConnections.getApiClient(currentItem.ServerId), currentItem.TimerId).then(function () {
-                reload(self, view, params);
-            });
-        });
-    }
-
     function onPlayTrailerClick() {
         playTrailer();
     }
@@ -2060,11 +1961,6 @@ export default function (view, params) {
 
             apiClient.getCurrentUser().then(function (user) {
                 itemContextMenu.show(getContextMenuOptions(selectedItem, user, button))
-                    .then(function (result) {
-                        if (result.updated) {
-                            reload(self, view, params);
-                        }
-                    })
                     .catch(() => { /* no-op */ });
             });
         });
@@ -2104,8 +2000,6 @@ export default function (view, params) {
         bindAll(view, '.btnInstantMix', 'click', onInstantMixClick);
         bindAll(view, '.btnShuffle', 'click', onShuffleClick);
         bindAll(view, '.btnPlayTrailer', 'click', onPlayTrailerClick);
-        bindAll(view, '.btnCancelSeriesTimer', 'click', onCancelSeriesTimerClick);
-        bindAll(view, '.btnCancelTimer', 'click', onCancelTimerClick);
         bindAll(view, '.btnDownload', 'click', onDownloadClick);
         view.querySelector('.trackSelections').addEventListener('submit', onTrackSelectionsSubmit);
         bindAll(view, '.btnMoreCommands', 'click', onMoreCommandsClick);
@@ -2152,7 +2046,6 @@ export default function (view, params) {
 
             currentItem = null;
             self._currentPlaybackMediaSources = null;
-            self.currentRecordingFields = null;
         });
     }
 

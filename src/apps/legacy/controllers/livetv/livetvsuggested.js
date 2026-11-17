@@ -164,10 +164,6 @@ function getTabs() {
         name: globalize.translate('Channels')
     }, {
         name: globalize.translate('Recordings')
-    }, {
-        name: globalize.translate('Schedule')
-    }, {
-        name: globalize.translate('Series')
     }];
 }
 
@@ -197,10 +193,6 @@ function getDefaultTabIndex(folderId) {
             return 2;
         case LibraryTab.Recordings:
             return 3;
-        case LibraryTab.Schedule:
-            return 4;
-        case LibraryTab.SeriesTimers:
-            return 5;
         default:
             return 0;
     }
@@ -252,14 +244,6 @@ export default function (view, params) {
 
             case 3:
                 depends = 'livetvrecordings';
-                break;
-
-            case 4:
-                depends = 'livetvschedule';
-                break;
-
-            case 5:
-                depends = 'livetvseriestimers';
                 break;
         }
 
@@ -330,6 +314,9 @@ export default function (view, params) {
     let isViewRestored;
     const self = this;
     let currentTabIndex = parseInt(params.tab || getDefaultTabIndex('livetv'), 10);
+    if (!(currentTabIndex >= 0 && currentTabIndex < getTabs().length)) {
+        currentTabIndex = 0;
+    }
     let initialTabIndex = currentTabIndex;
     let lastFullRender = 0;
     [].forEach.call(view.querySelectorAll('.sectionTitleTextButton-programs'), function (link) {

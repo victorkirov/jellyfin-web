@@ -450,7 +450,7 @@ function Guide(options) {
 
         html += '<div class="' + outerCssClass + '" data-channelid="' + channel.Id + '">';
 
-        const clickAction = layoutManager.tv ? ItemAction.Link : ItemAction.ProgramDialog;
+        const clickAction = ItemAction.Link;
 
         const categories = self.categoryOptions.categories || [];
         const displayMovieContent = !categories.length || categories.indexOf('movies') !== -1;

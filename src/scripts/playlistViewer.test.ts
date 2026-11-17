@@ -6,7 +6,6 @@ vi.mock('components/playback/playbackmanager', () => ({ playbackManager: { play:
 vi.mock('scripts/inputManager', () => ({ default: {} }));
 vi.mock('components/router/appRouter', () => ({ appRouter: {} }));
 vi.mock('lib/globalize', () => ({ default: {} }));
-vi.mock('components/recordingcreator/recordinghelper', () => ({ default: {} }));
 vi.mock('components/toast/toast', () => ({ default: {} }));
 vi.mock('scripts/settings/userSettings', () => ({}));
 

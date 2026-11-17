@@ -325,19 +325,11 @@ class AppRouter {
                 return '#/livetv?tab=2&serverId=' + serverId;
             }
 
-            if (options.section === 'dvrschedule') {
-                return '#/livetv?tab=4&serverId=' + serverId;
-            }
-
-            if (options.section === 'seriesrecording') {
-                return '#/livetv?tab=5&serverId=' + serverId;
-            }
-
             return '#/livetv?serverId=' + serverId;
         }
 
         if (itemType == 'SeriesTimer') {
-            return '#/details?seriesTimerId=' + id + '&serverId=' + serverId;
+            return '#/livetv?serverId=' + serverId;
         }
 
         if (item.CollectionType == CollectionType.Livetv) {

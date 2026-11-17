@@ -110,16 +110,6 @@ function buildSection(
         serverId
     }) + '" class="raised"><span>' + globalize.translate('Recordings') + '</span></a>';
 
-    html += '<a is="emby-linkbutton" href="' + appRouter.getRouteUrl('livetv', {
-        serverId,
-        section: 'dvrschedule'
-    }) + '" class="raised"><span>' + globalize.translate('Schedule') + '</span></a>';
-
-    html += '<a is="emby-linkbutton" href="' + appRouter.getRouteUrl('livetv', {
-        serverId,
-        section: 'seriesrecording'
-    }) + '" class="raised"><span>' + globalize.translate('Series') + '</span></a>';
-
     html += '</div>';
     if (options.enableOverflow) {
         html += '</div>';

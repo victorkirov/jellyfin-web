@@ -55,40 +55,10 @@ export default function (view) {
         });
     }
 
-    function updateRecordingButton(item) {
-        if (!item || item.Type !== 'Program') {
-            if (recordingButtonManager) {
-                recordingButtonManager.destroy();
-                recordingButtonManager = null;
-            }
-
-            view.querySelector('.btnRecord').classList.add('hide');
-            return;
-        }
-
-        ServerConnections.getApiClient(item.ServerId).getCurrentUser().then(function (user) {
-            if (user.Policy.EnableLiveTvManagement) {
-                import('components/recordingcreator/recordingbutton').then(({ default: RecordingButton }) => {
-                    if (recordingButtonManager) {
-                        recordingButtonManager.refreshItem(item);
-                        return;
-                    }
-
-                    recordingButtonManager = new RecordingButton({
-                        item: item,
-                        button: view.querySelector('.btnRecord')
-                    });
-                    view.querySelector('.btnRecord').classList.remove('hide');
-                });
-            }
-        });
-    }
-
     function updateDisplayItem(itemInfo) {
         const item = itemInfo.originalItem;
         currentItem = item;
         const displayItem = itemInfo.displayItem || item;
-        updateRecordingButton(displayItem);
         let parentName = displayItem.SeriesName || displayItem.Album;
 
         if (displayItem.EpisodeTitle || displayItem.IsSeries) {
@@ -190,7 +160,6 @@ export default function (view) {
 
         currentItem = item;
         if (!item) {
-            updateRecordingButton(null);
             LibraryMenu.setTitle('');
             Events.trigger(document, EventType.VIDEO_TITLE_CHANGE, [ '' ]);
             nowPlayingVolumeSlider.disabled = true;
@@ -459,11 +428,6 @@ export default function (view) {
                 showOsd();
                 break;
 
-            case 'record':
-                onRecordingCommand();
-                showOsd();
-                break;
-
             case 'togglestats':
                 toggleStats();
                 break;
@@ -475,14 +439,6 @@ export default function (view) {
                     e.preventDefault();
                 }
                 break;
-        }
-    }
-
-    function onRecordingCommand() {
-        const btnRecord = view.querySelector('.btnRecord');
-
-        if (!btnRecord.classList.contains('hide')) {
-            btnRecord.click();
         }
     }
 
@@ -1630,7 +1586,6 @@ export default function (view) {
     let currentUpNextDialog;
     let isEnabled;
     let currentItem;
-    let recordingButtonManager;
     let enableProgressByTimeOfDay;
     let currentVisibleMenu;
     let statsOverlay;
@@ -1787,11 +1742,6 @@ export default function (view) {
         if (self.touchHelper) {
             self.touchHelper.destroy();
             self.touchHelper = null;
-        }
-
-        if (recordingButtonManager) {
-            recordingButtonManager.destroy();
-            recordingButtonManager = null;
         }
 
         destroyStats();

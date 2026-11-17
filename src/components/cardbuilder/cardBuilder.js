@@ -558,22 +558,6 @@ function getCardFooterText(item, apiClient, options, footerClass, progressHtml, 
             }
         }
 
-        if (options.showSeriesTimerTime) {
-            if (item.RecordAnyTime) {
-                lines.push(globalize.translate('Anytime'));
-            } else {
-                lines.push(datetime.getDisplayTime(item.StartDate));
-            }
-        }
-
-        if (options.showSeriesTimerChannel) {
-            if (item.RecordAnyChannel) {
-                lines.push(globalize.translate('AllChannels'));
-            } else {
-                lines.push(escapeHtml(item.ChannelName || '') || globalize.translate('OneChannel'));
-            }
-        }
-
         if (options.showPersonRoleOrType && item.Type) {
             if (item.RoleList?.length > 1) {
                 lines.push(item.RoleList.map(getPeopleRoleOrTypeLabel).join(' / '));
