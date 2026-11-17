@@ -50,43 +50,6 @@ function supportsFade() {
     return !browser.tv;
 }
 
-function requireHlsPlayer(callback) {
-    import('hls.js/dist/hls.js').then(({ default: hls }) => {
-        hls.DefaultConfig.lowLatencyMode = false;
-        hls.DefaultConfig.backBufferLength = Infinity;
-        hls.DefaultConfig.liveBackBufferLength = 90;
-        window.Hls = hls;
-        callback();
-    });
-}
-
-function enableHlsPlayer(url, item, mediaSource, mediaType) {
-    if (!htmlMediaHelper.enableHlsJsPlayer(mediaSource.RunTimeTicks, mediaType)) {
-        return Promise.reject();
-    }
-
-    if (url.indexOf('.m3u8') !== -1) {
-        return Promise.resolve();
-    }
-
-    // issue head request to get content type
-    return new Promise(function (resolve, reject) {
-        import('../../utils/fetch').then((fetchHelper) => {
-            fetchHelper.ajax({
-                url: url,
-                type: 'HEAD'
-            }).then(function (response) {
-                const contentType = (response.headers.get('Content-Type') || '').toLowerCase();
-                if (contentType === 'application/vnd.apple.mpegurl' || contentType === 'application/x-mpegurl') {
-                    resolve();
-                } else {
-                    reject();
-                }
-            }, reject);
-        });
-    });
-}
-
 class HtmlAudioPlayer {
     constructor() {
         const self = this;
@@ -160,8 +123,6 @@ class HtmlAudioPlayer {
                 val += '#t=' + seconds;
             }
 
-            htmlMediaHelper.destroyHlsPlayer(self);
-
             self._currentPlayOptions = options;
 
             const crossOrigin = htmlMediaHelper.getCrossOriginValue(options.mediaSource);
@@ -174,31 +135,9 @@ class HtmlAudioPlayer {
                 navigator.audioSession.type = 'playback';
             }
 
-            return enableHlsPlayer(val, options.item, options.mediaSource, 'Audio').then(function () {
-                return new Promise(function (resolve, reject) {
-                    requireHlsPlayer(async () => {
-                        const includeCorsCredentials = await getIncludeCorsCredentials();
-
-                        const hls = new Hls({
-                            manifestLoadingTimeOut: 20000,
-                            xhrSetup: function (xhr) {
-                                xhr.withCredentials = includeCorsCredentials;
-                            }
-                        });
-                        hls.loadSource(val);
-                        hls.attachMedia(elem);
-
-                        htmlMediaHelper.bindEventsToHlsPlayer(self, hls, elem, onError, resolve, reject);
-
-                        self._hlsPlayer = hls;
-
-                        self._currentSrc = val;
-                    });
-                });
-            }, async () => {
+            return getIncludeCorsCredentials().then((includeCorsCredentials) => {
                 elem.autoplay = true;
 
-                const includeCorsCredentials = await getIncludeCorsCredentials();
                 if (includeCorsCredentials) {
                     // Safari will not send cookies without this
                     elem.crossOrigin = 'use-credentials';
@@ -382,12 +321,7 @@ class HtmlAudioPlayer {
                     break;
                 case 3:
                     // MEDIA_ERR_DECODE
-                    if (self._hlsPlayer) {
-                        htmlMediaHelper.handleHlsJsMediaError(self);
-                        return;
-                    } else {
-                        type = MediaError.MEDIA_DECODE_ERROR;
-                    }
+                    type = MediaError.MEDIA_DECODE_ERROR;
                     break;
                 case 4:
                     // MEDIA_ERR_SRC_NOT_SUPPORTED

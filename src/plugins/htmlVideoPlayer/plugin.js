@@ -18,12 +18,9 @@ import dom from '../../utils/dom';
 import { playbackManager } from '../../components/playback/playbackmanager';
 import { appRouter } from '../../components/router/appRouter';
 import {
-    bindEventsToHlsPlayer,
-    destroyHlsPlayer,
     destroyFlvPlayer,
     destroyCastPlayer,
     getCrossOriginValue,
-    enableHlsJsPlayerForCodecs,
     applySrc,
     resetSrc,
     playWithPromise,
@@ -31,7 +28,6 @@ import {
     saveVolume,
     seekOnPlaybackStart,
     onErrorInternal,
-    handleHlsJsMediaError,
     getSavedVolume,
     isValidDuration,
     getBufferedRanges
@@ -117,16 +113,6 @@ function enableNativeTrackSupport(mediaSource, track) {
     }
 
     return true;
-}
-
-function requireHlsPlayer(callback) {
-    import('hls.js/dist/hls.js').then(({ default: hls }) => {
-        hls.DefaultConfig.lowLatencyMode = false;
-        hls.DefaultConfig.backBufferLength = Infinity;
-        hls.DefaultConfig.liveBackBufferLength = 90;
-        window.Hls = hls;
-        callback();
-    });
 }
 
 function getMediaStreamVideoTracks(mediaSource) {
@@ -360,7 +346,6 @@ export class HtmlVideoPlayer {
      * @private (used in other files)
      * @type {any | undefined}
      */
-    _hlsPlayer;
     /**
      * @private (used in other files)
      * @type {any | null | undefined}
@@ -553,47 +538,6 @@ export class HtmlVideoPlayer {
     /**
      * @private
      */
-    setSrcWithHlsJs(elem, options, url) {
-        return new Promise((resolve, reject) => {
-            requireHlsPlayer(async () => {
-                let maxBufferLength = 30;
-
-                // Some browsers cannot handle huge fragments in high bitrate.
-                // This issue usually happens when using HWA encoders with a high bitrate setting.
-                // Limit the BufferLength to 6s, it works fine when playing 4k 120Mbps over HLS on chrome.
-                // https://github.com/video-dev/hls.js/issues/876
-                if ((browser.chrome || browser.edgeChromium || browser.firefox) && playbackManager.getMaxStreamingBitrate(this) >= 25000000) {
-                    maxBufferLength = 6;
-                }
-
-                const includeCorsCredentials = await getIncludeCorsCredentials();
-
-                const hls = new Hls({
-                    startPosition: options.playerStartPositionTicks / 10000000,
-                    manifestLoadingTimeOut: 20000,
-                    maxBufferLength: maxBufferLength,
-                    maxMaxBufferLength: maxBufferLength,
-                    videoPreference: { preferHDR: true },
-                    xhrSetup(xhr) {
-                        xhr.withCredentials = includeCorsCredentials;
-                    }
-                });
-                hls.loadSource(url);
-                hls.attachMedia(elem);
-
-                bindEventsToHlsPlayer(this, hls, elem, this.onError, resolve, reject);
-
-                this._hlsPlayer = hls;
-
-                // This is needed in setCurrentTrackElement
-                this.#currentSrc = url;
-            });
-        });
-    }
-
-    /**
-     * @private
-     */
     async setCurrentSrc(elem, options) {
         elem.removeEventListener('error', this.onError);
 
@@ -606,7 +550,6 @@ export class HtmlVideoPlayer {
             val += `#t=${seconds}`;
         }
 
-        destroyHlsPlayer(this);
         destroyFlvPlayer(this);
         destroyCastPlayer(this);
 
@@ -648,9 +591,7 @@ export class HtmlVideoPlayer {
             elem.crossOrigin = crossOrigin;
         }
 
-        if (enableHlsJsPlayerForCodecs(options.mediaSource, 'Video') && isHls(options.mediaSource)) {
-            return this.setSrcWithHlsJs(elem, options, val);
-        } else if (options.playMethod !== 'Transcode' && options.mediaSource.Container?.toUpperCase() === 'FLV') {
+        if (options.playMethod !== 'Transcode' && options.mediaSource.Container?.toUpperCase() === 'FLV') {
             return this.setSrcWithFlvJs(elem, options, val);
         } else {
             elem.autoplay = true;
@@ -967,7 +908,6 @@ export class HtmlVideoPlayer {
     destroy() {
         this.setSubtitleOffset.cancel();
 
-        destroyHlsPlayer(this);
         destroyFlvPlayer(this);
 
         setBackdropTransparency(TRANSPARENCY_LEVEL.None);
@@ -1216,12 +1156,7 @@ export class HtmlVideoPlayer {
                 break;
             case 3:
                 // MEDIA_ERR_DECODE
-                if (this._hlsPlayer) {
-                    handleHlsJsMediaError(this);
-                    return;
-                } else {
-                    type = MediaError.MEDIA_DECODE_ERROR;
-                }
+                type = MediaError.MEDIA_DECODE_ERROR;
                 break;
             case 4:
                 // MEDIA_ERR_SRC_NOT_SUPPORTED
@@ -2340,7 +2275,7 @@ export class HtmlVideoPlayer {
         categories.push(mediaCategory);
 
         const mediaInfos = [];
-        mediaInfos.push(this._hlsPlayer ? 'HLS' : 'Video');
+        mediaInfos.push('Video');
         if (playOptions.url) {
             //  create an anchor element (note: no need to append this element to the document)
             let link = document.createElement('a');

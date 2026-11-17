@@ -1,7 +1,5 @@
 import appSettings from '../scripts/settings/appSettings' ;
-import browser from '../scripts/browser';
 import Events from '../utils/events.ts';
-import { MediaError } from 'types/mediaError';
 
 export function getSavedVolume() {
     return appSettings.get('volume') || 1;
@@ -19,94 +17,6 @@ export function getCrossOriginValue(mediaSource) {
     }
 
     return 'anonymous';
-}
-
-function canPlayNativeHls() {
-    const media = document.createElement('video');
-
-    return !!(media.canPlayType('application/x-mpegURL').replace(/no/, '')
-            || media.canPlayType('application/vnd.apple.mpegURL').replace(/no/, ''));
-}
-
-export function enableHlsJsPlayerForCodecs(mediaSource, mediaType) {
-    // Workaround for VP9 HLS support on desktop Safari
-    // Force using HLS.js because desktop Safari's native HLS player does not play VP9 over HLS
-    // browser.osx will return true on iPad, cannot use
-    if (!browser.iOS && browser.safari && mediaSource.MediaStreams.some(x => x.Codec === 'vp9')) {
-        return true;
-    }
-    return enableHlsJsPlayer(mediaSource.RunTimeTicks, mediaType);
-}
-
-export function enableHlsJsPlayer(runTimeTicks, mediaType) {
-    if (window.MediaSource == null) {
-        return false;
-    }
-
-    // hls.js is only in beta. needs more testing.
-    if (browser.iOS) {
-        return false;
-    }
-
-    // The native players on these devices support seeking live streams, no need to use hls.js here
-    if (browser.tizen || browser.web0s) {
-        return false;
-    }
-
-    if (canPlayNativeHls()) {
-        // Android Webview's native HLS has performance and compatiblity issues
-        if (browser.android && (mediaType === 'Audio' || mediaType === 'Video')) {
-            return true;
-        }
-
-        // Chromium 141+ brings native HLS support that does not support switching HDR/SDR playlists.
-        // Always use hls.js to avoid falling back to transcoding from remuxing and client side tone-mapping.
-        if (browser.chrome || browser.edgeChromium || browser.opera) {
-            return true;
-        }
-
-        // simple playback should use the native support
-        if (runTimeTicks) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-let recoverDecodingErrorDate;
-let recoverSwapAudioCodecDate;
-export function handleHlsJsMediaError(instance, reject) {
-    const hlsPlayer = instance._hlsPlayer;
-
-    if (!hlsPlayer) {
-        return;
-    }
-
-    let now = Date.now();
-
-    if (window.performance?.now) {
-        now = performance.now();
-    }
-
-    if (!recoverDecodingErrorDate || (now - recoverDecodingErrorDate) > 3000) {
-        recoverDecodingErrorDate = now;
-        console.debug('try to recover media Error ...');
-        hlsPlayer.recoverMediaError();
-    } else if (!recoverSwapAudioCodecDate || (now - recoverSwapAudioCodecDate) > 3000) {
-        recoverSwapAudioCodecDate = now;
-        console.debug('try to swap Audio Codec and recover media Error ...');
-        hlsPlayer.swapAudioCodec();
-        hlsPlayer.recoverMediaError();
-    } else {
-        console.error('cannot recover, last media error recovery failed ...');
-
-        if (reject) {
-            reject();
-        } else {
-            onErrorInternal(instance, MediaError.FATAL_HLS_ERROR);
-        }
-    }
 }
 
 export function onErrorInternal(instance, type) {
@@ -231,19 +141,6 @@ export function destroyCastPlayer(instance) {
     }
 }
 
-export function destroyHlsPlayer(instance) {
-    const player = instance._hlsPlayer;
-    if (player) {
-        try {
-            player.destroy();
-        } catch (err) {
-            console.error(err);
-        }
-
-        instance._hlsPlayer = null;
-    }
-}
-
 export function destroyFlvPlayer(instance) {
     const player = instance._flvPlayer;
     if (player) {
@@ -259,92 +156,11 @@ export function destroyFlvPlayer(instance) {
     }
 }
 
-export function bindEventsToHlsPlayer(instance, hls, elem, onErrorFn, resolve, reject) {
-    hls.on(Hls.Events.MANIFEST_PARSED, function () {
-        playWithPromise(elem, onErrorFn).then(resolve, function () {
-            if (reject) {
-                reject();
-                reject = null;
-            }
-        });
-    });
-
-    hls.on(Hls.Events.ERROR, function (event, data) {
-        console.error('HLS Error: Type: ' + data.type + ' Details: ' + (data.details || '') + ' Fatal: ' + (data.fatal || false));
-
-        // try to recover network error
-        if (data.type === Hls.ErrorTypes.NETWORK_ERROR
-                && data.response?.code && data.response.code >= 400
-        ) {
-            console.debug('hls.js response error code: ' + data.response.code);
-
-            // Trigger failure differently depending on whether this is prior to start of playback, or after
-            hls.destroy();
-
-            if (reject) {
-                reject(MediaError.SERVER_ERROR);
-                reject = null;
-            } else {
-                onErrorInternal(instance, MediaError.SERVER_ERROR);
-            }
-
-            return;
-        }
-
-        if (data.fatal) {
-            switch (data.type) {
-                case Hls.ErrorTypes.NETWORK_ERROR:
-
-                    if (data.response && data.response.code === 0) {
-                        // This could be a CORS error related to access control response headers
-
-                        console.debug('hls.js response error code: ' + data.response.code);
-
-                        // Trigger failure differently depending on whether this is prior to start of playback, or after
-                        hls.destroy();
-
-                        if (reject) {
-                            reject(MediaError.NETWORK_ERROR);
-                            reject = null;
-                        } else {
-                            onErrorInternal(instance, MediaError.NETWORK_ERROR);
-                        }
-                    } else {
-                        console.debug('fatal network error encountered, try to recover');
-                        hls.startLoad();
-                    }
-
-                    break;
-                case Hls.ErrorTypes.MEDIA_ERROR:
-                    console.debug('fatal media error encountered, try to recover');
-                    handleHlsJsMediaError(instance, reject);
-                    reject = null;
-                    break;
-                default:
-
-                    console.debug('Cannot recover from hls error - destroy and trigger error');
-                    // cannot recover
-                    // Trigger failure differently depending on whether this is prior to start of playback, or after
-                    hls.destroy();
-
-                    if (reject) {
-                        reject();
-                        reject = null;
-                    } else {
-                        onErrorInternal(instance, MediaError.FATAL_HLS_ERROR);
-                    }
-                    break;
-            }
-        }
-    });
-}
-
 export function onEndedInternal(instance, elem, onErrorFn) {
     elem.removeEventListener('error', onErrorFn);
 
     resetSrc(elem);
 
-    destroyHlsPlayer(instance);
     destroyFlvPlayer(instance);
     destroyCastPlayer(instance);
 

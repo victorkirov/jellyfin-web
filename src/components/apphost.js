@@ -1,7 +1,6 @@
 import appSettings from '../scripts/settings/appSettings';
 import browser from '../scripts/browser';
 import Events from '../utils/events.ts';
-import * as htmlMediaHelper from '../components/htmlMediaHelper';
 import * as webSettings from '../scripts/settings/webSettings';
 import globalize from '../lib/globalize';
 import profileBuilder from '../scripts/browserDeviceProfile';
@@ -25,36 +24,21 @@ const BrowserName = {
     safari: 'Safari'
 };
 
-function getBaseProfileOptions(item) {
-    const disableHlsVideoAudioCodecs = [];
-
-    if (item && htmlMediaHelper.enableHlsJsPlayer(item.RunTimeTicks, item.MediaType)) {
-        if (browser.edge) {
-            disableHlsVideoAudioCodecs.push('mp3');
-        }
-        if (!browser.edgeChromium) {
-            disableHlsVideoAudioCodecs.push('ac3');
-            disableHlsVideoAudioCodecs.push('eac3');
-        }
-        if (!(browser.chrome || browser.edgeChromium || browser.firefox)) {
-            disableHlsVideoAudioCodecs.push('opus');
-        }
-    }
-
+function getBaseProfileOptions() {
     return {
         enableMkvProgressive: false,
-        disableHlsVideoAudioCodecs: disableHlsVideoAudioCodecs
+        disableHlsVideoAudioCodecs: []
     };
 }
 
-function getDeviceProfile(item) {
+function getDeviceProfile() {
     return new Promise(function (resolve) {
         let profile;
 
         if (window.NativeShell) {
             profile = window.NativeShell.AppHost.getDeviceProfile(profileBuilder, __PACKAGE_JSON_VERSION__);
         } else {
-            const builderOpts = getBaseProfileOptions(item);
+            const builderOpts = getBaseProfileOptions();
             profile = profileBuilder(builderOpts);
         }
 
