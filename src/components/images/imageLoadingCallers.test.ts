@@ -4,7 +4,7 @@ import type { CardItem } from '../cardbuilder/cardTypes';
 
 const { registerElement } = vi.hoisted(() => ({ registerElement: vi.fn() }));
 vi.mock('./blurhash.worker', () => ({ default: class { addEventListener() { /* No blurhash requested. */ } } }));
-vi.mock('scripts/settings/userSettings', () => ({ enableBlurhash: () => false, enableFastFadein: () => true, enableImageTypes: () => true }));
+vi.mock('scripts/settings/userSettings', () => ({ enableBlurhash: () => false, enableImageTypes: () => true }));
 vi.mock('scripts/browser', () => ({ default: {} }));
 vi.mock('scripts/datetime', () => ({ default: {} }));
 vi.mock('lib/globalize', () => ({ default: { translate: (key: string) => key } }));
@@ -96,8 +96,8 @@ describe('image loader callers', () => {
         frame();
         expect(old.hasAttribute('data-src')).toBe(true);
         expect(current.hasAttribute('data-src')).toBe(false);
-        expect(observers).toHaveLength(2);
-        observers.forEach(observer => {
+        expect(observers.filter(observer => observer.targets.size)).toHaveLength(2);
+        observers.filter(observer => observer.targets.size).forEach(observer => {
             expect(observer.targets.has(old)).toBe(false);
             expect(observer.targets.has(current)).toBe(true);
         });
@@ -122,7 +122,7 @@ describe('image loader callers', () => {
         frame();
         expect(images).toHaveLength(2);
         expect(current.hasAttribute('data-src')).toBe(false);
-        expect(observers).toHaveLength(2);
+        expect(observers.filter(observer => observer.targets.size)).toHaveLength(2);
         expect(observers[0].targets.has(old)).toBe(false);
     });
 });

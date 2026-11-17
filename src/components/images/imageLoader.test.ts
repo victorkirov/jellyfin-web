@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { postMessage, enableBlurhash, enableFastFadein, workerMessage } = vi.hoisted(() => ({
-    postMessage: vi.fn(), workerMessage: vi.fn(), enableBlurhash: vi.fn(() => true), enableFastFadein: vi.fn(() => false)
+const { postMessage, enableBlurhash, workerMessage } = vi.hoisted(() => ({
+    postMessage: vi.fn(), workerMessage: vi.fn(), enableBlurhash: vi.fn(() => true)
 }));
 vi.mock('./blurhash.worker', () => ({ default: class {
     addEventListener = workerMessage;
     postMessage = postMessage;
 } }));
-vi.mock('../../scripts/settings/userSettings', () => ({ enableBlurhash, enableFastFadein }));
+vi.mock('../../scripts/settings/userSettings', () => ({ enableBlurhash }));
 
 let imageLoader: typeof import('./imageLoader');
 let observers: { callback: IntersectionObserverCallback;
@@ -148,6 +148,17 @@ describe('poster load scheduling', () => {
         frame();
         expect(target.style.backgroundImage).toContain('explicit.jpg');
     });
+    it('adds an already-filled direct image to retention when the load observer adopts it', () => {
+        const [target] = targets();
+        imageLoader.setLazyImage(target, 'direct.jpg');
+        complete();
+        frame();
+        expect(observers).toHaveLength(0);
+        imageLoader.lazyChildren(document.body);
+        intersect(target);
+        expect(observers[1].targets.has(target)).toBe(true);
+        expect(preloaders).toHaveLength(1);
+    });
     it('retains a replacement URL when unloading an older filled image', () => {
         imageLoader.lazyChildren(document.body);
         const [target] = targets();
@@ -175,17 +186,37 @@ describe('poster load scheduling', () => {
 });
 
 describe('TV observer zones and presentation', () => {
+    it('observes only applied posters for unloading and unobserves emptied ones', () => {
+        document.body.innerHTML += document.body.innerHTML;
+        imageLoader.lazyChildren(document.body);
+        const [first, second] = targets();
+        expect(observers).toHaveLength(1);
+        intersect(first);
+        complete();
+        expect(observers).toHaveLength(1);
+        frame();
+        expect(observers).toHaveLength(2);
+        expect(observers[1].targets).toEqual(new Set([first]));
+        expect(observers[1].targets.has(second)).toBe(false);
+        intersect(first, false);
+        intersect(first, false, 1);
+        expect(observers[1].targets.size).toBe(0);
+        expect(observers[0].targets.has(first)).toBe(true);
+    });
     it('loads 1.5 viewport heights ahead and retains posters for 3 heights', () => {
         imageLoader.lazyChildren(document.body);
-        expect(observers.map(observer => observer.options.rootMargin)).toEqual([`${window.innerHeight * 1.5}px 0px`, `${window.innerHeight * 3}px 0px`]);
+        intersect(targets()[0]);
+        complete();
+        frame();
+        expect(observers.map(observer => observer.options.rootMargin)).toEqual(['150% 0px', '300% 0px']);
     });
     it('keeps filled images outside the load zone until leaving the retention zone', () => {
         imageLoader.lazyChildren(document.body);
         const [target] = targets();
         intersect(target);
-        intersect(target, true, 1);
         complete();
         frame();
+        intersect(target, true, 1);
         intersect(target, false);
         expect(target.hasAttribute('data-src')).toBe(false);
         intersect(target);
@@ -199,11 +230,6 @@ describe('TV observer zones and presentation', () => {
         frame();
         expect(target.hasAttribute('data-src')).toBe(false);
     });
-    it('does not empty never-filled posters on initial retention delivery', () => {
-        imageLoader.lazyChildren(document.body);
-        intersect(targets()[0], false, 1);
-        expect(targets()[0].getAttribute('data-src')).toBe('image.jpg');
-    });
     it('applies posters immediately without fade classes or animation listeners', () => {
         imageLoader.lazyChildren(document.body);
         const [target] = targets();
@@ -214,7 +240,6 @@ describe('TV observer zones and presentation', () => {
         expect(target.className).not.toMatch(/lazy-image-fadein|lazy-hidden/);
         expect(listener).not.toHaveBeenCalledWith('animationend', expect.anything());
         expect(document.querySelector('.cardPadder')?.classList.contains('lazy-hidden-children')).toBe(true);
-        expect(enableFastFadein).not.toHaveBeenCalled();
     });
 });
 

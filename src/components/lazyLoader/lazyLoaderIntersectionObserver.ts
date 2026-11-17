@@ -1,5 +1,5 @@
 type Callback = (entry: IntersectionObserverEntry, observer: IntersectionObserver) => void;
-type Options = { callback: Callback; viewportMargin?: number };
+type Options = { callback: Callback; rootMargin?: string };
 
 const sharedLoaders = new Map<Callback, LazyLoader>();
 const activeLoaders = new Set<LazyLoader>();
@@ -40,22 +40,12 @@ export class LazyLoader {
                 });
             },
             {
-                // Percentage root margins use viewport width, including in the polyfill.
-                rootMargin: this.options.viewportMargin === undefined ? '50%' : `${window.innerHeight * this.options.viewportMargin}px 0px`,
+                rootMargin: this.options.rootMargin || '50%',
                 threshold: 0
             });
 
         this.observer = newObserver;
-        if (this.options.viewportMargin !== undefined) window.addEventListener('resize', this.resizeObserver);
     }
-
-    private resizeObserver = () => {
-        this.observer?.disconnect();
-        this.createObserver();
-        this.elements.forEach(element => {
-            this.observer!.observe(element);
-        });
-    };
 
     addElements(elements: ArrayLike<Element>) {
         let observer = this.observer!;
@@ -73,16 +63,18 @@ export class LazyLoader {
         watchRemovals();
     }
 
+    removeElement(element: Element) {
+        this.observer?.unobserve(element);
+        this.elements.delete(element);
+        if (!this.elements.size) this.destroyObserver();
+    }
+
     removeDetachedElements() {
         this.elements.forEach(element => {
             if (!document.documentElement.contains(element)) {
-                this.observer!.unobserve(element);
-                this.elements.delete(element);
+                this.removeElement(element);
             }
         });
-        if (!this.elements.size) {
-            this.destroyObserver();
-        }
     }
 
     destroyObserver() {
@@ -90,7 +82,6 @@ export class LazyLoader {
 
         if (observer) {
             observer.disconnect();
-            window.removeEventListener('resize', this.resizeObserver);
             this.observer = null;
             this.elements.clear();
             activeLoaders.delete(this);
@@ -110,20 +101,20 @@ export class LazyLoader {
     }
 }
 
-function unveilElements(elements: ArrayLike<Element>, callback: Callback, viewportMargin?: number) {
+function unveilElements(elements: ArrayLike<Element>, callback: Callback, rootMargin?: string) {
     if (!elements.length) {
         return;
     }
     let lazyLoader = sharedLoaders.get(callback);
     if (!lazyLoader) {
-        lazyLoader = new LazyLoader({ callback, viewportMargin });
+        lazyLoader = new LazyLoader({ callback, rootMargin });
         sharedLoaders.set(callback, lazyLoader);
     }
     lazyLoader.addElements(elements);
 }
 
-export function lazyChildren(elem: Element, callback: Callback, viewportMargin?: number) {
-    unveilElements(elem.getElementsByClassName('lazy'), callback, viewportMargin);
+export function lazyChildren(elem: Element, callback: Callback, rootMargin?: string) {
+    unveilElements(elem.getElementsByClassName('lazy'), callback, rootMargin);
 }
 
 export default {

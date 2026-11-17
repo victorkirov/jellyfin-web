@@ -1,3 +1,5 @@
+import { LazyLoader } from '../lazyLoader/lazyLoaderIntersectionObserver';
+
 type PendingImage = { target: HTMLElement; url: string; requireLoadZone: boolean };
 
 const loadZone = new WeakSet<HTMLElement>();
@@ -5,10 +7,17 @@ const pendingImages = new WeakMap<HTMLElement, PendingImage>();
 const filledSources = new WeakMap<HTMLElement, string>();
 const readyImages: PendingImage[] = [];
 let framePending = false;
+const unloadLoader = new LazyLoader({
+    callback: entry => {
+        if (!entry.isIntersecting) emptyImage(entry.target as HTMLElement);
+    },
+    rootMargin: '300% 0px'
+});
 
 export function setInLoadZone(target: HTMLElement, inside: boolean) {
     if (inside) {
         loadZone.add(target);
+        if (filledSources.has(target)) unloadLoader.addElements([target]);
     } else {
         loadZone.delete(target);
         if (pendingImages.get(target)?.requireLoadZone) {
@@ -46,6 +55,7 @@ function applyNextImage() {
         target.removeAttribute('data-src');
         target.classList.remove('lazy-hidden');
         setPlaceholderVisible(target, false);
+        if (requireLoadZone) unloadLoader.addElements([target]);
         break;
     }
     if (readyImages.length) scheduleFrame();
@@ -80,6 +90,7 @@ export function emptyImage(target: HTMLElement) {
     const url = filledSources.get(target);
     if (!url) return;
     filledSources.delete(target);
+    unloadLoader.removeElement(target);
     setPlaceholderVisible(target, true);
     if (target.tagName === 'IMG') {
         target.setAttribute('src', '');

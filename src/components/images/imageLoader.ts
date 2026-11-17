@@ -3,7 +3,7 @@ import * as userSettings from '../../scripts/settings/userSettings';
 import './style.scss';
 
 import { itemBlurhashing } from './blurhash';
-import { preloadImage, emptyImage, setInLoadZone } from './imageQueue';
+import { preloadImage, setInLoadZone } from './imageQueue';
 
 type ImageEntry = { target: Element; isIntersecting: boolean };
 const imageOptions = new WeakMap<Element, { enableBlurhash: boolean }>();
@@ -30,10 +30,6 @@ export function fillImage(entry: ImageEntry) {
     if (source) preloadImage(target, source, true);
 }
 
-function unloadImage(entry: ImageEntry) {
-    if (!entry.isIntersecting) emptyImage(entry.target as HTMLElement);
-}
-
 function blurhashImage(target: HTMLElement) {
     const hash = target.getAttribute('data-blurhash');
     if (!target.classList.contains('blurhashed') && !target.classList.contains('non-blurhashable')) {
@@ -53,8 +49,7 @@ export function lazyChildren(elem: Element) {
         imageOptions.set(lazyElem, options);
     }
 
-    lazyLoader.lazyChildren(elem, fillImage, 1.5);
-    lazyLoader.lazyChildren(elem, unloadImage, 3);
+    lazyLoader.lazyChildren(elem, fillImage, '150% 0px');
 }
 
 export function getPrimaryImageAspectRatio(items: { PrimaryImageAspectRatio?: number | null }[]) {
