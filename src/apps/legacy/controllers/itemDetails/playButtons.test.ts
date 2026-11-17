@@ -7,6 +7,7 @@ import { type Api } from '@jellyfin/sdk';
 import ItemDetails from './index';
 import focusManager from 'lib/focusManager';
 import cardBuilder from 'components/cardbuilder/cardBuilder';
+import { requestActionBarLayout } from './actionBarLayout';
 import type { UserDataChangedMessage } from '@jellyfin/sdk/lib/generated-client';
 
 const { apiClient, playbackManager, fixture, hideLoading, getListViewHtml, getSdkItem, api, getCommands, showMenu, goBack } = vi.hoisted(() => {
@@ -381,6 +382,83 @@ async function openResumableSeries() {
     const listener = apiClient.subscribe.mock.calls[apiClient.subscribe.mock.calls.length - 1][1];
     return { page, episode, listener };
 }
+
+function actionGeometry(page: HTMLElement) {
+    const bar = getElement(page, '.mainDetailButtons');
+    const geometry = { width: 500 };
+    Object.defineProperty(bar, 'clientWidth', { get: () => geometry.width });
+    for (const button of bar.querySelectorAll<HTMLButtonElement>('button')) {
+        button.getBoundingClientRect = vi.fn(() => {
+            const naturalWidth = button.classList.contains('btnPlay') ? 400 : 230;
+            const width = button.classList.contains('hide') ? 0 : naturalWidth;
+            const height = width ? 70 : 0;
+            return { x: 0, y: 0, left: 0, top: 0, width, height, right: width, bottom: height, toJSON: () => ({}) };
+        });
+    }
+    return geometry;
+}
+
+it('restores a series target and aria-label without waiting for the item refresh', async () => {
+    const { page, episode } = await openResumableSeries();
+    const geometry = actionGeometry(page);
+    const play = getElement(page, '.btnPlay');
+    const shuffle = getElement(page, '.btnShuffle');
+    requestActionBarLayout(page);
+    await Promise.resolve();
+    expect(shuffle.classList.contains('detailButton-iconOnly')).toBe(true);
+    page.dispatchEvent(new CustomEvent('viewbeforehide'));
+    geometry.width = 0;
+    requestActionBarLayout(page);
+    await Promise.resolve();
+    let resolveItem!: (value: { data: typeof fixture.item }) => void;
+    getSdkItem.mockReturnValueOnce(new Promise(resolve => {
+        resolveItem = resolve;
+    }));
+    const resumed = { ...episode, UserData: { ...episode.UserData!, PlaybackPositionTicks: 18000000000 } };
+    apiClient.getNextUpEpisodes.mockResolvedValueOnce({ Items: [resumed] });
+    geometry.width = 1200;
+    page.dispatchEvent(new CustomEvent('viewshow', { detail: { isRestored: true } }));
+    expect(apiClient.getNextUpEpisodes).toHaveBeenCalledTimes(2);
+    await vi.waitFor(() => expect(play.getAttribute('aria-label')).toBe('Resume from 30:00 · S14:E8'));
+    expect(play.title).toBe('Resume from 30:00 · S14:E8');
+    expect(shuffle.classList.contains('detailButton-iconOnly')).toBe(false);
+    play.click();
+    expect(playbackManager.play).toHaveBeenLastCalledWith(expect.objectContaining({ items: [resumed], startPositionTicks: 18000000000 }));
+    resolveItem({ data: fixture.item });
+    await vi.waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    expect(apiClient.getNextUpEpisodes).toHaveBeenCalledTimes(2);
+    expect(play.getAttribute('aria-label')).toBe(play.title);
+});
+
+it('re-runs a movie layout skipped at zero width on restored viewshow', async () => {
+    fixture.item = { Id: 'movie', Type: 'Movie', UserData: { Key: 'movie', PlaybackPositionTicks: 7200000000 } };
+    const page = getElement(document, '#itemDetailPage');
+    expect(new ItemDetails(page, { id: 'movie' })).toBeDefined();
+    page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+    await vi.waitFor(() => expect(hideLoading).toHaveBeenCalled());
+    const geometry = actionGeometry(page);
+    const play = getElement(page, '.btnPlay');
+    const restart = getElement(page, '.btnReplay');
+    requestActionBarLayout(page);
+    await Promise.resolve();
+    expect(restart.classList.contains('detailButton-iconOnly')).toBe(true);
+    page.dispatchEvent(new CustomEvent('viewbeforehide'));
+    geometry.width = 0;
+    requestActionBarLayout(page);
+    await Promise.resolve();
+    let resolveItem!: (value: { data: typeof fixture.item }) => void;
+    getSdkItem.mockReturnValueOnce(new Promise(resolve => {
+        resolveItem = resolve;
+    }));
+    geometry.width = 1200;
+    page.dispatchEvent(new CustomEvent('viewshow', { detail: { isRestored: true } }));
+    await Promise.resolve();
+    expect(restart.classList.contains('detailButton-iconOnly')).toBe(false);
+    expect(play.getAttribute('aria-label')).toBe('Resume from 12:00');
+    resolveItem({ data: fixture.item });
+    await vi.waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    expect(apiClient.getNextUpEpisodes).not.toHaveBeenCalled();
+});
 
 describe('Details action eligibility and resolved series target', () => {
     it.each(['Series', 'Season'] as const)('keeps generic Play on unresolved %s and retains folder actions', async Type => {

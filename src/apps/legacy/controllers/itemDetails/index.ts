@@ -305,8 +305,12 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
             if ((e as CustomEvent<{ isRestored?: boolean }>).detail.isRestored) {
                 if (currentItem) {
                     libraryMenu.setTitle('');
-                    nextUpEpisode = undefined;
-                    reloadPlayButtons(view, currentItem);
+                    if (currentItem.Type === 'Series') {
+                        refreshNextUp();
+                    } else {
+                        reloadPlayButtons(view, currentItem);
+                        requestActionBarLayout(view);
+                    }
                     renderTrackSelections(page, self, currentItem, true);
                     renderBackdrop(page, currentItem);
                     refreshSelectedVersion();
@@ -371,7 +375,6 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
             if (sameItem) {
                 reloadPlayButtons(view, currentItem, nextUpEpisode);
                 reloadUserDataButtons(view, currentItem);
-                if (currentItem.Type === 'Series') refreshNextUp();
                 requestActionBarLayout(view);
                 return;
             }

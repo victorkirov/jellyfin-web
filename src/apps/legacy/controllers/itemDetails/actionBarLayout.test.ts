@@ -41,7 +41,6 @@ it.each([
         expect(button.getBoundingClientRect).toHaveBeenCalledTimes(1);
     }
 });
-
 it('restores labels when a later render fits and ignores hidden actions', () => {
     Object.defineProperty(bar, 'clientWidth', { configurable: true, value: 900 });
     fitActionBar(page);
@@ -52,10 +51,21 @@ it('restores labels when a later render fits and ignores hidden actions', () => 
     fitActionBar(page);
     expect(collapsed()).toEqual([]);
 });
-
 it('coalesces synchronous label and visibility changes into one measurement batch', async () => {
     requestActionBarLayout(page);
     requestActionBarLayout(page);
     await Promise.resolve();
+    expect(bar.querySelector('button')!.getBoundingClientRect).toHaveBeenCalledTimes(1);
+});
+
+it('allows a visible render to retry a layout skipped while hidden', async () => {
+    Object.defineProperty(bar, 'clientWidth', { configurable: true, value: 0 });
+    requestActionBarLayout(page);
+    await Promise.resolve();
+    expect(bar.querySelector('button')!.getBoundingClientRect).not.toHaveBeenCalled();
+    Object.defineProperty(bar, 'clientWidth', { configurable: true, value: 900 });
+    requestActionBarLayout(page);
+    await Promise.resolve();
+    expect(collapsed()).toHaveLength(6);
     expect(bar.querySelector('button')!.getBoundingClientRect).toHaveBeenCalledTimes(1);
 });
