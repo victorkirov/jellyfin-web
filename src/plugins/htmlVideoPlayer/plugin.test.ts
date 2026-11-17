@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import DOMPurify from 'dompurify';
 import HtmlVideoPlayer from './plugin';
+import itemHelper from '../../components/itemHelper';
 
 vi.mock('screenfull', () => ({ default: {} }));
 vi.mock('lib/playback/utils/subtitleStyles', () => ({ useCustomSubtitles: {} }));
@@ -71,6 +72,21 @@ describe('Custom subtitle cues', () => {
         vi.stubGlobal('fetch', request);
         expect(await player.fetchSubtitles({}, { ServerId: 'server' })).toEqual(data);
         expect(request).toHaveBeenCalledExactlyOnceWith('/subtitles.js');
+    });
+
+    it('uses network subtitles without a Windows Storage dependency', async () => {
+        const data = { TrackEvents: [{ StartPositionTicks: 12_500_000, EndPositionTicks: 27_500_000, Text: 'Network subtitle' }] };
+        const request = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(data) });
+        const readFile = vi.fn().mockResolvedValue({});
+        vi.stubGlobal('fetch', request);
+        vi.stubGlobal('Windows', { Storage: {
+            StorageFile: { getFileFromPathAsync: readFile },
+            FileIO: { readTextAsync: () => Promise.resolve('{"TrackEvents":[]}') }
+        } });
+        vi.spyOn(itemHelper, 'isLocalItem').mockReturnValue(true);
+        expect(await player.fetchSubtitles({ Path: '/subtitles.js' }, {})).toEqual(data);
+        expect(request).toHaveBeenCalledExactlyOnceWith('/subtitles.js');
+        expect(readFile).not.toHaveBeenCalled();
     });
 
     it('converts a fractional resume position from ticks to seconds in the media URL', async () => {

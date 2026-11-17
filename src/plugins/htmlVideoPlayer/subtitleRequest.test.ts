@@ -10,8 +10,10 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe('Subtitle response acquisition', () => {
     it('balances fetch activity before JSON decoding completes', async () => {
-        let finishJson: (value: typeof subtitleData) => void = () => undefined;
-        const json = vi.fn(() => new Promise(resolve => { finishJson = resolve; }));
+        let finishJson: (value: typeof subtitleData) => void;
+        const json = vi.fn(() => new Promise<typeof subtitleData>(resolve => {
+            finishJson = resolve;
+        }));
         const request = vi.fn().mockResolvedValue({ ok: true, json });
         vi.stubGlobal('fetch', request);
         const activity = { incrementFetchQueue: vi.fn(), decrementFetchQueue: vi.fn() };
@@ -20,15 +22,15 @@ describe('Subtitle response acquisition', () => {
         expect(request).toHaveBeenCalledExactlyOnceWith('/subtitles.js');
         expect(activity.incrementFetchQueue).toHaveBeenCalledOnce();
         expect(activity.decrementFetchQueue).toHaveBeenCalledOnce();
-        finishJson(subtitleData);
+        finishJson!(subtitleData);
         expect(await pending).toEqual(subtitleData);
     });
 
     it.each(['network', 'status', 'url', 'json'])('balances activity after %s failure', async (failure) => {
         const error = new Error(failure);
-        vi.stubGlobal('fetch', failure === 'network'
-            ? vi.fn().mockRejectedValue(error)
-            : vi.fn().mockResolvedValue({
+        vi.stubGlobal('fetch', failure === 'network' ?
+            vi.fn().mockRejectedValue(error) :
+            vi.fn().mockResolvedValue({
                 ok: failure !== 'status',
                 json: () => Promise.reject(error)
             }));

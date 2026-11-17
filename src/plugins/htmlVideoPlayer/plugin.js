@@ -1263,22 +1263,7 @@ export class HtmlVideoPlayer {
     /**
      * @private
      */
-    fetchSubtitlesUwp(track) {
-        return Windows.Storage.StorageFile.getFileFromPathAsync(track.Path).then(function (storageFile) {
-            return Windows.Storage.FileIO.readTextAsync(storageFile);
-        }).then(function (text) {
-            return JSON.parse(text);
-        });
-    }
-
-    /**
-     * @private
-     */
     async fetchSubtitles(track, item) {
-        if (window.Windows && itemHelper.isLocalItem(item)) {
-            return this.fetchSubtitlesUwp(track, item);
-        }
-
         return requestSubtitleData(this, () => getTextTrackUrl(track, item, '.js'));
     }
 
