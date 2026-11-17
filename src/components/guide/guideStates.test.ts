@@ -71,6 +71,79 @@ afterEach(() => {
 });
 
 describe('Guide request states', () => {
+    it('ignores an older guide-info result after a newer refresh', async () => {
+        let resolveFirst!: (value: object) => void;
+        apiClient.getLiveTvGuideInfo.mockReturnValueOnce(new Promise(resolve => {
+            resolveFirst = resolve;
+        }));
+        const { page, guide } = createGuide();
+        guide.refresh();
+        await vi.waitFor(() => expect(page.textContent).toContain('LiveTvNoChannels'));
+        const calls = apiClient.getLiveTvChannels.mock.calls.length;
+        resolveFirst({});
+        await vi.waitFor(() => expect(loading.hide).toHaveBeenCalled());
+        await Promise.resolve();
+        expect(apiClient.getLiveTvChannels).toHaveBeenCalledTimes(calls);
+    });
+
+    it.each(['pause', 'destroy'] as const)('invalidates nested channel requests on %s', async action => {
+        let resolveChannels!: (value: object) => void;
+        apiClient.getLiveTvChannels.mockReturnValueOnce(new Promise(resolve => {
+            resolveChannels = resolve;
+        }));
+        const { page, guide } = createGuide();
+        await vi.waitFor(() => expect(apiClient.getLiveTvChannels).toHaveBeenCalled());
+        guide[action]();
+        if (action === 'pause') guide.resume(false);
+        resolveChannels({ Items: [{ Id: 'old', Name: 'Stale', ImageTags: {} }], TotalRecordCount: 1 });
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(apiClient.getLiveTvPrograms).not.toHaveBeenCalled();
+        expect(page.textContent).not.toContain('Stale');
+        expect(loading.hide).toHaveBeenCalled();
+    });
+
+    it('preserves the newer program grid when nested requests finish in reverse order', async () => {
+        let resolveOld!: (value: object) => void;
+        apiClient.getLiveTvChannels.mockResolvedValue({ Items: [{ Id: 'channel', Name: 'News', ImageTags: {} }], TotalRecordCount: 1 });
+        apiClient.getLiveTvPrograms.mockReturnValueOnce(new Promise(resolve => {
+            resolveOld = resolve;
+        }));
+        const { page, guide } = createGuide();
+        await vi.waitFor(() => expect(apiClient.getLiveTvPrograms).toHaveBeenCalledTimes(1));
+        guide.refresh();
+        await vi.waitFor(() => expect(page.textContent).toContain('LiveTvNoPrograms'));
+        const channel = page.querySelector<HTMLElement>('.guide-channelHeaderCell')!;
+        channel.focus();
+        const active = document.activeElement;
+        const html = page.innerHTML;
+        focus.mockClear();
+        loading.hide.mockClear();
+        resolveOld({ Items: [{ Id: 'old' }] });
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(page.innerHTML).toBe(html);
+        expect(document.activeElement).toBe(active);
+        expect(focus).not.toHaveBeenCalled();
+        expect(loading.hide).not.toHaveBeenCalled();
+    });
+
+    it('releases loading on pause and removes its refresh timer on destroy', async () => {
+        vi.useFakeTimers();
+        apiClient.getLiveTvGuideInfo.mockReturnValueOnce(new Promise(() => undefined));
+        const { guide } = createGuide();
+        expect(vi.getTimerCount()).toBe(1);
+        guide.pause();
+        expect(loading.hide).toHaveBeenCalledTimes(1);
+        expect(vi.getTimerCount()).toBe(0);
+        guide.resume(false);
+        expect(vi.getTimerCount()).toBe(1);
+        guide.destroy();
+        expect(vi.getTimerCount()).toBe(0);
+        guide.resume(true);
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
     it('shows no channels after success and avoids an unscoped programs request', async () => {
         const { page } = createGuide();
         await vi.waitFor(() => expect(page.textContent).toContain('LiveTvNoChannels'));

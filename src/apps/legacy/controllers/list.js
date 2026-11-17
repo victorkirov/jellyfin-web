@@ -1,3 +1,4 @@
+import { bindLibraryPaging } from './libraryPaging';
 import globalize from 'lib/globalize';
 import listView from 'components/listview/listview';
 import * as userSettings from 'scripts/settings/userSettings';
@@ -5,7 +6,6 @@ import focusManager from 'components/focusManager';
 import cardBuilder from 'components/cardbuilder/cardBuilder';
 import loading from 'components/loading/loading';
 import AlphaNumericShortcuts from 'scripts/alphanumericshortcuts';
-import libraryBrowser from 'scripts/libraryBrowser';
 import { playbackManager } from 'components/playback/playbackmanager';
 import AlphaPicker from 'components/alphaPicker/alphaPicker';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
@@ -437,65 +437,41 @@ class ItemsView {
         }
 
         let isLoading = false;
+        let requestId = 0;
 
-        function onNextPageClick() {
-            if (!isLoading && query.Limit > 0) {
-                query.StartIndex += query.Limit;
-                self.itemsContainer.refreshItems().then(() => {
-                    window.scrollTo(0, 0);
-                    autoFocus();
-                });
-            }
-        }
-
-        function onPreviousPageClick() {
-            if (!isLoading && query.Limit > 0) {
-                query.StartIndex = Math.max(0, query.StartIndex - query.Limit);
-                self.itemsContainer.refreshItems().then(() => {
-                    window.scrollTo(0, 0);
-                    autoFocus();
-                });
-            }
-        }
-
-        function updatePaging(startIndex, totalRecordCount, limit) {
-            const pagingHtml = libraryBrowser.getQueryPagingHtml({
-                startIndex,
-                limit,
-                totalRecordCount,
-                showLimit: false,
-                updatePageSizeSetting: false,
-                addLayoutButton: false,
-                sortButton: false,
-                filterButton: false
+        function updatePaging(result) {
+            let focusRequestId;
+            bindLibraryPaging({
+                view, query, totalRecordCount: result.TotalRecordCount,
+                isLoading: () => isLoading, getRequestId: () => requestId,
+                refresh: () => {
+                    const refresh = self.itemsContainer.refreshItems();
+                    focusRequestId = requestId;
+                    return refresh;
+                },
+                focus: () => {
+                    if (focusRequestId === requestId && self.itemsContainer && !self.itemsContainer.paused) {
+                        window.scrollTo(0, 0);
+                        autoFocus();
+                    }
+                }
             });
-
-            for (const elem of view.querySelectorAll('.paging')) {
-                elem.innerHTML = pagingHtml;
-            }
-
-            for (const elem of view.querySelectorAll('.btnNextPage')) {
-                elem.addEventListener('click', onNextPageClick);
-            }
-
-            for (const elem of view.querySelectorAll('.btnPreviousPage')) {
-                elem.addEventListener('click', onPreviousPageClick);
-            }
         }
 
         function fetchData() {
+            const request = ++requestId;
             isLoading = true;
 
             return getItems(self, params, self.currentItem, null, query.StartIndex, query.Limit).then(function (result) {
+                if (request !== requestId || self.itemsContainer?.paused) return result;
                 if (self.totalItemCount == null) {
                     self.totalItemCount = result.Items ? result.Items.length : result.length;
                 }
 
                 updateAlphaPickerState(self);
-                updatePaging(result.StartIndex, result.TotalRecordCount, query.Limit);
                 return result;
             }).finally(() => {
-                isLoading = false;
+                if (request === requestId) isLoading = false;
             });
         }
 
@@ -772,8 +748,11 @@ class ItemsView {
         }
 
         function autoFocus() {
+            const request = requestId;
             import('components/autoFocuser').then(({ default: autoFocuser }) => {
-                autoFocuser.autoFocus(view);
+                if (request === requestId && self.itemsContainer && !self.itemsContainer.paused) {
+                    autoFocuser.autoFocus(view);
+                }
             });
         }
 
@@ -827,6 +806,7 @@ class ItemsView {
         this.alphaPickerElement = view.querySelector('.alphaPicker');
         self.itemsContainer.fetchData = fetchData;
         self.itemsContainer.getItemsHtml = getItemsHtml;
+        self.itemsContainer.afterRefresh = updatePaging;
         view.addEventListener('viewshow', function (e) {
             const isRestored = e.detail.isRestored;
 

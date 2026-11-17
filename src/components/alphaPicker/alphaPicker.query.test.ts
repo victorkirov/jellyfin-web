@@ -4,7 +4,7 @@ import TvShowsController from '../../apps/legacy/controllers/shows/tvshows';
 import MoviesController from '../../apps/legacy/controllers/movies/movies';
 
 const getItems = vi.hoisted(() => vi.fn<(userId: string, query: unknown) => Promise<unknown>>().mockResolvedValue({ Items: [] }));
-vi.mock('components/loading/loading', () => ({ default: { show: vi.fn() } }));
+vi.mock('components/loading/loading', () => ({ default: { show: vi.fn(), hide: vi.fn() } }));
 vi.mock('scripts/settings/userSettings', () => ({
     libraryPageSize: () => 100,
     get: vi.fn(),
@@ -39,12 +39,13 @@ afterEach(() => {
 });
 
 it('sends letter, number and clear selections through the movie library query', () => {
+    getItems.mockResolvedValue({ Items: [] });
     vi.stubGlobal('ApiClient', { getItems, getCurrentUserId: () => 'user' });
     const tab = document.createElement('main');
     tab.innerHTML = '<div class="alphaPicker"></div><div class="itemsContainer"></div><button class="btnFilter"></button><button class="btnSort"></button><button class="btnSelectView"></button><button class="btnPlayAll"></button>';
     document.body.appendChild(tab);
     const items = Object.assign(tab.querySelector('.itemsContainer')!, {
-        fetchData: () => Promise.resolve({}), refreshItems: vi.fn()
+        fetchData: () => Promise.resolve({}), refreshItems: vi.fn(), pause: vi.fn()
     });
     items.refreshItems.mockImplementation(() => items.fetchData());
     const controller = new MoviesController(tab, { topParentId: 'library' }, tab, { mode: 'movies' });

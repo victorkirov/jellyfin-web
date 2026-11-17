@@ -151,19 +151,31 @@ function Guide(options) {
     let autoRefreshInterval;
     let programCells;
     let lastFocusDirection;
+    let requestGeneration = 0;
+    let paused = false;
+    let destroyed = false;
+    let isLoading = false;
+    let needsRefresh = false;
 
     self.refresh = function (isBackground) {
+        if (paused || destroyed) return;
         currentDate = null;
         reloadPage(options.element, isBackground === true);
         restartAutoRefresh();
     };
 
     self.pause = function () {
+        paused = true;
+        requestGeneration++;
+        needsRefresh = needsRefresh || isLoading;
+        hideLoading();
         stopAutoRefresh();
     };
 
     self.resume = function (refreshData) {
-        if (refreshData) {
+        if (destroyed) return;
+        paused = false;
+        if (refreshData || needsRefresh) {
             self.refresh();
         } else {
             restartAutoRefresh();
@@ -171,7 +183,8 @@ function Guide(options) {
     };
 
     self.destroy = function () {
-        stopAutoRefresh();
+        destroyed = true;
+        self.pause();
 
         if (self._wsUnsubscribers) {
             self._wsUnsubscribers.forEach(unsub => {
@@ -187,6 +200,7 @@ function Guide(options) {
 
     function restartAutoRefresh() {
         stopAutoRefresh();
+        if (paused || destroyed) return;
 
         const intervalMs = 60000 * 15; // (minutes)
 
@@ -215,14 +229,19 @@ function Guide(options) {
     }
 
     function showLoading() {
+        isLoading = true;
         loading.show();
     }
 
     function hideLoading() {
-        loading.hide();
+        if (isLoading) loading.hide();
+        isLoading = false;
     }
 
     function reloadGuide(context, newStartDate, scrollToTimeMs, focusToTimeMs, startTimeOfDayMs, focusProgramOnRender, isBackground) {
+        if (paused || destroyed) return Promise.resolve();
+        const generation = ++requestGeneration;
+        needsRefresh = false;
         const apiClient = ServerConnections.getApiClient(options.serverId);
 
         const channelQuery = {
@@ -306,6 +325,7 @@ function Guide(options) {
         };
 
         return apiClient.getLiveTvChannels(channelQuery).then(function (channelsResult) {
+            if (generation !== requestGeneration) return;
             const hasChannels = channelsResult.Items.length > 0;
             context.querySelector('.timeslotHeaders').classList.toggle('hide', !hasChannels);
             context.querySelector('.guideVerticalScroller').classList.toggle('hide', !hasChannels);
@@ -365,6 +385,7 @@ function Guide(options) {
             }
 
             return apiClient.getLiveTvPrograms(programQuery).then(function (programsResult) {
+                if (generation !== requestGeneration) return;
                 const guideOptions = { focusProgramOnRender, scrollToTimeMs, focusToTimeMs, startTimeOfDayMs };
 
                 renderGuide(context, date, channelsResult.Items, programsResult.Items, renderOptions, guideOptions, apiClient);
@@ -375,7 +396,7 @@ function Guide(options) {
                 hideLoading();
             });
         }).catch(function () {
-            showGuideError(context, isBackground);
+            if (generation === requestGeneration) showGuideError(context, isBackground);
         });
     }
 
@@ -890,6 +911,9 @@ function Guide(options) {
     }
 
     function reloadPage(page, isBackground) {
+        if (paused || destroyed) return Promise.resolve();
+        const generation = ++requestGeneration;
+        needsRefresh = false;
         const preserveRenderedGuide = !!isBackground && !!page.querySelector('.guide-channelHeaderCell')
             && !page.querySelector('.guideVerticalScroller').classList.contains('hide');
         showLoading();
@@ -898,9 +922,10 @@ function Guide(options) {
         const apiClient = ServerConnections.getApiClient(options.serverId);
 
         return apiClient.getLiveTvGuideInfo().then(function (guideInfo) {
+            if (generation !== requestGeneration) return;
             return setDateRange(page, guideInfo, preserveRenderedGuide);
         }).catch(function () {
-            showGuideError(page, preserveRenderedGuide);
+            if (generation === requestGeneration) showGuideError(page, preserveRenderedGuide);
         });
     }
 

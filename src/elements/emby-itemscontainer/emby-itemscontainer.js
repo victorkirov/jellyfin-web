@@ -277,6 +277,9 @@ ItemsContainerPrototype.attachedCallback = function () {
 
 ItemsContainerPrototype.detachedCallback = function () {
     clearRefreshInterval(this);
+    clearTimeout(this.refreshTimeout);
+    this.refreshTimeout = null;
+    this.refreshGeneration = (this.refreshGeneration || 0) + 1;
 
     this.enableDragReordering(false);
     this.removeEventListener('click', onClick);
@@ -302,6 +305,10 @@ ItemsContainerPrototype.detachedCallback = function () {
 ItemsContainerPrototype.pause = function () {
     clearRefreshInterval(this, true);
     this.paused = true;
+    if (this.refreshTimeout) this.needsRefresh = true;
+    this.refreshGeneration = (this.refreshGeneration || 0) + 1;
+    clearTimeout(this.refreshTimeout);
+    this.refreshTimeout = null;
 };
 
 ItemsContainerPrototype.resume = function (options) {
@@ -339,10 +346,18 @@ ItemsContainerPrototype.refreshItems = function () {
         return Promise.resolve();
     }
 
-    this.needsRefresh = false;
+    clearTimeout(this.refreshTimeout);
+    this.refreshTimeout = null;
+    const generation = (this.refreshGeneration || 0) + 1;
+    this.refreshGeneration = generation;
+    this.needsRefresh = true;
     this.pendingCardUpdates = null;
 
-    return this.fetchData().then(onDataFetched.bind(this));
+    return this.fetchData().then(result => {
+        if (generation !== this.refreshGeneration) return;
+        this.needsRefresh = false;
+        onDataFetched.call(this, result);
+    });
 };
 
 ItemsContainerPrototype.notifyRefreshNeeded = function (isInForeground) {
@@ -357,9 +372,12 @@ ItemsContainerPrototype.notifyRefreshNeeded = function (isInForeground) {
     }
 
     if (isInForeground === true) {
-        this.refreshItems();
+        this.refreshItems().catch(console.error);
     } else {
-        this.refreshTimeout = setTimeout(this.refreshItems.bind(this), 10000);
+        this.refreshTimeout = setTimeout(() => {
+            this.refreshTimeout = null;
+            this.refreshItems().catch(console.error);
+        }, 10000);
     }
 };
 

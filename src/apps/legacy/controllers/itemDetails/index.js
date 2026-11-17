@@ -1860,6 +1860,7 @@ export default function (view, params) {
             currentItem = item;
             reloadFromItem(instance, page, pageParams, item, user);
         }).catch((error) => {
+            loading.hide();
             console.error('failed to get item or current user: ', error);
         });
     }

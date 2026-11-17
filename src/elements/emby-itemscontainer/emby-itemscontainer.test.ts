@@ -60,6 +60,78 @@ function createContainer() {
 }
 
 describe('item container refreshes', () => {
+    it('keeps only the latest response and its focus restoration', async () => {
+        const { container, prototype } = createContainer();
+        let resolveFirst!: (result: object) => void;
+        container.fetchData.mockReturnValueOnce(new Promise(resolve => {
+            resolveFirst = resolve;
+        }));
+        const first = prototype.refreshItems.call(container);
+        await prototype.refreshItems.call(container);
+        const button = container.querySelector('button')!;
+        button.focus();
+        resolveFirst({ Items: [{ Id: 'stale' }] });
+        await first;
+        expect(container.getItemsHtml).toHaveBeenCalledTimes(1);
+        expect(container.afterRefresh).toHaveBeenCalledTimes(1);
+        expect(document.activeElement).toBe(button);
+    });
+
+    it('retries a failed request on resume', async () => {
+        const { container, prototype } = createContainer();
+        container.fetchData.mockRejectedValueOnce(new Error('offline'));
+        await expect(prototype.refreshItems.call(container)).rejects.toThrow('offline');
+        await prototype.resume.call(container);
+        expect(container.fetchData).toHaveBeenCalledTimes(2);
+        expect(container.textContent).toBe('One');
+    });
+
+    it('invalidates a request even when resumed before it completes', async () => {
+        const { container, prototype } = createContainer();
+        let resolveFirst!: (result: object) => void;
+        container.fetchData.mockReturnValueOnce(new Promise(resolve => {
+            resolveFirst = resolve;
+        }));
+        const first = prototype.refreshItems.call(container);
+        prototype.pause.call(container);
+        await prototype.resume.call(container);
+        resolveFirst({ Items: [{ Id: 'stale' }] });
+        await first;
+        expect(container.fetchData).toHaveBeenCalledTimes(2);
+        expect(container.getItemsHtml).toHaveBeenCalledTimes(1);
+    });
+
+    it('clears delayed refreshes and invalidates pending work on detach', async () => {
+        vi.useFakeTimers();
+        try {
+            const { container, prototype } = createContainer();
+            prototype.notifyRefreshNeeded.call(container);
+            expect(vi.getTimerCount()).toBe(1);
+            prototype.detachedCallback.call(container);
+            expect(vi.getTimerCount()).toBe(0);
+            await vi.advanceTimersByTimeAsync(10000);
+            expect(container.innerHTML).toBe('');
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('coalesces a delayed refresh into resume after pause', async () => {
+        vi.useFakeTimers();
+        try {
+            const { container, prototype } = createContainer();
+            prototype.notifyRefreshNeeded.call(container);
+            prototype.pause.call(container);
+            expect(vi.getTimerCount()).toBe(0);
+            await prototype.resume.call(container);
+            expect(container.fetchData).toHaveBeenCalledTimes(1);
+            await vi.advanceTimersByTimeAsync(10000);
+            expect(container.fetchData).toHaveBeenCalledTimes(1);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
     it('preserves existing nodes and focus when generated markup is unchanged', async () => {
         const { container, prototype } = createContainer();
         await prototype.refreshItems.call(container);

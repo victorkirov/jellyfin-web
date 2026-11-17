@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import ItemDetails from './index';
 import { getItemQuery } from 'hooks/useItem';
 import { queryClient } from 'utils/query/queryClient';
@@ -305,5 +305,27 @@ describe('Details item query reuse and freshness', () => {
         expect(getSdkItem).toHaveBeenCalledTimes(2);
         expect(page.querySelector('.btnUserRating').setItem).toHaveBeenLastCalledWith(fixture.item);
         expect(page.querySelector('.btnPlaystate').setItem).toHaveBeenLastCalledWith(fixture.item);
+    });
+});
+
+describe('Details request failures', () => {
+    it.each([
+        ['item', () => getSdkItem.mockRejectedValueOnce(new Error('offline'))],
+        ['current user', () => apiClient.getCurrentUser.mockRejectedValueOnce(new Error('offline'))]
+    ])('releases loading after the %s request rejects and permits retry', async (_name, failOnce) => {
+        vi.spyOn(console, 'error').mockReturnValue(undefined);
+        // The shared client retries failed queries with backoff; disable that here to test the failure path directly.
+        const defaults = queryClient.getDefaultOptions();
+        queryClient.setDefaultOptions({ ...defaults, queries: { ...defaults.queries, retry: false } });
+        onTestFinished(() => queryClient.setDefaultOptions(defaults));
+        failOnce();
+        const page = document.querySelector('#itemDetailPage');
+        fixture.item = { Id: 'failing-movie', Type: 'Movie', MediaType: 'Video', ServerId: 'server', UserData: {} };
+        new ItemDetails(page, { id: 'failing-movie', serverId: 'server' });
+        page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+        await vi.waitFor(() => expect(hideLoading).toHaveBeenCalled());
+        expect(page.querySelector('.btnPlay').classList.contains('hide')).toBe(true);
+        page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+        await vi.waitFor(() => expect(page.querySelector('.btnPlay').classList.contains('hide')).toBe(false));
     });
 });

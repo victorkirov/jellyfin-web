@@ -1,3 +1,4 @@
+import { bindLibraryPaging, getLibraryLayout, getLibraryLayoutOptions, libraryLayouts, supportedLibraryLayout } from '../libraryPaging';
 import loading from 'components/loading/loading';
 import libraryBrowser from 'scripts/libraryBrowser';
 import imageLoader from 'components/images/imageLoader';
@@ -28,7 +29,7 @@ export default function (view, params, tabContent) {
                     EnableImageTypes: 'Primary,Backdrop,Banner,Thumb',
                     StartIndex: 0
                 },
-                view: userSettings.getSavedView(key) || 'Poster'
+                view: getLibraryLayout(key)
             };
 
             if (userSettings.libraryPageSize() > 0) {
@@ -71,129 +72,45 @@ export default function (view, params, tabContent) {
         const query = getQuery();
         setFilterStatus(page, query);
 
-        ApiClient.getItems(ApiClient.getCurrentUserId(), query).then((result) => {
-            function onNextPageClick() {
-                if (isLoading) {
-                    return;
-                }
-
-                if (userSettings.libraryPageSize() > 0) {
-                    query.StartIndex += query.Limit;
-                }
-                reloadItems(tabContent);
-            }
-
-            function onPreviousPageClick() {
-                if (isLoading) {
-                    return;
-                }
-
-                if (userSettings.libraryPageSize() > 0) {
-                    query.StartIndex = Math.max(0, query.StartIndex - query.Limit);
-                }
-                reloadItems(tabContent);
-            }
-
+        const request = ++requestId;
+        return ApiClient.getItems(ApiClient.getCurrentUserId(), { ...query }).then((result) => {
+            if (request !== requestId || !active) return;
             window.scrollTo(0, 0);
             this.alphaPicker?.updateControls(query);
             let html;
-            const pagingHtml = libraryBrowser.getQueryPagingHtml({
-                startIndex: query.StartIndex,
-                limit: query.Limit,
-                totalRecordCount: result.TotalRecordCount,
-                showLimit: false,
-                updatePageSizeSetting: false,
-                addLayoutButton: false,
-                sortButton: false,
-                filterButton: false
+            bindLibraryPaging({
+                view: tabContent, query, totalRecordCount: result.TotalRecordCount,
+                isLoading: () => isLoading, getRequestId: () => requestId, refresh: () => reloadItems(tabContent)
             });
             const viewStyle = this.getCurrentViewStyle();
-            if (viewStyle == 'Thumb') {
-                html = cardBuilder.getCardsHtml({
-                    items: result.Items,
-                    shape: 'backdrop',
-                    preferThumb: true,
-                    context: 'tvshows',
-                    overlayMoreButton: true,
-                    showTitle: true,
-                    centerText: true
-                });
-            } else if (viewStyle == 'ThumbCard') {
-                html = cardBuilder.getCardsHtml({
-                    items: result.Items,
-                    shape: 'backdrop',
-                    preferThumb: true,
-                    context: 'tvshows',
-                    cardLayout: true,
-                    showTitle: true,
-                    showYear: true,
-                    centerText: true
-                });
-            } else if (viewStyle == 'Banner') {
-                html = cardBuilder.getCardsHtml({
-                    items: result.Items,
-                    shape: 'banner',
-                    preferBanner: true,
-                    context: 'tvshows'
-                });
-            } else if (viewStyle == 'List') {
-                html = listView.getListViewHtml({
-                    items: result.Items,
-                    context: 'tvshows',
-                    sortBy: query.SortBy
-                });
-            } else if (viewStyle == 'PosterCard') {
-                html = cardBuilder.getCardsHtml({
-                    items: result.Items,
-                    shape: 'portrait',
-                    context: 'tvshows',
-                    showTitle: true,
-                    showYear: true,
-                    centerText: true,
-                    cardLayout: true
-                });
+            if (viewStyle === 'List') {
+                html = listView.getListViewHtml({ items: result.Items, context: 'tvshows', sortBy: query.SortBy });
             } else {
-                html = cardBuilder.getCardsHtml({
-                    items: result.Items,
-                    shape: 'portrait',
-                    context: 'tvshows',
-                    centerText: true,
-                    lazy: true,
-                    overlayMoreButton: true,
-                    showTitle: true,
-                    showYear: true
-                });
-            }
-
-            let elems = tabContent.querySelectorAll('.paging');
-
-            for (const elem of elems) {
-                elem.innerHTML = pagingHtml;
-            }
-
-            elems = tabContent.querySelectorAll('.btnNextPage');
-            for (const elem of elems) {
-                elem.addEventListener('click', onNextPageClick);
-            }
-
-            elems = tabContent.querySelectorAll('.btnPreviousPage');
-            for (const elem of elems) {
-                elem.addEventListener('click', onPreviousPageClick);
+                const cardOptions = { ...getLibraryLayoutOptions(viewStyle), items: result.Items, context: 'tvshows' };
+                if (viewStyle === 'Thumb') delete cardOptions.showYear;
+                if (viewStyle === 'Poster') cardOptions.lazy = true;
+                if (viewStyle === 'Poster' || viewStyle === 'Thumb') cardOptions.overlayMoreButton = true;
+                html = cardBuilder.getCardsHtml(cardOptions);
             }
 
             const itemsContainer = tabContent.querySelector('.itemsContainer');
             itemsContainer.innerHTML = html;
             imageLoader.lazyChildren(itemsContainer);
             userSettings.saveQuerySettings(getSavedQueryKey(), query);
-            loading.hide();
-            isLoading = false;
-
             import('components/autoFocuser').then(({ default: autoFocuser }) => {
-                autoFocuser.autoFocus(page);
+                if (request === requestId && active) autoFocuser.autoFocus(page);
             });
+        }).finally(() => {
+            if (request === requestId) {
+                loading.hide();
+                isLoading = false;
+            }
         });
     };
 
+    let requestId = 0;
+    let active = true;
+    let refreshOnShow = false;
     const data = {};
     let isLoading = false;
 
@@ -206,14 +123,14 @@ export default function (view, params, tabContent) {
             });
             Events.on(filterDialog, 'filterchange', function () {
                 getQuery().StartIndex = 0;
-                reloadItems(tabContent);
+                reloadItems(tabContent).catch(console.error);
             });
             filterDialog.show();
         });
     };
 
     this.getCurrentViewStyle = function () {
-        return getPageData().view;
+        return supportedLibraryLayout(getPageData().view);
     };
 
     const initPage = (tabElement) => {
@@ -229,7 +146,7 @@ export default function (view, params, tabContent) {
                 delete query.NameLessThan;
             }
             query.StartIndex = 0;
-            reloadItems(tabElement);
+            reloadItems(tabElement).catch(console.error);
         });
         this.alphaPicker = new AlphaPicker({
             element: alphaPickerElement,
@@ -268,7 +185,7 @@ export default function (view, params, tabContent) {
                 }],
                 callback: function () {
                     getQuery().StartIndex = 0;
-                    reloadItems(tabElement);
+                    reloadItems(tabElement).catch(console.error);
                 },
                 query: getQuery(),
                 button: e.target
@@ -276,7 +193,7 @@ export default function (view, params, tabContent) {
         });
         const btnSelectView = tabElement.querySelector('.btnSelectView');
         btnSelectView.addEventListener('click', (e) => {
-            libraryBrowser.showLayoutMenu(e.target, this.getCurrentViewStyle(), 'Banner,List,Poster,PosterCard,Thumb,ThumbCard'.split(','));
+            libraryBrowser.showLayoutMenu(e.target, this.getCurrentViewStyle(), libraryLayouts);
         });
         btnSelectView.addEventListener('layoutchange', function (e) {
             const viewStyle = e.detail.viewStyle;
@@ -284,7 +201,7 @@ export default function (view, params, tabContent) {
             userSettings.saveViewSetting(getSavedQueryKey(), viewStyle);
             getQuery().StartIndex = 0;
             onViewStyleChange();
-            reloadItems(tabElement);
+            reloadItems(tabElement).catch(console.error);
         });
     };
 
@@ -292,8 +209,23 @@ export default function (view, params, tabContent) {
     onViewStyleChange();
 
     this.renderTab = () => {
-        reloadItems(tabContent);
-        this.alphaPicker?.updateControls(getQuery());
+        return reloadItems(tabContent);
     };
+    const pause = () => {
+        refreshOnShow = refreshOnShow || isLoading;
+        active = false;
+        requestId++;
+        isLoading = false;
+        loading.hide();
+    };
+    view.addEventListener('viewbeforehide', pause);
+    view.addEventListener('viewshow', () => {
+        active = true;
+        if (refreshOnShow) {
+            refreshOnShow = false;
+            reloadItems(tabContent).catch(console.error);
+        }
+    });
+    this.destroy = pause;
 }
 
