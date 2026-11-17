@@ -6,7 +6,6 @@
 import browser from './browser';
 import inputManager from './inputManager';
 import layoutManager from '../components/layoutManager';
-import appSettings from './settings/appSettings';
 
 /**
  * Key name mapping.
@@ -26,21 +25,6 @@ const KeyNames = {
     139: 'NavigationDown',
     140: 'NavigationLeft',
     141: 'NavigationRight',
-    195: 'GamepadA',
-    // Currently Xbox UWP WebView 2 sends code 27 (Escape instead) despite being undocumented
-    // Desktop UWP unchanged
-    196: 'GamepadB',
-    203: 'GamepadDPadUp',
-    204: 'GamepadDPadDown',
-    205: 'GamepadDPadLeft',
-    206: 'GamepadDPadRight',
-    // Currently Xbox UWP WebView 2 sends Arrow keycodes despite being undocumented
-    // Desktop UWP unchanged
-    // Left Thumbstick
-    211: 'GamepadLeftThumbUp',
-    212: 'GamepadLeftThumbDown',
-    214: 'GamepadLeftThumbLeft',
-    213: 'GamepadLeftThumbRight',
     // End of UWP WebView Section
 
     // MediaRewind (Tizen/WebOS)
@@ -64,20 +48,10 @@ const KeyNames = {
 };
 
 const KeyAliases = {
-    // GamepadA needs special case handling
-    GamepadB: 'Escape',
     NavigationUp: 'ArrowUp',
     NavigationDown: 'ArrowDown',
     NavigationLeft: 'ArrowLeft',
-    NavigationRight: 'ArrowRight',
-    GamepadDPadUp: 'ArrowUp',
-    GamepadDPadDown: 'ArrowDown',
-    GamepadDPadLeft: 'ArrowLeft',
-    GamepadDPadRight: 'ArrowRight',
-    GamepadLeftThumbUp: 'ArrowUp',
-    GamepadLeftThumbDown: 'ArrowDown',
-    GamepadLeftThumbLeft: 'ArrowLeft',
-    GamepadLeftThumbRight: 'ArrowRight'
+    NavigationRight: 'ArrowRight'
 };
 
 /**
@@ -193,9 +167,6 @@ export function enable() {
                 inputManager.handleCommand('down');
                 break;
 
-            case 'GamepadA':
-                inputManager.handleCommand('select');
-                break;
             case 'Back':
                 inputManager.handleCommand('back');
                 break;
@@ -260,27 +231,8 @@ export function enable() {
     });
 }
 
-export function canEnableGamepad() {
-    // Not needed for UWP
-    return !browser.edgeUwp;
-}
-
-// Gamepad initialisation. No script is required if no gamepads are present at init time, saving a bit of resources.
-// Whenever the gamepad is connected, we hand all the control of the gamepad to gamepadtokey.js by removing the event handler
-function attachGamepadScript() {
-    console.log('Gamepad connected! Attaching gamepadtokey.js script');
-    window.removeEventListener('gamepadconnected', attachGamepadScript);
-    import('./gamepadtokey');
-}
-
-// No need to check for gamepads manually at load time, the eventhandler will be fired for that
-if (navigator.getGamepads && appSettings.enableGamepad() && canEnableGamepad()) {
-    window.addEventListener('gamepadconnected', attachGamepadScript);
-}
-
 export default {
     enable: enable,
     getKeyName: getKeyName,
-    isNavigationKey,
-    canEnableGamepad
+    isNavigationKey
 };

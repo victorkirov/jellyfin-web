@@ -20,19 +20,6 @@ class AppSettings {
     }
 
     /**
-     * Get or set 'Enable Gamepad' state.
-     * @param {boolean|undefined} val - Flag to enable 'Enable Gamepad' or undefined.
-     * @return {boolean} 'Enable Gamepad' state.
-     */
-    enableGamepad(val) {
-        if (val !== undefined) {
-            return this.set('enableGamepad', val.toString());
-        }
-
-        return toBoolean(this.get('enableGamepad'), false);
-    }
-
-    /**
      * Get or set 'Enable smooth scroll' state.
      * @param {boolean|undefined} val - Flag to enable 'Enable smooth scroll' or undefined.
      * @return {boolean} 'Enable smooth scroll' state.

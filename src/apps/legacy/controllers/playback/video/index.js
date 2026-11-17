@@ -1318,18 +1318,12 @@ export default function (view) {
                 }
                 break;
             case 'NavigationLeft':
-            case 'GamepadDPadLeft':
-            case 'GamepadLeftThumbstickLeft':
-                // Ignores gamepad events that are always triggered, even when not focused.
                 if (document.hasFocus()) {
                     playbackManager.rewind(currentPlayer);
                     showOsd(btnRewind);
                 }
                 break;
             case 'NavigationRight':
-            case 'GamepadDPadRight':
-            case 'GamepadLeftThumbstickRight':
-                // Ignores gamepad events that are always triggered, even when not focused.
                 if (document.hasFocus()) {
                     playbackManager.fastForward(currentPlayer);
                     showOsd(btnFastForward);
