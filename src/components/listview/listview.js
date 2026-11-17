@@ -195,7 +195,7 @@ export function getListViewHtml(options) {
     for (let i = 0, length = items.length; i < length; i++) {
         const item = items[i];
 
-        const safeOverviewHtml = item.Overview ?
+        const safeOverviewHtml = enableOverview && item.Overview ?
             DOMPurify.sanitize(renderMarkdown(item.Overview)) :
             '';
 
