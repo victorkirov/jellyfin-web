@@ -7,8 +7,8 @@ const mocks = vi.hoisted(() => ({
     getCurrentUser: vi.fn(),
     show: vi.fn()
 }));
-vi.mock('apps/legacy/features/playback/utils/image', () => ({ getImageUrl: () => '' }));
-vi.mock('apps/legacy/features/playback/utils/itemText', () => ({ getItemTextLines: (item: { Name: string }) => [item.Name] }));
+vi.mock('lib/playback/utils/image', () => ({ getImageUrl: () => '' }));
+vi.mock('lib/playback/utils/itemText', () => ({ getItemTextLines: (item: { Name: string }) => [item.Name] }));
 vi.mock('../../scripts/datetime', () => ({ default: {} }));
 vi.mock('../backdrop/backdrop', () => ({ clearBackdrop: vi.fn(), setBackdrops: vi.fn() }));
 vi.mock('../listview/listview', () => ({ default: {} }));
@@ -23,16 +23,16 @@ vi.mock('lib/jellyfin-apiclient', () => ({
         getCurrentUser: mocks.getCurrentUser
     }) }
 }));
-vi.mock('../layoutManager', () => ({ default: {} }));
+vi.mock('../../lib/layoutManager', () => ({ default: {} }));
 vi.mock('../../scripts/settings/userSettings', () => ({}));
 vi.mock('../itemContextMenu', () => ({ default: { show: mocks.show } }));
 vi.mock('../toast/toast', () => ({ default: {} }));
 vi.mock('../router/appRouter', () => ({ appRouter: {} }));
 vi.mock('../cardbuilder/utils/builder', () => ({ getDefaultBackgroundClass: () => '' }));
-vi.mock('../../elements/emby-button/emby-button', () => ({}));
+vi.mock('../buttons/emby-button', () => ({}));
 vi.mock('../../elements/emby-button/paper-icon-button-light', () => ({}));
-vi.mock('../../elements/emby-itemscontainer/emby-itemscontainer', () => ({}));
-vi.mock('../../elements/emby-ratingbutton/emby-ratingbutton', () => ({}));
+vi.mock('../itemscontainer/emby-itemscontainer', () => ({}));
+vi.mock('../buttons/emby-ratingbutton', () => ({}));
 vi.mock('../../elements/emby-slider/emby-slider', () => ({}));
 
 function setup() {

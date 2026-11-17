@@ -18,7 +18,7 @@ vi.mock('scripts/settings/userSettings', () => ({
     get: vi.fn(), getSavedView: key => userSettings.get(key + '-_view'), set: vi.fn(), libraryPageSize: () => 2,
     loadQuerySettings: (key, query) => query, saveQuerySettings: vi.fn(), saveViewSetting: vi.fn()
 }));
-vi.mock('components/focusManager', () => ({ default: {} }));
+vi.mock('lib/focusManager', () => ({ default: {} }));
 vi.mock('scripts/alphanumericshortcuts', () => ({ default: class {} }));
 vi.mock('scripts/libraryMenu', () => ({ default: {} }));
 vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: { getApiClient: vi.fn() } }));
@@ -39,7 +39,7 @@ vi.mock('lib/globalize', () => ({ default: { translate: key => key } }));
 vi.mock('utils/events', () => ({ default: {} }));
 vi.mock('components/playback/playbackmanager', () => ({ playbackManager: {} }));
 vi.mock('components/filterdialog/filterIndicator', () => ({ setFilterStatus: vi.fn(), getFilterStatus: vi.fn() }));
-vi.mock('elements/emby-itemscontainer/emby-itemscontainer', () => ({}));
+vi.mock('components/itemscontainer/emby-itemscontainer', () => ({}));
 vi.mock('components/autoFocuser', () => ({ default: { autoFocus: vi.fn() } }));
 
 function deferred() {

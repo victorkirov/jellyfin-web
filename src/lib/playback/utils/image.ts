@@ -1,7 +1,7 @@
 import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
 import { ImageType } from '@jellyfin/sdk/lib/generated-client/models/image-type';
 
-import { ServerConnections } from 'lib/jellyfin-apiclient';
+import { ServerConnections } from 'lib/jellyfin-apiclient/index';
 import type { ItemDto } from 'types/base/models/item-dto';
 
 interface ImageOptions {

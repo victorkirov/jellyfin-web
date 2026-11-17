@@ -5,10 +5,10 @@ import { appHost } from 'components/apphost';
 import Page from 'components/Page';
 import toast from 'components/toast/toast';
 import { AppFeature } from 'constants/appFeature';
-import LinkButton from 'elements/emby-button/LinkButton';
+import LinkButton from 'components/buttons/LinkButton';
 import globalize from 'lib/globalize';
 import { ConnectionState, ServerConnections } from 'lib/jellyfin-apiclient';
-import { selectServer } from 'utils/dashboard';
+import { selectServer } from 'components/dashboard';
 
 interface ConnectionErrorPageProps {
     state: ConnectionState | 'SetupRequired'

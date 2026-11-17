@@ -3,15 +3,15 @@ import globalize from '../../lib/globalize';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import { appHost } from '../apphost';
 import appSettings from '../../scripts/settings/appSettings';
-import focusManager from '../focusManager';
-import layoutManager from '../layoutManager';
+import focusManager from '../../lib/focusManager';
+import layoutManager from '../../lib/layoutManager';
 import loading from '../loading/loading';
 import subtitleAppearanceHelper from './subtitleappearancehelper';
 import dom from '../../utils/dom';
 import Events from '../../utils/events.ts';
 
 import '../listview/listview.scss';
-import '../../elements/emby-select/emby-select';
+import '../select/emby-select';
 import '../../elements/emby-slider/emby-slider';
 import '../../elements/emby-input/emby-input';
 import '../../elements/emby-checkbox/emby-checkbox';

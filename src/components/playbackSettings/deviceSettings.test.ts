@@ -14,8 +14,8 @@ const { apiClient } = vi.hoisted(() => ({
 
 vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: { getApiClient: () => apiClient } }));
 vi.mock('components/apphost', () => ({ appHost: { supports: () => true } }));
-vi.mock('components/layoutManager', () => ({ default: { tv: true, setLayout: vi.fn() } }));
-vi.mock('components/focusManager', () => ({ default: {} }));
+vi.mock('lib/layoutManager', () => ({ default: { tv: true, setLayout: vi.fn() } }));
+vi.mock('lib/focusManager', () => ({ default: {} }));
 vi.mock('components/pluginManager', () => ({ pluginManager: {} }));
 vi.mock('components/qualityOptions', () => ({ default: {} }));
 vi.mock('components/loading/loading', () => ({ default: { show: vi.fn(), hide: vi.fn() } }));
@@ -25,9 +25,9 @@ vi.mock('components/subtitlesettings/subtitleappearancehelper', () => ({ default
 vi.mock('components/displaySettings/displaySettings.template.html', () => ({ default: '' }));
 vi.mock('components/playbackSettings/playbackSettings.template.html', () => ({ default: '' }));
 vi.mock('components/subtitlesettings/subtitlesettings.template.html', () => ({ default: '' }));
-vi.mock('elements/emby-select/emby-select', () => ({}));
+vi.mock('components/select/emby-select', () => ({}));
 vi.mock('elements/emby-checkbox/emby-checkbox', () => ({}));
-vi.mock('elements/emby-button/emby-button', () => ({}));
+vi.mock('components/buttons/emby-button', () => ({}));
 vi.mock('elements/emby-textarea/emby-textarea', () => ({}));
 vi.mock('elements/emby-input/emby-input', () => ({}));
 vi.mock('elements/emby-slider/emby-slider', () => ({}));

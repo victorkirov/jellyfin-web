@@ -9,7 +9,7 @@ import * as inputManager from '../scripts/inputManager';
 import toast from '../components/toast/toast';
 import confirm from '../components/confirm/confirm';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
-import * as dashboard from '../utils/dashboard';
+import * as dashboard from './dashboard';
 
 export class PluginManager {
     pluginsList = [];

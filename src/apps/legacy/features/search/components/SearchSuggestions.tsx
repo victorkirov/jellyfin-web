@@ -4,9 +4,9 @@ import Loading from 'components/loading/LoadingComponent';
 import { appRouter } from 'components/router/appRouter';
 import { useSearchSuggestions } from '../api/useSearchSuggestions';
 import globalize from 'lib/globalize';
-import LinkButton from 'elements/emby-button/LinkButton';
+import LinkButton from 'components/buttons/LinkButton';
 
-import 'elements/emby-button/emby-button';
+import 'components/buttons/emby-button';
 
 type SearchSuggestionsProps = {
     parentId?: string | null;

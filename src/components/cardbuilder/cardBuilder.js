@@ -16,11 +16,11 @@ import globalize from 'lib/globalize';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import { getItemTypeIcon, getLibraryIcon } from 'utils/image';
 
-import focusManager from '../focusManager';
+import focusManager from '../../lib/focusManager';
 import imageLoader from '../images/imageLoader';
 import indicators from '../indicators/indicators';
 import itemHelper from '../itemHelper';
-import layoutManager from '../layoutManager';
+import layoutManager from '../../lib/layoutManager';
 import { appRouter } from '../router/appRouter';
 import itemShortcuts from '../shortcuts';
 

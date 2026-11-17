@@ -5,7 +5,7 @@ import { getMediaSegmentApi } from '@jellyfin/sdk/lib/utils/api/media-segment-ap
 
 import type { PlaybackManager } from 'components/playback/playbackmanager';
 import { TICKS_PER_MILLISECOND, TICKS_PER_SECOND } from 'constants/time';
-import { ServerConnections } from 'lib/jellyfin-apiclient';
+import { ServerConnections } from 'lib/jellyfin-apiclient/index';
 import { currentSettings as userSettings } from 'scripts/settings/userSettings';
 import type { PlayerState } from 'types/playbackStopInfo';
 import type { Event } from 'utils/events';

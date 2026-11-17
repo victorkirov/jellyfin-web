@@ -25,9 +25,9 @@ import { getUserQuery } from 'hooks/api/useUser';
 import { getDisplayPreferencesQuery } from 'hooks/api/useDisplayPreferences';
 import { getItemQuery } from 'hooks/useItem';
 import { getBrandingOptionsQuery } from 'hooks/useBrandingOptions';
-import { getNextUpQuery } from 'apps/legacy/features/libraries/api/useNextUp';
-import { getResumeItemsQuery } from 'apps/legacy/features/libraries/api/useResumeItems';
-import { getLatestMediaQuery } from 'apps/legacy/features/libraries/api/useLatestMedia';
+import { getNextUpQuery } from 'lib/queries/nextUp';
+import { getResumeItemsQuery } from 'lib/queries/resumeItems';
+import { getLatestMediaQuery } from 'lib/queries/latestMedia';
 
 const makeApi = (basePath: string) => new Api(basePath,
     { name: 'test', version: '1' }, { name: 'test', id: 'test' });

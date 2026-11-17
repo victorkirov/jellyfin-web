@@ -1,7 +1,7 @@
-import layoutManager from '../../components/layoutManager';
+import layoutManager from '../../lib/layoutManager';
 import browser from '../../scripts/browser';
-import actionsheet from '../../components/actionSheet/actionSheet';
-import './emby-select.scss';
+import actionsheet from '../actionSheet/actionSheet';
+import '../../elements/emby-select/emby-select.scss';
 import 'webcomponents.js/webcomponents-lite';
 
 const EmbySelectPrototype = Object.create(HTMLSelectElement.prototype);

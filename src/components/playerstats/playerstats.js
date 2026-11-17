@@ -3,7 +3,7 @@ import { ServerConnections } from 'lib/jellyfin-apiclient';
 import Events from 'utils/events';
 import { getReadableSize } from 'utils/file';
 
-import layoutManager from '../layoutManager';
+import layoutManager from '../../lib/layoutManager';
 import { playbackManager } from '../playback/playbackmanager';
 import playMethodHelper from '../playback/playmethodhelper';
 

@@ -6,13 +6,13 @@ import { appHost } from 'components/apphost';
 import Loading from 'components/loading/LoadingComponent';
 import Page from 'components/Page';
 import { AppFeature } from 'constants/appFeature';
-import LinkButton from 'elements/emby-button/LinkButton';
+import LinkButton from 'components/buttons/LinkButton';
 import { useApi } from 'hooks/useApi';
 import { useQuickConnectEnabled } from 'hooks/useQuickConnect';
 import { useUsers } from 'hooks/useUsers';
 import globalize from 'lib/globalize';
 import browser from 'scripts/browser';
-import Dashboard from 'utils/dashboard';
+import Dashboard from 'components/dashboard';
 import shell from 'scripts/shell';
 
 const UserSettingsPage: FC = () => {

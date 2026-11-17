@@ -1,7 +1,7 @@
 import { clearBackdrop, setBackdropImages, setBackdrops } from '../components/backdrop/backdrop';
 import * as userSettings from './settings/userSettings';
 import libraryMenu from './libraryMenu';
-import { pageClassOn } from '../utils/dashboard';
+import { pageClassOn } from '../components/dashboard';
 import { queryClient } from 'utils/query/queryClient';
 import { getBrandingOptionsQuery } from 'hooks/useBrandingOptions';
 import { SPLASHSCREEN_URL } from 'constants/branding';

@@ -9,7 +9,7 @@ import escapeHtml from 'escape-html';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import datetime from '../../scripts/datetime';
 import imageLoader from '../images/imageLoader';
-import layoutManager from '../layoutManager';
+import layoutManager from '../../lib/layoutManager';
 import browser from '../../scripts/browser';
 
 const enableFocusTransform = !browser.slow && !browser.edge;

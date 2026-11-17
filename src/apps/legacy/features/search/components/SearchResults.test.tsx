@@ -14,7 +14,7 @@ vi.mock('@jellyfin/sdk/lib/utils/api/studio-api', () => ({ getStudioApi: () => (
 vi.mock('lib/globalize', () => ({ default: { translate: (key: string) => key } }));
 vi.mock('components/loading/LoadingComponent', () => ({ default: () => <div>Loading</div> }));
 vi.mock('elements/emby-button/Button', () => ({ default: ({ title, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{title}</button> }));
-vi.mock('components/focusManager', () => ({ default: { autoFocus: (el: HTMLElement) => el.querySelector<HTMLElement>('button,a'), focus: (el: HTMLElement) => el.focus() } }));
+vi.mock('lib/focusManager', () => ({ default: { autoFocus: (el: HTMLElement) => el.querySelector<HTMLElement>('button,a'), focus: (el: HTMLElement) => el.focus() } }));
 vi.mock('./SearchResultsRow', () => ({ default: ({ title }: { title: string }) => <a href='#result'>{title}</a> }));
 
 import SearchResults from './SearchResults';

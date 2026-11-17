@@ -24,9 +24,9 @@ import { includesAny } from '../../utils/container.ts';
 import { getItems } from '../../utils/jellyfin-apiclient/getItems.ts';
 import { getItemBackdropImageUrl } from '../../utils/jellyfin-apiclient/backdropImage';
 
-import { PlayerEvent } from 'apps/legacy/features/playback/constants/playerEvent';
-import { bindMediaSegmentManager } from 'apps/legacy/features/playback/utils/mediaSegmentManager';
-import { bindMediaSessionSubscriber } from 'apps/legacy/features/playback/utils/mediaSessionSubscriber';
+import { PlayerEvent } from 'lib/playback/constants/playerEvent';
+import { bindMediaSegmentManager } from 'lib/playback/utils/mediaSegmentManager';
+import { bindMediaSessionSubscriber } from 'lib/playback/utils/mediaSessionSubscriber';
 import { AppFeature } from 'constants/appFeature';
 import { PluginType } from 'constants/pluginType';
 import { TICKS_PER_MILLISECOND, TICKS_PER_SECOND } from 'constants/time';
@@ -3878,7 +3878,7 @@ export class PlaybackManager {
 
         if (appHost.supports(AppFeature.RemoteControl)) {
             // Defer setup past module evaluation to avoid the circular dependency:
-            // playbackmanager → lib/jellyfin-apiclient → ServerConnections → utils/dashboard → backdrop → playbackmanager
+            // playbackmanager → lib/jellyfin-apiclient → ServerConnections → components/dashboard → backdrop → playbackmanager
             queueMicrotask(() => {
                 let _unsubscribeRemoteControl;
                 Events.on(ServerConnections, 'localusersignedin', () => {

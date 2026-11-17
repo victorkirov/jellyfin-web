@@ -5,7 +5,7 @@ import appSettings from 'scripts/settings/appSettings';
 import { setUserInfo } from 'scripts/settings/userSettings';
 import { getMaxBandwidth } from 'utils/getMaxBandwidth';
 import { detectBitrate } from 'utils/bitrateTest';
-import Dashboard from 'utils/dashboard';
+import Dashboard from 'components/dashboard';
 import Events from 'utils/events';
 import { createApiClient } from 'utils/jellyfin-apiclient/createApiClient';
 

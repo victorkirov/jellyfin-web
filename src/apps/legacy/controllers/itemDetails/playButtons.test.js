@@ -46,8 +46,8 @@ vi.mock('components/mediainfo/mediainfo', async importOriginal => {
 });
 vi.mock('elements/emby-progressbar/emby-progressbar', () => ({}));
 vi.mock('components/homesections/deferSection', () => ({ deferSection: () => vi.fn() }));
-vi.mock('components/focusManager', () => ({ default: { isCurrentlyFocusable: () => false, focus: vi.fn(), autoFocus: vi.fn() } }));
-vi.mock('components/layoutManager', () => ({ default: { tv: true } }));
+vi.mock('lib/focusManager', () => ({ default: { isCurrentlyFocusable: () => false, focus: vi.fn(), autoFocus: vi.fn() } }));
+vi.mock('lib/layoutManager', () => ({ default: { tv: true } }));
 vi.mock('components/listview/listview', () => ({ default: { getListViewHtml } }));
 vi.mock('components/loading/loading', () => ({ default: { show: vi.fn(), hide: hideLoading } }));
 vi.mock('components/itemDetails/ItemDetailsMetadataGroup', () => ({ default: vi.fn() }));
@@ -59,14 +59,14 @@ vi.mock('scripts/browser', () => ({ default: {} }));
 vi.mock('scripts/libraryMenu', () => ({ default: { setTitle: vi.fn(), setTransparentMenu: vi.fn() } }));
 vi.mock('scripts/settings/userSettings', () => ({ enableBackdrops: () => false }));
 vi.mock('utils/dom', () => ({ default: { getWindowSize: () => ({ innerWidth: 1280 }) } }));
-vi.mock('utils/reactUtils', () => ({ renderComponent: () => vi.fn() }));
-vi.mock('elements/emby-itemscontainer/emby-itemscontainer', () => ({}));
+vi.mock('apps/legacy/renderComponent', () => ({ renderComponent: () => vi.fn() }));
+vi.mock('components/itemscontainer/emby-itemscontainer', () => ({}));
 vi.mock('elements/emby-checkbox/emby-checkbox', () => ({}));
-vi.mock('elements/emby-button/emby-button', () => ({}));
-vi.mock('elements/emby-playstatebutton/emby-playstatebutton', () => ({}));
-vi.mock('elements/emby-ratingbutton/emby-ratingbutton', () => ({}));
+vi.mock('components/buttons/emby-button', () => ({}));
+vi.mock('components/buttons/emby-playstatebutton', () => ({}));
+vi.mock('components/buttons/emby-ratingbutton', () => ({}));
 vi.mock('elements/emby-scroller/emby-scroller', () => ({}));
-vi.mock('elements/emby-select/emby-select', () => ({}));
+vi.mock('components/select/emby-select', () => ({}));
 
 beforeEach(() => {
     vi.clearAllMocks();

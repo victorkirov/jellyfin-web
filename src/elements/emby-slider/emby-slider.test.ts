@@ -5,7 +5,7 @@ vi.mock('../../utils/dom', () => ({ default: {
     parentWithClass: () => null,
     addEventListener: (element: EventTarget, event: string, handler: EventListener) => element.addEventListener(event, handler)
 } }));
-vi.mock('../../components/layoutManager', () => ({ default: {} }));
+vi.mock('../../lib/layoutManager', () => ({ default: {} }));
 vi.mock('../../scripts/keyboardNavigation', () => ({ default: {} }));
 vi.mock('../../lib/globalize', () => ({ default: { getIsElementRTL: () => false } }));
 vi.mock('webcomponents.js/webcomponents-lite', () => ({}));

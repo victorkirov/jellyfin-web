@@ -1,6 +1,6 @@
-import './emby-collapse.scss';
+import '../../elements/emby-collapse/emby-collapse.scss';
 import 'webcomponents.js/webcomponents-lite';
-import '../emby-button/emby-button';
+import '../buttons/emby-button';
 
 const EmbyButtonPrototype = Object.create(HTMLDivElement.prototype);
 

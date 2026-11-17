@@ -6,7 +6,7 @@ import { bindMediaSegmentManager } from './mediaSegmentManager';
 
 const { getItemSegments } = vi.hoisted(() => ({ getItemSegments: vi.fn() }));
 vi.mock('@jellyfin/sdk/lib/utils/api/media-segment-api', () => ({ getMediaSegmentApi: () => ({ getItemSegments }) }));
-vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: { getApi: () => ({}) } }));
+vi.mock('lib/jellyfin-apiclient/index', () => ({ ServerConnections: { getApi: () => ({}) } }));
 vi.mock('scripts/settings/userSettings', () => ({ currentSettings: { get: () => 'Skip' } }));
 
 const segment = (id: string) => ({ Id: id, Type: MediaSegmentType.Intro, StartTicks: 0, EndTicks: 100_000_000 });

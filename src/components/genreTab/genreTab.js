@@ -2,14 +2,14 @@ import escapeHtml from 'escape-html';
 
 import cardBuilder from 'components/cardbuilder/cardBuilder';
 import { getBackdropShape, getPortraitShape } from 'components/cardbuilder/utils/shape';
-import layoutManager from 'components/layoutManager';
+import layoutManager from 'lib/layoutManager';
 import lazyLoader from 'components/lazyLoader/lazyLoaderIntersectionObserver';
 import loading from 'components/loading/loading';
 import { appRouter } from 'components/router/appRouter';
 import globalize from 'lib/globalize';
 import * as userSettings from 'scripts/settings/userSettings';
 
-import 'elements/emby-button/emby-button';
+import 'components/buttons/emby-button';
 
 export default function (view, params, tabContent, options) {
     function getPageData() {

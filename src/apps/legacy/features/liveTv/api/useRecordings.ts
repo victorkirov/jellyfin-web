@@ -1,29 +1,8 @@
-import { userQueryKey } from 'utils/query/queryKeys';
-import type { Api } from '@jellyfin/sdk';
 import type { LiveTvApiGetRecordingsRequest } from '@jellyfin/sdk/lib/generated-client/api/live-tv-api';
-import { getLiveTvApi } from '@jellyfin/sdk/lib/utils/api/live-tv-api';
-import { queryOptions, useQuery } from '@tanstack/react-query';
-import type { AxiosRequestConfig } from 'axios';
+import { useQuery } from '@tanstack/react-query';
 
 import { useApi } from 'hooks/useApi';
-
-const fetchRecordings = async (
-    api: Api,
-    params?: LiveTvApiGetRecordingsRequest,
-    options?: AxiosRequestConfig
-) => {
-    const response = await getLiveTvApi(api).getRecordings(params, options);
-    return response.data;
-};
-
-export const getRecordingsQuery = (
-    api?: Api,
-    params?: LiveTvApiGetRecordingsRequest
-) => queryOptions({
-    queryKey: userQueryKey(api, params?.userId, 'Recordings', params),
-    queryFn: ({ signal }) => fetchRecordings(api!, params, { signal }),
-    enabled: !!api
-});
+import { getRecordingsQuery } from 'lib/queries/recordings';
 
 export const useRecordings = (
     params?: LiveTvApiGetRecordingsRequest

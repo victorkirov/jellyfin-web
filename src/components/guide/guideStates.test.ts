@@ -21,11 +21,11 @@ vi.mock('scripts/datetime', () => ({ default: {
     parseISO8601Date: (value: string) => new Date(value),
     toLocaleDateString: () => 'Today', getDisplayTime: () => '12:00'
 } }));
-vi.mock('components/focusManager', () => ({ default: { focus: vi.fn(), autoFocus: focus } }));
+vi.mock('lib/focusManager', () => ({ default: { focus: vi.fn(), autoFocus: focus } }));
 vi.mock('components/playback/playbackmanager', () => ({ playbackManager: {} }));
 vi.mock('scripts/settings/userSettings', () => ({ get: vi.fn() }));
 vi.mock('components/images/imageLoader', () => ({ default: { lazyChildren: vi.fn() } }));
-vi.mock('components/layoutManager', () => ({ default: { tv: true } }));
+vi.mock('lib/layoutManager', () => ({ default: { tv: true } }));
 vi.mock('components/shortcuts', () => ({ default: { on: vi.fn(), off: vi.fn() } }));
 vi.mock('utils/dom', () => ({ default: {
     getWindowSize: () => ({ innerWidth: 1920 }),
@@ -34,7 +34,7 @@ vi.mock('utils/dom', () => ({ default: {
     parentWithClass: () => null
 } }));
 vi.mock('elements/emby-programcell/emby-programcell', () => ({}));
-vi.mock('elements/emby-button/emby-button', () => ({}));
+vi.mock('components/buttons/emby-button', () => ({}));
 vi.mock('elements/emby-button/paper-icon-button-light', () => ({}));
 vi.mock('elements/emby-tabs/emby-tabs', () => ({}));
 vi.mock('elements/emby-scroller/emby-scroller', () => ({}));

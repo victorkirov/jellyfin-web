@@ -1,15 +1,15 @@
 import 'webcomponents.js/webcomponents-lite';
 import Sortable from 'sortablejs';
 
-import itemShortcuts from '../../components/shortcuts';
+import itemShortcuts from '../shortcuts';
 import inputManager from '../../scripts/inputManager';
-import { playbackManager } from '../../components/playback/playbackmanager';
-import imageLoader from '../../components/images/imageLoader';
-import layoutManager from '../../components/layoutManager';
+import { playbackManager } from '../playback/playbackmanager';
+import imageLoader from '../images/imageLoader';
+import layoutManager from '../../lib/layoutManager';
 import browser from '../../scripts/browser';
 import dom from '../../utils/dom';
-import focusManager from '../../components/focusManager';
-import { ServerConnections } from 'lib/jellyfin-apiclient';
+import focusManager from '../../lib/focusManager';
+import { ServerConnections } from 'lib/jellyfin-apiclient/index';
 import { OutboundWebSocketMessageType } from '@jellyfin/sdk/lib/websocket';
 
 const ItemsContainerPrototype = Object.create(HTMLDivElement.prototype);
@@ -100,7 +100,7 @@ function updateCards(itemsContainer, update) {
         return Promise.resolve();
     }
 
-    return import('../../components/cardbuilder/cardBuilder').then(cardBuilder => {
+    return import('../cardbuilder/cardBuilder').then(cardBuilder => {
         if (itemsContainer.paused) {
             return;
         }

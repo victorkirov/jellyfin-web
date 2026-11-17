@@ -5,7 +5,7 @@ import cardBuilder from 'components/cardbuilder/cardBuilder';
 import { CardShape } from 'components/cardbuilder/utils/shape';
 import type { CardOptions } from 'types/cardOptions';
 import 'elements/emby-scroller/emby-scroller';
-import 'elements/emby-itemscontainer/emby-itemscontainer';
+import 'components/itemscontainer/emby-itemscontainer';
 
 // There seems to be some compatibility issues here between
 // React and our legacy web components, so we need to inject

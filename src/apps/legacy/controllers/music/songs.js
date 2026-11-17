@@ -6,11 +6,11 @@ import loading from 'components/loading/loading';
 import { playbackManager } from 'components/playback/playbackmanager';
 import * as userSettings from 'scripts/settings/userSettings';
 import globalize from 'lib/globalize';
-import Dashboard from 'utils/dashboard';
+import Dashboard from 'components/dashboard';
 import Events from 'utils/events';
 import { setFilterStatus } from 'components/filterdialog/filterIndicator';
 
-import 'elements/emby-itemscontainer/emby-itemscontainer';
+import 'components/itemscontainer/emby-itemscontainer';
 
 export default function (view, params, tabContent) {
     function getPageData() {

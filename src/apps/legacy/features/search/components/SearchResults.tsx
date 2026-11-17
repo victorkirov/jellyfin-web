@@ -7,7 +7,7 @@ import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collec
 import { Section } from '../types';
 import { Link } from 'react-router-dom';
 import Button from 'elements/emby-button/Button';
-import focusManager from 'components/focusManager';
+import focusManager from 'lib/focusManager';
 
 interface SearchResultsProps {
     parentId?: string;

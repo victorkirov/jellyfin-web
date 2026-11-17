@@ -4,9 +4,9 @@
  */
 
 import dialogHelper from '../dialogHelper/dialogHelper';
-import '../../elements/emby-button/emby-button';
-import focusManager from '../focusManager';
-import layoutManager from '../layoutManager';
+import '../buttons/emby-button';
+import focusManager from '../../lib/focusManager';
+import layoutManager from '../../lib/layoutManager';
 import dom from '../../utils/dom';
 import globalize from '../../lib/globalize';
 import './style.scss';

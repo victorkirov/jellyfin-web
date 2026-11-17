@@ -13,7 +13,7 @@ vi.mock('components/cardbuilder/utils/shape', () => ({
     getBackdropShape: (scroll: boolean) => scroll ? 'backdropoverflow' : 'backdrop',
     getPortraitShape: (scroll: boolean) => scroll ? 'portraitoverflow' : 'portrait'
 }));
-vi.mock('components/layoutManager', () => ({ default: { desktop: false, tv: true } }));
+vi.mock('lib/layoutManager', () => ({ default: { desktop: false, tv: true } }));
 vi.mock('components/lazyLoader/lazyLoaderIntersectionObserver', () => ({ default: { lazyChildren: vi.fn() } }));
 vi.mock('components/loading/loading', () => ({ default: { show: vi.fn(), hide: vi.fn() } }));
 vi.mock('components/router/appRouter', () => ({ appRouter: { getRouteUrl: vi.fn(() => '/genre') } }));
@@ -24,7 +24,7 @@ vi.mock('scripts/settings/userSettings', () => ({
     saveQuerySettings: vi.fn(),
     saveViewSetting: vi.fn()
 }));
-vi.mock('elements/emby-button/emby-button', () => ({}));
+vi.mock('components/buttons/emby-button', () => ({}));
 
 const api = {
     getCurrentUserId: vi.fn(() => 'user'),

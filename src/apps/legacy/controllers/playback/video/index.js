@@ -1,6 +1,6 @@
 import escapeHtml from 'escape-html';
 
-import { PlayerEvent } from 'apps/legacy/features/playback/constants/playerEvent';
+import { PlayerEvent } from 'lib/playback/constants/playerEvent';
 import { AppFeature } from 'constants/appFeature';
 import { TICKS_PER_MILLISECOND, TICKS_PER_MINUTE, TICKS_PER_SECOND } from 'constants/time';
 import { EventType } from 'constants/eventType';
@@ -13,17 +13,17 @@ import mouseManager from 'scripts/mouseManager';
 import datetime from 'scripts/datetime';
 import itemHelper from 'components/itemHelper';
 import mediaInfo from 'components/mediainfo/mediainfo';
-import focusManager from 'components/focusManager';
+import focusManager from 'lib/focusManager';
 import Events from 'utils/events';
 import globalize from 'lib/globalize';
 import { appHost } from 'components/apphost';
-import layoutManager from 'components/layoutManager';
+import layoutManager from 'lib/layoutManager';
 import * as userSettings from 'scripts/settings/userSettings';
 import keyboardnavigation from 'scripts/keyboardNavigation';
 import 'styles/scrollstyles.scss';
 import 'elements/emby-slider/emby-slider';
 import 'elements/emby-button/paper-icon-button-light';
-import 'elements/emby-ratingbutton/emby-ratingbutton';
+import 'components/buttons/emby-ratingbutton';
 import 'styles/videoosd.scss';
 import shell from 'scripts/shell';
 import SubtitleSync from 'components/subtitlesync/subtitlesync';

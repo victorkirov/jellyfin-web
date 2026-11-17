@@ -18,7 +18,7 @@ import { loadCoreDictionary } from 'lib/globalize/loader';
 import getServerAddress from 'lib/jellyfin-apiclient/utils/getServerAddress';
 import keyboardNavigation from './scripts/keyboardNavigation';
 import { getPlugins } from './scripts/settings/webSettings';
-import { pageClassOn, serverAddress } from './utils/dashboard';
+import { pageClassOn, serverAddress } from './components/dashboard';
 import Events from './utils/events';
 import { updateApiClientSdk } from 'utils/jellyfin-apiclient/compat';
 import { initializeServerConnections } from './scripts/serverNotifications';
@@ -27,7 +27,7 @@ import RootApp from './RootApp';
 
 // Import the button webcomponent for use throughout the site
 // NOTE: This is a bit of a hack, files should ensure the component is imported before use
-import './elements/emby-button/emby-button';
+import './components/buttons/emby-button';
 
 // Import auto-running components
 // NOTE: This is an anti-pattern

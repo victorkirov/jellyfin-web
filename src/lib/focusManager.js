@@ -7,9 +7,7 @@ function pushScope(elem) {
 }
 
 function popScope() {
-    if (scopes.length) {
-        scopes.length -= 1;
-    }
+    scopes.pop();
 }
 
 function autoFocus(view, defaultToFirst, findAutoFocusElement) {

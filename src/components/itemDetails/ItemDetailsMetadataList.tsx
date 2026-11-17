@@ -3,7 +3,7 @@ import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client';
 import type { NameGuidPair } from '@jellyfin/sdk/lib/generated-client/models/name-guid-pair';
 import { PersonKind } from '@jellyfin/sdk/lib/generated-client/models/person-kind';
 import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
-import LinkButton from 'elements/emby-button/LinkButton';
+import LinkButton from 'components/buttons/LinkButton';
 import { appRouter } from 'components/router/appRouter';
 import globalize from 'lib/globalize';
 

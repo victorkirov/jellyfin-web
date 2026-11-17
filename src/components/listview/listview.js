@@ -14,15 +14,15 @@ import { getDefaultBackgroundClass } from '../cardbuilder/utils/builder';
 import itemHelper from '../itemHelper';
 import mediaInfo from '../mediainfo/mediainfo';
 import indicators from '../indicators/indicators';
-import layoutManager from '../layoutManager';
+import layoutManager from '../../lib/layoutManager';
 import globalize from '../../lib/globalize';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import datetime from '../../scripts/datetime';
 import cardBuilder from '../cardbuilder/cardBuilder';
 
 import './listview.scss';
-import '../../elements/emby-ratingbutton/emby-ratingbutton';
-import '../../elements/emby-playstatebutton/emby-playstatebutton';
+import '../buttons/emby-ratingbutton';
+import '../buttons/emby-playstatebutton';
 
 function getIndex(item, options) {
     if (options.index === 'disc') {

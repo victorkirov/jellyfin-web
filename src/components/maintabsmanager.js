@@ -1,5 +1,5 @@
 import '../elements/emby-tabs/emby-tabs';
-import '../elements/emby-button/emby-button';
+import './buttons/emby-button';
 
 let tabOwnerView;
 const queryScope = document.querySelector('.skinHeader');

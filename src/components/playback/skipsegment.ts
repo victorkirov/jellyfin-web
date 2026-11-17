@@ -2,16 +2,16 @@ import { PlaybackManager } from './playbackmanager';
 import { TICKS_PER_MILLISECOND, TICKS_PER_SECOND } from 'constants/time';
 import type { MediaSegmentDto } from '@jellyfin/sdk/lib/generated-client/models/media-segment-dto';
 import type { PlaybackStopInfo } from 'types/playbackStopInfo';
-import { PlaybackSubscriber } from 'apps/legacy/features/playback/utils/playbackSubscriber';
-import { isInSegment } from 'apps/legacy/features/playback/utils/mediaSegments';
+import { PlaybackSubscriber } from 'lib/playback/utils/playbackSubscriber';
+import { isInSegment } from 'lib/playback/utils/mediaSegments';
 import Events, { type Event } from 'utils/events';
 import { EventType } from 'constants/eventType';
 import './skipbutton.scss';
 import dom from 'utils/dom';
 import globalize from 'lib/globalize';
 import * as userSettings from 'scripts/settings/userSettings';
-import focusManager from 'components/focusManager';
-import layoutManager from 'components/layoutManager';
+import focusManager from 'lib/focusManager';
+import layoutManager from 'lib/layoutManager';
 
 interface ShowOptions {
     animate?: boolean;

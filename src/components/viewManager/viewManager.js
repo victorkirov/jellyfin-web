@@ -1,5 +1,5 @@
 import viewContainer from '../viewContainer';
-import focusManager from '../focusManager';
+import focusManager from '../../lib/focusManager';
 
 let currentView;
 let dispatchPageEvents;

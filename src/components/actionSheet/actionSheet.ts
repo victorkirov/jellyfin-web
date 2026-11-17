@@ -1,9 +1,9 @@
 import escapeHtml from 'escape-html';
 import dialogHelper from '../dialogHelper/dialogHelper';
-import layoutManager from '../layoutManager';
+import layoutManager from '../../lib/layoutManager';
 import globalize from '../../lib/globalize';
 import dom from '../../utils/dom';
-import '../../elements/emby-button/emby-button';
+import '../buttons/emby-button';
 import './actionSheet.scss';
 import 'material-design-icons-iconfont';
 import '../../styles/scrollstyles.scss';

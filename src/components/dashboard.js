@@ -1,20 +1,20 @@
 import { appHost } from 'components/apphost';
 import viewContainer from 'components/viewContainer';
 import { AppFeature } from 'constants/appFeature';
-import { ServerConnections } from 'lib/jellyfin-apiclient';
+import { ServerConnections } from 'lib/jellyfin-apiclient/index';
 
-import toast from '../components/toast/toast';
-import loading from '../components/loading/loading';
-import { appRouter } from '../components/router/appRouter';
-import baseAlert from '../components/alert';
-import baseConfirm from '../components/confirm/confirm';
-import globalize from '../lib/globalize';
+import toast from './toast/toast';
+import loading from './loading/loading';
+import { appRouter } from './router/appRouter';
+import baseAlert from './alert';
+import baseConfirm from './confirm/confirm';
+import globalize from '../lib/globalize/index';
 import * as webSettings from '../scripts/settings/webSettings';
 import datetime from '../scripts/datetime';
-import { setBackdropTransparency } from '../components/backdrop/backdrop';
-import dialogHelper from '../components/dialogHelper/dialogHelper';
-import { getLocationSearch } from './url.ts';
-import { queryClient } from './query/queryClient';
+import { setBackdropTransparency } from './backdrop/backdrop';
+import dialogHelper from './dialogHelper/dialogHelper';
+import { getLocationSearch } from '../utils/url.ts';
+import { queryClient } from '../utils/query/queryClient';
 
 export function getCurrentUser() {
     return window.ApiClient.getCurrentUser(false);

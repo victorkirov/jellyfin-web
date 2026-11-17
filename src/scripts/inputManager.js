@@ -1,5 +1,5 @@
 import { appHost } from 'components/apphost';
-import focusManager from 'components/focusManager';
+import focusManager from 'lib/focusManager';
 import { playbackManager } from 'components/playback/playbackmanager';
 import { appRouter } from 'components/router/appRouter';
 import { AppFeature } from 'constants/appFeature';

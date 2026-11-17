@@ -1,4 +1,4 @@
-import layoutManager from 'components/layoutManager';
+import layoutManager from 'lib/layoutManager';
 import { DEFAULT_SECTIONS, HomeSectionType } from 'constants/homeSectionType';
 import { getUserViewsQuery } from 'hooks/api/useUserViews';
 import globalize from 'lib/globalize';
@@ -16,9 +16,9 @@ import { loadRecentlyAdded } from './sections/recentlyAdded';
 import { loadResume } from './sections/resume';
 
 import 'elements/emby-button/paper-icon-button-light';
-import 'elements/emby-itemscontainer/emby-itemscontainer';
+import 'components/itemscontainer/emby-itemscontainer';
 import 'elements/emby-scroller/emby-scroller';
-import 'elements/emby-button/emby-button';
+import 'components/buttons/emby-button';
 
 import './homesections.scss';
 

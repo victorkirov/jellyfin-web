@@ -1,7 +1,7 @@
 import { OutboundWebSocketMessageType } from '@jellyfin/sdk/lib/websocket';
 
 import alert from 'components/alert';
-import focusManager from 'components/focusManager';
+import focusManager from 'lib/focusManager';
 import { playbackManager } from 'components/playback/playbackmanager';
 import { appRouter } from 'components/router/appRouter';
 import toast from 'components/toast/toast';

@@ -1,12 +1,12 @@
 import dialogHelper from '../dialogHelper/dialogHelper';
-import layoutManager from '../layoutManager';
+import layoutManager from '../../lib/layoutManager';
 import globalize from '../../lib/globalize';
 import * as userSettings from '../../scripts/settings/userSettings';
-import '../../elements/emby-select/emby-select';
+import '../select/emby-select';
 import '../../elements/emby-button/paper-icon-button-light';
 import 'material-design-icons-iconfont';
 import '../formdialog.scss';
-import '../../elements/emby-button/emby-button';
+import '../buttons/emby-button';
 import '../../styles/flexstyles.scss';
 import template from './sortmenu.template.html';
 

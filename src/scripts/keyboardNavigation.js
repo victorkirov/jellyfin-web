@@ -5,7 +5,7 @@
 
 import browser from './browser';
 import inputManager from './inputManager';
-import layoutManager from '../components/layoutManager';
+import layoutManager from '../lib/layoutManager';
 
 /**
  * Key name mapping.

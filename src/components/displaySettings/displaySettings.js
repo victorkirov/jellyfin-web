@@ -6,7 +6,7 @@ import { ServerConnections } from 'lib/jellyfin-apiclient';
 
 import { pluginManager } from '../pluginManager';
 import { appHost } from '../apphost';
-import focusManager from '../focusManager';
+import focusManager from '../../lib/focusManager';
 import datetime from '../../scripts/datetime';
 import globalize from '../../lib/globalize';
 import loading from '../loading/loading';
@@ -15,9 +15,9 @@ import toast from '../toast/toast';
 
 import template from './displaySettings.template.html';
 
-import '../../elements/emby-select/emby-select';
+import '../select/emby-select';
 import '../../elements/emby-checkbox/emby-checkbox';
-import '../../elements/emby-button/emby-button';
+import '../buttons/emby-button';
 import '../../elements/emby-textarea/emby-textarea';
 
 function loadScreensavers(context, userSettings) {

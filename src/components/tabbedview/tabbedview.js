@@ -1,6 +1,6 @@
 import { clearBackdrop } from '../backdrop/backdrop';
 import * as mainTabsManager from '../maintabsmanager';
-import layoutManager from '../layoutManager';
+import layoutManager from '../../lib/layoutManager';
 import '../../elements/emby-tabs/emby-tabs';
 import LibraryMenu from '../../scripts/libraryMenu';
 

@@ -1,4 +1,4 @@
-import layoutManager from 'components/layoutManager';
+import layoutManager from 'lib/layoutManager';
 import toast from 'components/toast/toast';
 import globalize from 'lib/globalize';
 import appSettings from 'scripts/settings/appSettings';

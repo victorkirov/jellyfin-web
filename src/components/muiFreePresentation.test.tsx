@@ -11,7 +11,7 @@ vi.mock('react-router-dom', () => ({ useRouteError: () => error }));
 vi.mock('components/Page', () => ({ default: ({ children }: { children: ReactNode }) => <div>{children}</div> }));
 vi.mock('components/loading/loading', () => ({ default: { hide } }));
 vi.mock('components/router/appRouter', () => ({ appRouter: { getRouteUrl: (item: { Id: string }) => '#/details?id=' + item.Id } }));
-vi.mock('elements/emby-button/LinkButton', () => ({ default: ({ children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => <a {...props}>{children}</a> }));
+vi.mock('components/buttons/LinkButton', () => ({ default: ({ children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => <a {...props}>{children}</a> }));
 vi.mock('lib/globalize', () => ({ default: { translate: (key: string) => key } }));
 
 import ErrorBoundary from './router/ErrorBoundary';
@@ -42,7 +42,7 @@ describe('Legacy presentation without MUI', () => {
     });
 
     it('keeps MUI out of the root and legacy render providers', () => {
-        for (const path of ['src/RootAppRouter.tsx', 'src/utils/reactUtils.tsx', 'src/components/router/ErrorBoundary.tsx', 'src/components/MarkdownBox.tsx', 'src/components/itemDetails/ItemDetailsMetadataList.tsx']) {
+        for (const path of ['src/RootAppRouter.tsx', 'src/apps/legacy/renderComponent.tsx', 'src/components/router/ErrorBoundary.tsx', 'src/components/MarkdownBox.tsx', 'src/components/itemDetails/ItemDetailsMetadataList.tsx']) {
             const source = readFileSync(path, 'utf8');
             expect(source, path).not.toMatch(/@mui|ThemeProvider|ColorSchemeSync/);
         }

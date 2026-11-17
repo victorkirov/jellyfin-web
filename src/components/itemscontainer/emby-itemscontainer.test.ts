@@ -16,21 +16,21 @@ const { lazyChildren, focus, autoFocus, registerElement, sortable, subscribe, on
 
 vi.mock('webcomponents.js/webcomponents-lite', () => ({}));
 vi.mock('sortablejs', () => ({ default: sortable }));
-vi.mock('../../components/shortcuts', () => ({ default: { on: vi.fn(), off: vi.fn() } }));
+vi.mock('../shortcuts', () => ({ default: { on: vi.fn(), off: vi.fn() } }));
 vi.mock('../../scripts/inputManager', () => ({ default: {} }));
-vi.mock('../../components/playback/playbackmanager', () => ({ playbackManager: {} }));
-vi.mock('../../components/images/imageLoader', () => ({ default: { lazyChildren } }));
-vi.mock('../../components/layoutManager', () => ({ default: { tv: true } }));
+vi.mock('../playback/playbackmanager', () => ({ playbackManager: {} }));
+vi.mock('../images/imageLoader', () => ({ default: { lazyChildren } }));
+vi.mock('../../lib/layoutManager', () => ({ default: { tv: true } }));
 vi.mock('../../scripts/browser', () => ({ default: {} }));
 vi.mock('../../utils/dom', () => ({ default: {} }));
-vi.mock('../../components/focusManager', () => ({ default: { focus, autoFocus } }));
-vi.mock('lib/jellyfin-apiclient', () => ({
+vi.mock('../../lib/focusManager', () => ({ default: { focus, autoFocus } }));
+vi.mock('lib/jellyfin-apiclient/index', () => ({
     ServerConnections: {
         currentApiClient: () => ({ subscribe })
     }
 }));
 
-vi.mock('../../components/cardbuilder/cardBuilder', () => ({
+vi.mock('../cardbuilder/cardBuilder', () => ({
     onUserDataChanged, onTimerCreated, onTimerCancelled, onSeriesTimerCancelled
 }));
 

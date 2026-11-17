@@ -3,7 +3,7 @@ import DOMPurify from 'dompurify';
 import HtmlVideoPlayer from './plugin';
 
 vi.mock('screenfull', () => ({ default: {} }));
-vi.mock('apps/legacy/features/playback/utils/subtitleStyles', () => ({ useCustomSubtitles: {} }));
+vi.mock('lib/playback/utils/subtitleStyles', () => ({ useCustomSubtitles: {} }));
 vi.mock('components/subtitlesettings/subtitleappearancehelper', () => ({ default: {} }));
 vi.mock('constants/appFeature', () => ({ AppFeature: {} }));
 vi.mock('constants/pluginType', () => ({ PluginType: {} }));

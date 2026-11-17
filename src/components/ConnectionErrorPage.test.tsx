@@ -7,10 +7,10 @@ const retry = vi.hoisted(() => ({ current: undefined as (() => void) | undefined
 vi.mock('components/apphost', () => ({ appHost: { supports: () => true } }));
 vi.mock('components/Page', () => ({ default: ({ children }: React.PropsWithChildren) => <div>{children}</div> }));
 vi.mock('components/toast/toast', () => ({ default: vi.fn() }));
-vi.mock('utils/dashboard', () => ({ selectServer }));
+vi.mock('components/dashboard', () => ({ selectServer }));
 vi.mock('lib/globalize', () => ({ default: { translate: (key: string) => key } }));
 vi.mock('lib/jellyfin-apiclient', () => ({ ConnectionState: {}, ServerConnections: {} }));
-vi.mock('elements/emby-button/LinkButton', () => ({
+vi.mock('components/buttons/LinkButton', () => ({
     default: ({ children, onClick }: React.PropsWithChildren<{ onClick?: () => void }>) => {
         if (children === 'Retry') retry.current = onClick;
         return <button type='button' onClick={onClick}>{children}</button>;

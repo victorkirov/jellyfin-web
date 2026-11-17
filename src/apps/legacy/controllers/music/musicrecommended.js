@@ -1,11 +1,11 @@
 import createTabControllerCache from '../tabControllerCache';
-import { getLatestMediaQuery } from 'apps/legacy/features/libraries/api/useLatestMedia';
+import { getLatestMediaQuery } from 'lib/queries/latestMedia';
 import ServerConnections from 'lib/jellyfin-apiclient/ServerConnections';
 import { queryClient } from 'utils/query/queryClient';
 import cardBuilder from 'components/cardbuilder/cardBuilder';
 import { getSquareShape } from 'components/cardbuilder/utils/shape';
 import imageLoader from 'components/images/imageLoader';
-import layoutManager from 'components/layoutManager';
+import layoutManager from 'lib/layoutManager';
 import loading from 'components/loading/loading';
 import * as mainTabsManager from 'components/maintabsmanager';
 import browser from 'scripts/browser';
@@ -15,11 +15,11 @@ import inputManager from 'scripts/inputManager';
 import libraryMenu from 'scripts/libraryMenu';
 import * as userSettings from 'scripts/settings/userSettings';
 import { LibraryTab } from 'types/libraryTab';
-import Dashboard from 'utils/dashboard';
+import Dashboard from 'components/dashboard';
 
-import 'elements/emby-itemscontainer/emby-itemscontainer';
+import 'components/itemscontainer/emby-itemscontainer';
 import 'elements/emby-tabs/emby-tabs';
-import 'elements/emby-button/emby-button';
+import 'components/buttons/emby-button';
 
 import 'styles/flexstyles.scss';
 import 'styles/scrollstyles.scss';

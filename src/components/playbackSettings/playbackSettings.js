@@ -1,7 +1,7 @@
 import { MediaSegmentType } from '@jellyfin/sdk/lib/generated-client/models/media-segment-type';
 
-import { MediaSegmentAction } from 'apps/legacy/features/playback/constants/mediaSegmentAction';
-import { getId, getMediaSegmentAction } from 'apps/legacy/features/playback/utils/mediaSegmentSettings';
+import { MediaSegmentAction } from 'lib/playback/constants/mediaSegmentAction';
+import { getId, getMediaSegmentAction } from 'lib/playback/utils/mediaSegmentSettings';
 import { pluginManager } from 'components/pluginManager';
 import { AppFeature } from 'constants/appFeature';
 import { PluginType } from 'constants/pluginType';
@@ -12,7 +12,7 @@ import { ID as STILL_WATCHING_ID, StillWatchingConfiguration, StillWatchingOptio
 import appSettings from '../../scripts/settings/appSettings';
 import { appHost } from '../apphost';
 import browser from '../../scripts/browser';
-import focusManager from '../focusManager';
+import focusManager from '../../lib/focusManager';
 import qualityoptions from '../qualityOptions';
 import globalize from '../../lib/globalize';
 import loading from '../loading/loading';
@@ -20,7 +20,7 @@ import Events from '../../utils/events.ts';
 import toast from '../toast/toast';
 import template from './playbackSettings.template.html';
 
-import '../../elements/emby-select/emby-select';
+import '../select/emby-select';
 import '../../elements/emby-checkbox/emby-checkbox';
 import '../../elements/emby-collapse/emby-collapse.scss';
 

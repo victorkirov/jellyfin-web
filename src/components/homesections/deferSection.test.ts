@@ -9,7 +9,7 @@ const autoFocus = vi.fn();
 const getFocusableElements = vi.fn();
 const focus = vi.fn();
 
-vi.mock('components/focusManager', () => ({
+vi.mock('lib/focusManager', () => ({
     default: { autoFocus: (...args: unknown[]) => autoFocus(...args), getFocusableElements: (...args: unknown[]) => getFocusableElements(...args), focus: (...args: unknown[]) => focus(...args) }
 }));
 

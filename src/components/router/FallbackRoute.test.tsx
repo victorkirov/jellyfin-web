@@ -6,10 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const show = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 vi.mock('components/Page', () => ({ default: ({ children }: React.PropsWithChildren) => <div>{children}</div> }));
 vi.mock('components/apphost', () => ({ appHost: { supports: () => true } }));
-vi.mock('components/layoutManager', () => ({ default: { tv: true } }));
+vi.mock('lib/layoutManager', () => ({ default: { tv: true } }));
 vi.mock('components/router/appRouter', () => ({ appRouter: { show } }));
 vi.mock('components/playback/playbackmanager', () => ({ playbackManager: {} }));
-vi.mock('components/focusManager', () => ({ default: {} }));
+vi.mock('lib/focusManager', () => ({ default: {} }));
 vi.mock('scripts/shell', () => ({ default: {} }));
 vi.mock('lib/globalize', () => ({ default: { translate: (key: string) => key } }));
 

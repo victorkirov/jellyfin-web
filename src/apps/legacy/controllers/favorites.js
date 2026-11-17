@@ -6,14 +6,14 @@ import { getStudioApi } from '@jellyfin/sdk/lib/utils/api/studio-api';
 
 import cardBuilder from 'components/cardbuilder/cardBuilder';
 import { getBackdropShape, getPortraitShape, getSquareShape } from 'components/cardbuilder/utils/shape';
-import focusManager from 'components/focusManager';
-import layoutManager from 'components/layoutManager';
+import focusManager from 'lib/focusManager';
+import layoutManager from 'lib/layoutManager';
 import { appRouter } from 'components/router/appRouter';
 import dom from 'utils/dom';
 import globalize from 'lib/globalize';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 
-import 'elements/emby-itemscontainer/emby-itemscontainer';
+import 'components/itemscontainer/emby-itemscontainer';
 import 'elements/emby-scroller/emby-scroller';
 
 function enableScrollX() {

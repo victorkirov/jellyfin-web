@@ -14,9 +14,9 @@ vi.mock('lib/globalize', () => ({ default: { translate: (key: string) => key } }
 vi.mock('components/loading/LoadingComponent', () => ({ default: () => <div>Loading</div> }));
 vi.mock('components/cardbuilder/cardBuilder', () => ({ default: { buildCards: mocks.build } }));
 vi.mock('elements/emby-scroller/emby-scroller', () => ({}));
-vi.mock('elements/emby-itemscontainer/emby-itemscontainer', () => ({}));
+vi.mock('components/itemscontainer/emby-itemscontainer', () => ({}));
 vi.mock('elements/emby-button/Button', () => ({ default: () => null }));
-vi.mock('components/focusManager', () => ({ default: {} }));
+vi.mock('lib/focusManager', () => ({ default: {} }));
 
 import SearchResults from './SearchResults';
 

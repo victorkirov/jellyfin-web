@@ -8,7 +8,7 @@ import escapeHtml from 'escape-html';
 
 import dialogHelper from 'components/dialogHelper/dialogHelper';
 import itemHelper from 'components/itemHelper';
-import layoutManager from 'components/layoutManager';
+import layoutManager from 'lib/layoutManager';
 import loading from 'components/loading/loading';
 import globalize from 'lib/globalize';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
@@ -16,9 +16,9 @@ import { getReadableSize } from 'utils/file';
 
 import 'components/formdialog.scss';
 import 'components/listview/listview.scss';
-import 'elements/emby-button/emby-button';
+import 'components/buttons/emby-button';
 import 'elements/emby-button/paper-icon-button-light';
-import 'elements/emby-select/emby-select';
+import 'components/select/emby-select';
 import 'material-design-icons-iconfont';
 
 import 'styles/flexstyles.scss';

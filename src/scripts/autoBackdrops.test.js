@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../components/backdrop/backdrop', () => mocks);
 vi.mock('./settings/userSettings', () => ({ enableBackdrops: () => true }));
 vi.mock('./libraryMenu', () => ({ default: mocks }));
-vi.mock('../utils/dashboard', () => mocks);
+vi.mock('../components/dashboard', () => mocks);
 vi.mock('utils/query/queryClient', () => ({ queryClient: mocks }));
 vi.mock('hooks/useBrandingOptions', () => ({ getBrandingOptionsQuery: () => ({}) }));
 vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: mocks }));

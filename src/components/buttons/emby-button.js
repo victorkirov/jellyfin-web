@@ -1,13 +1,13 @@
 import 'webcomponents.js/webcomponents-lite';
 
 import { appHost } from 'components/apphost';
-import layoutManager from 'components/layoutManager';
+import layoutManager from 'lib/layoutManager';
 import { appRouter } from 'components/router/appRouter';
 import { AppFeature } from 'constants/appFeature';
 import { removeEventListener, addEventListener } from 'utils/dom';
 import shell from 'scripts/shell';
 
-import './emby-button.scss';
+import '../../elements/emby-button/emby-button.scss';
 
 const EmbyButtonPrototype = Object.create(HTMLButtonElement.prototype);
 const EmbyLinkButtonPrototype = Object.create(HTMLAnchorElement.prototype);

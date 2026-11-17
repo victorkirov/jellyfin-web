@@ -1,5 +1,5 @@
 import createTabControllerCache from '../tabControllerCache';
-import { getLatestMediaQuery } from 'apps/legacy/features/libraries/api/useLatestMedia';
+import { getLatestMediaQuery } from 'lib/queries/latestMedia';
 import ServerConnections from 'lib/jellyfin-apiclient/ServerConnections';
 import { queryClient } from 'utils/query/queryClient';
 import { userQueryKey } from 'utils/query/queryKeys';
@@ -8,7 +8,7 @@ import escapeHtml from 'escape-html';
 import cardBuilder from 'components/cardbuilder/cardBuilder';
 import { getBackdropShape, getPortraitShape } from 'components/cardbuilder/utils/shape';
 import imageLoader from 'components/images/imageLoader';
-import layoutManager from 'components/layoutManager';
+import layoutManager from 'lib/layoutManager';
 import * as mainTabsManager from 'components/maintabsmanager';
 import { playbackManager } from 'components/playback/playbackmanager';
 import dom from 'utils/dom';
@@ -17,13 +17,13 @@ import inputManager from 'scripts/inputManager';
 import libraryMenu from 'scripts/libraryMenu';
 import * as userSettings from 'scripts/settings/userSettings';
 import { LibraryTab } from 'types/libraryTab';
-import Dashboard from 'utils/dashboard';
+import Dashboard from 'components/dashboard';
 import Events from 'utils/events';
 
 import 'elements/emby-scroller/emby-scroller';
-import 'elements/emby-itemscontainer/emby-itemscontainer';
+import 'components/itemscontainer/emby-itemscontainer';
 import 'elements/emby-tabs/emby-tabs';
-import 'elements/emby-button/emby-button';
+import 'components/buttons/emby-button';
 
 function enableScrollX() {
     return true;

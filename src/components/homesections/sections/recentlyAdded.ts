@@ -7,10 +7,10 @@ import type { UserDto } from '@jellyfin/sdk/lib/generated-client/models/user-dto
 import escapeHtml from 'escape-html';
 import type { ApiClient } from 'jellyfin-apiclient';
 
-import { getLatestMediaQuery } from 'apps/legacy/features/libraries/api/useLatestMedia';
+import { getLatestMediaQuery } from 'lib/queries/latestMedia';
 import cardBuilder from 'components/cardbuilder/cardBuilder';
 import { getBackdropShape, getPortraitShape, getSquareShape } from 'components/cardbuilder/utils/shape';
-import layoutManager from 'components/layoutManager';
+import layoutManager from 'lib/layoutManager';
 import { appRouter } from 'components/router/appRouter';
 import globalize from 'lib/globalize';
 import ServerConnections from 'lib/jellyfin-apiclient/ServerConnections';

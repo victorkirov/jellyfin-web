@@ -2,18 +2,18 @@ import cardBuilder from 'components/cardbuilder/cardBuilder';
 import { getBackdropShape, getPortraitShape } from 'components/cardbuilder/utils/shape';
 import { clearLiveTvStatus, showLiveTvStatus } from 'components/guide/liveTvStatus';
 import imageLoader from 'components/images/imageLoader';
-import layoutManager from 'components/layoutManager';
+import layoutManager from 'lib/layoutManager';
 import loading from 'components/loading/loading';
 import * as mainTabsManager from 'components/maintabsmanager';
 import globalize from 'lib/globalize';
 import inputManager from 'scripts/inputManager';
 import * as userSettings from 'scripts/settings/userSettings';
 import { LibraryTab } from 'types/libraryTab';
-import Dashboard from 'utils/dashboard';
+import Dashboard from 'components/dashboard';
 
-import 'elements/emby-itemscontainer/emby-itemscontainer';
+import 'components/itemscontainer/emby-itemscontainer';
 import 'elements/emby-tabs/emby-tabs';
-import 'elements/emby-button/emby-button';
+import 'components/buttons/emby-button';
 
 import 'styles/scrollstyles.scss';
 

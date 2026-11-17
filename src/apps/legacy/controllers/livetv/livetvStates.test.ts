@@ -15,23 +15,23 @@ const { apiClient, filterQuery, loading } = vi.hoisted(() => ({
 vi.mock('components/cardbuilder/cardBuilder', () => ({ default: { getCardsHtml: ({ items }: { items: { Name: string }[] }) => items.map(item => `<button>${item.Name}</button>`).join('') } }));
 vi.mock('components/cardbuilder/utils/shape', () => ({ getBackdropShape: () => 'backdrop', getPortraitShape: () => 'portrait' }));
 vi.mock('components/images/imageLoader', () => ({ default: { lazyChildren: vi.fn() } }));
-vi.mock('components/layoutManager', () => ({ default: { tv: true } }));
+vi.mock('lib/layoutManager', () => ({ default: { tv: true } }));
 vi.mock('components/loading/loading', () => ({ default: loading }));
 vi.mock('components/maintabsmanager', () => ({}));
 vi.mock('components/autoFocuser', () => ({ default: { autoFocus: (element: HTMLElement) => element.querySelector<HTMLElement>('button, a')?.focus() } }));
 vi.mock('scripts/libraryBrowser', () => ({ default: { getQueryPagingHtml: () => 'paging' } }));
 vi.mock('scripts/settings/userSettings', () => ({ libraryPageSize: () => 100, get: vi.fn() }));
 vi.mock('scripts/inputManager', () => ({ default: {} }));
-vi.mock('utils/dashboard', () => ({ default: { getCurrentUserId: () => 'user' } }));
+vi.mock('components/dashboard', () => ({ default: { getCurrentUserId: () => 'user' } }));
 vi.mock('utils/events', () => ({ default: { on: vi.fn() } }));
 vi.mock('lib/globalize', () => ({ default: { translate: (key: string) => key } }));
 vi.mock('components/filterdialog/filterIndicator', () => ({
     getFilterStatus: (query: Record<string, unknown>) => !!query.IsFavorite,
     setFilterStatus: (_element: HTMLElement, query: Record<string, unknown>) => { filterQuery.current = query; }
 }));
-vi.mock('elements/emby-itemscontainer/emby-itemscontainer', () => ({}));
+vi.mock('components/itemscontainer/emby-itemscontainer', () => ({}));
 vi.mock('elements/emby-tabs/emby-tabs', () => ({}));
-vi.mock('elements/emby-button/emby-button', () => ({}));
+vi.mock('components/buttons/emby-button', () => ({}));
 
 function page() {
     const view = document.createElement('div');

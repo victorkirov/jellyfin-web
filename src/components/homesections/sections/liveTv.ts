@@ -4,11 +4,11 @@ import { ItemFields } from '@jellyfin/sdk/lib/generated-client/models/item-field
 import type { UserDto } from '@jellyfin/sdk/lib/generated-client/models/user-dto';
 import type { ApiClient } from 'jellyfin-apiclient';
 
-import { getRecommendedProgramsQuery } from 'apps/legacy/features/liveTv/api/useRecommendedPrograms';
+import { getRecommendedProgramsQuery } from 'lib/queries/recommendedPrograms';
 import { appRouter } from 'components/router/appRouter';
 import cardBuilder from 'components/cardbuilder/cardBuilder';
 import { getBackdropShape } from 'components/cardbuilder/utils/shape';
-import layoutManager from 'components/layoutManager';
+import layoutManager from 'lib/layoutManager';
 import globalize from 'lib/globalize';
 import ServerConnections from 'lib/jellyfin-apiclient/ServerConnections';
 import { queryClient } from 'utils/query/queryClient';

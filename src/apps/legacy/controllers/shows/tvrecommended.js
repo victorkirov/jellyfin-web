@@ -1,13 +1,13 @@
-import { getNextUpQuery } from 'apps/legacy/features/libraries/api/useNextUp';
+import { getNextUpQuery } from 'lib/queries/nextUp';
 import createTabControllerCache from '../tabControllerCache';
-import { getLatestMediaQuery } from 'apps/legacy/features/libraries/api/useLatestMedia';
+import { getLatestMediaQuery } from 'lib/queries/latestMedia';
 import ServerConnections from 'lib/jellyfin-apiclient/ServerConnections';
 import { queryClient } from 'utils/query/queryClient';
 import { userQueryKey } from 'utils/query/queryKeys';
 import autoFocuser from 'components/autoFocuser';
 import cardBuilder from 'components/cardbuilder/cardBuilder';
 import { getBackdropShape } from 'components/cardbuilder/utils/shape';
-import layoutManager from 'components/layoutManager';
+import layoutManager from 'lib/layoutManager';
 import loading from 'components/loading/loading';
 import * as mainTabsManager from 'components/maintabsmanager';
 import { playbackManager } from 'components/playback/playbackmanager';
@@ -17,13 +17,13 @@ import inputManager from 'scripts/inputManager';
 import libraryMenu from 'scripts/libraryMenu';
 import * as userSettings from 'scripts/settings/userSettings';
 import { LibraryTab } from 'types/libraryTab';
-import Dashboard from 'utils/dashboard';
+import Dashboard from 'components/dashboard';
 import Events from 'utils/events';
 import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collection-type';
 import { OutboundWebSocketMessageType } from '@jellyfin/sdk/lib/websocket';
 
-import 'elements/emby-itemscontainer/emby-itemscontainer';
-import 'elements/emby-button/emby-button';
+import 'components/itemscontainer/emby-itemscontainer';
+import 'components/buttons/emby-button';
 
 import 'styles/scrollstyles.scss';
 

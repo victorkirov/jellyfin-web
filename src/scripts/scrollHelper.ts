@@ -1,4 +1,4 @@
-import focusManager from '../components/focusManager';
+import focusManager from '../lib/focusManager';
 import dom from '../utils/dom';
 import '../styles/scrollstyles.scss';
 

@@ -2,11 +2,11 @@ import RemoteControl from 'components/remotecontrol/remotecontrol';
 import { playbackManager } from 'components/playback/playbackmanager';
 import { clearBackdrop } from 'components/backdrop/backdrop';
 import libraryMenu from 'scripts/libraryMenu';
-import 'elements/emby-button/emby-button';
+import 'components/buttons/emby-button';
 import 'elements/emby-button/paper-icon-button-light';
-import 'elements/emby-collapse/emby-collapse';
+import 'components/collapse/emby-collapse';
 import 'elements/emby-input/emby-input';
-import 'elements/emby-itemscontainer/emby-itemscontainer';
+import 'components/itemscontainer/emby-itemscontainer';
 import 'elements/emby-slider/emby-slider';
 
 export default function (view) {

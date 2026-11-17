@@ -2,10 +2,10 @@ import cardBuilder from 'components/cardbuilder/cardBuilder';
 import { getBackdropShape } from 'components/cardbuilder/utils/shape';
 import imageLoader from 'components/images/imageLoader';
 import loading from 'components/loading/loading';
-import Dashboard from 'utils/dashboard';
+import Dashboard from 'components/dashboard';
 
 import 'components/listview/listview.scss';
-import 'elements/emby-itemscontainer/emby-itemscontainer';
+import 'components/itemscontainer/emby-itemscontainer';
 
 function renderRecordings(elem, recordings, cardOptions, scrollX) {
     if (!elem) {

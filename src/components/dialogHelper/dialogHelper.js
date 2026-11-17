@@ -1,6 +1,6 @@
-import focusManager from '../focusManager';
+import focusManager from '../../lib/focusManager';
 import browser from '../../scripts/browser';
-import layoutManager from '../layoutManager';
+import layoutManager from '../../lib/layoutManager';
 import inputManager from '../../scripts/inputManager';
 import { toBoolean } from '../../utils/string.ts';
 import { hide } from '../loading/loading.ts';

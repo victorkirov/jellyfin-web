@@ -18,11 +18,11 @@ vi.mock('components/cardbuilder/cardBuilder', () => ({ default: {} }));
 vi.mock('lib/globalize', () => ({ default: { translate: (key: string) => key } }));
 vi.mock('components/playback/playbackmanager', () => ({ playbackManager: {} }));
 vi.mock('components/filterdialog/filterIndicator', () => ({ getFilterStatus: vi.fn(), setFilterStatus: vi.fn() }));
-vi.mock('elements/emby-itemscontainer/emby-itemscontainer', () => ({}));
-vi.mock('elements/emby-button/emby-button', () => ({}));
+vi.mock('components/itemscontainer/emby-itemscontainer', () => ({}));
+vi.mock('components/buttons/emby-button', () => ({}));
 vi.mock('elements/emby-button/paper-icon-button-light', () => ({}));
-vi.mock('components/focusManager', () => ({ default: { focus: (element: HTMLElement) => element.focus() } }));
-vi.mock('components/layoutManager', () => ({ default: { tv: true } }));
+vi.mock('lib/focusManager', () => ({ default: { focus: (element: HTMLElement) => element.focus() } }));
+vi.mock('lib/layoutManager', () => ({ default: { tv: true } }));
 vi.mock('components/dialogHelper/dialogHelper', () => ({ default: {
     createDialog: () => document.createElement('div'),
     open: (dialog: HTMLElement) => document.body.appendChild(dialog),

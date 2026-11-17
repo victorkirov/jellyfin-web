@@ -10,7 +10,7 @@ vi.mock('../scripts/inputManager', () => ({}));
 vi.mock('../components/toast/toast', () => ({ default: {} }));
 vi.mock('../components/confirm/confirm', () => ({ default: {} }));
 vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: {} }));
-vi.mock('../utils/dashboard', () => ({}));
+vi.mock('./dashboard', () => ({}));
 
 import { PluginManager } from './pluginManager';
 import Events from '../utils/events';

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import listView from 'components/listview/listview';
 import shortcuts from 'components/shortcuts';
-import focusManager from 'components/focusManager';
+import focusManager from 'lib/focusManager';
 import viewManager from 'components/viewManager/viewManager';
 
 const { showItem, play, layout, viewContainer, getScaledImageUrl } = vi.hoisted(() => ({
@@ -14,18 +14,18 @@ const strings = JSON.parse(readFileSync('src/strings/en-us.json', 'utf8'));
 vi.mock('lib/globalize', () => ({ default: { translate: (key, value) => (strings[key] || key).replace('{0}', value), getCurrentDateTimeLocale: () => 'en-US' } }));
 vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: { getApiClient: () => ({ getScaledImageUrl }) } }));
 vi.mock('components/cardbuilder/cardBuilder', () => ({ default: { getDefaultText: () => '' } }));
-vi.mock('components/layoutManager', () => ({ default: layout }));
-vi.mock('components/scrollManager', () => ({ default: { isEnabled: () => false } }));
+vi.mock('lib/layoutManager', () => ({ default: layout }));
+vi.mock('lib/scrollManager', () => ({ default: { isEnabled: () => false } }));
 vi.mock('components/viewContainer', () => ({ default: viewContainer }));
 vi.mock('components/router/appRouter', () => ({ appRouter: { showItem } }));
 vi.mock('components/playback/playbackmanager', () => ({ playbackManager: { play, canPlay: () => true } }));
 vi.mock('scripts/inputManager', () => ({ default: { on: vi.fn(), off: vi.fn() } }));
 vi.mock('scripts/settings/userSettings', () => ({ getSortValuesLegacy: () => ({ sortBy: 'SortName', sortOrder: 'Ascending' }) }));
 vi.mock('components/toast/toast', () => ({ default: vi.fn() }));
-vi.mock('elements/emby-button/emby-button', () => ({}));
+vi.mock('components/buttons/emby-button', () => ({}));
 vi.mock('elements/emby-progressbar/emby-progressbar', () => ({}));
-vi.mock('elements/emby-ratingbutton/emby-ratingbutton', () => ({}));
-vi.mock('elements/emby-playstatebutton/emby-playstatebutton', () => ({}));
+vi.mock('components/buttons/emby-ratingbutton', () => ({}));
+vi.mock('components/buttons/emby-playstatebutton', () => ({}));
 
 const items = [1, 3, 4].map((number, index) => ({
     Id: 'episode-' + number, ServerId: 'server', Type: 'Episode', MediaType: 'Video',

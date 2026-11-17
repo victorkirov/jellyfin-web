@@ -2,14 +2,14 @@ import dom from '../../utils/dom';
 import { playbackManager } from '../playback/playbackmanager';
 import Events from '../../utils/events.ts';
 import mediaInfo from '../mediainfo/mediainfo';
-import layoutManager from '../layoutManager';
-import focusManager from '../focusManager';
+import layoutManager from '../../lib/layoutManager';
+import focusManager from '../../lib/focusManager';
 import globalize from '../../lib/globalize';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import itemHelper from '../itemHelper';
 
 import './upnextdialog.scss';
-import '../../elements/emby-button/emby-button';
+import '../buttons/emby-button';
 import '../../styles/flexstyles.scss';
 
 const transitionEndEventName = dom.whichTransitionEvent();

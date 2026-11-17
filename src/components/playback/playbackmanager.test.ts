@@ -40,8 +40,8 @@ vi.mock('../apphost', () => ({ appHost: { supports: () => false, getDefaultLayou
 vi.mock('utils/bitrateTest', () => ({ detectBitrate: mocks.detectBitrate }));
 vi.mock('../../utils/jellyfin-apiclient/backdropImage', () => ({ getItemBackdropImageUrl: () => null }));
 vi.mock('screenfull', () => ({ default: { isEnabled: false } }));
-vi.mock('apps/legacy/features/playback/utils/mediaSegmentManager', () => ({ bindMediaSegmentManager: vi.fn() }));
-vi.mock('apps/legacy/features/playback/utils/mediaSessionSubscriber', () => ({ bindMediaSessionSubscriber: vi.fn() }));
+vi.mock('lib/playback/utils/mediaSegmentManager', () => ({ bindMediaSegmentManager: vi.fn() }));
+vi.mock('lib/playback/utils/mediaSessionSubscriber', () => ({ bindMediaSessionSubscriber: vi.fn() }));
 vi.mock('./skipsegment.ts', () => ({ bindSkipSegment: vi.fn() }));
 
 const item = { Id: 'item', ServerId: 'server', Type: 'Movie', MediaType: 'Video' };

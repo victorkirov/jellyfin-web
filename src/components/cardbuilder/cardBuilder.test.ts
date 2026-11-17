@@ -18,7 +18,7 @@ vi.mock('lib/jellyfin-apiclient', () => ({
         getApi: () => undefined
     }
 }));
-vi.mock('../focusManager', () => ({ default: {} }));
+vi.mock('../../lib/focusManager', () => ({ default: {} }));
 vi.mock('../images/imageLoader', () => ({
     default: { getPrimaryImageAspectRatio: () => 1 }
 }));
@@ -28,7 +28,7 @@ vi.mock('../indicators/indicators', () => ({
 vi.mock('../itemHelper', () => ({
     default: { getDisplayName: (item: { Name: string }) => item.Name }
 }));
-vi.mock('../layoutManager', () => ({ default: { tv: true } }));
+vi.mock('../../lib/layoutManager', () => ({ default: { tv: true } }));
 vi.mock('../playback/playbackmanager', () => ({ playbackManager: {} }));
 vi.mock('../router/appRouter', () => ({ appRouter: {} }));
 vi.mock('../shortcuts', () => ({ default: {} }));

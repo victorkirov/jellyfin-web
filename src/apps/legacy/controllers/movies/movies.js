@@ -10,7 +10,7 @@ import Events from 'utils/events';
 import { playbackManager } from 'components/playback/playbackmanager';
 import { getFilterStatus, setFilterStatus } from 'components/filterdialog/filterIndicator';
 
-import 'elements/emby-itemscontainer/emby-itemscontainer';
+import 'components/itemscontainer/emby-itemscontainer';
 
 export default function (view, params, tabContent, options) {
     const onViewStyleChange = () => {

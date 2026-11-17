@@ -6,8 +6,8 @@ import imageLoader from 'components/images/imageLoader';
 import globalize from 'lib/globalize';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 
-import 'elements/emby-itemscontainer/emby-itemscontainer';
-import 'elements/emby-button/emby-button';
+import 'components/itemscontainer/emby-itemscontainer';
+import 'components/buttons/emby-button';
 
 function renderItems(page, item, user) {
     const sections = [];

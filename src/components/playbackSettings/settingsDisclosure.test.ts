@@ -5,16 +5,16 @@ import PlaybackSettings from './playbackSettings';
 import SubtitleSettings from '../subtitlesettings/subtitlesettings';
 import appSettings from '../../scripts/settings/appSettings';
 import Events from '../../utils/events';
-import focusManager from '../focusManager';
+import focusManager from '../../lib/focusManager';
 
 vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: { getApiClient: () => ({
     getUser: () => Promise.resolve({ Id: 'user', Policy: { EnableVideoPlaybackTranscoding: true, EnableAudioPlaybackTranscoding: true } }),
     getCurrentUserId: () => 'user'
 }) } }));
 vi.mock('components/apphost', () => ({ appHost: { supports: () => true } }));
-vi.mock('components/layoutManager', () => ({ default: { tv: true } }));
+vi.mock('lib/layoutManager', () => ({ default: { tv: true } }));
 vi.mock('scripts/browser', () => ({ default: { web0s: true, safari: true } }));
-vi.mock('components/scrollManager', () => ({ default: { isEnabled: () => false } }));
+vi.mock('lib/scrollManager', () => ({ default: { isEnabled: () => false } }));
 vi.mock('components/pluginManager', () => ({ pluginManager: { ofType: () => [] } }));
 vi.mock('components/qualityOptions', () => ({ default: {
     getAudioQualityOptions: () => [{ bitrate: 0, name: 'Auto' }, { bitrate: 1500000, name: 'Selected' }],
@@ -26,7 +26,7 @@ vi.mock('lib/globalize', () => ({ default: { translate: (key: string) => key, tr
 vi.mock('components/subtitlesettings/subtitleappearancehelper', () => ({ default: { applyStyles: vi.fn() } }));
 vi.mock('components/playbackSettings/playbackSettings.template.html', () => ({ default: readFileSync('src/components/playbackSettings/playbackSettings.template.html', 'utf8') }));
 vi.mock('components/subtitlesettings/subtitlesettings.template.html', () => ({ default: readFileSync('src/components/subtitlesettings/subtitlesettings.template.html', 'utf8') }));
-vi.mock('elements/emby-select/emby-select', () => ({}));
+vi.mock('components/select/emby-select', () => ({}));
 vi.mock('elements/emby-checkbox/emby-checkbox', () => ({}));
 vi.mock('elements/emby-input/emby-input', () => ({}));
 vi.mock('elements/emby-slider/emby-slider', () => ({}));

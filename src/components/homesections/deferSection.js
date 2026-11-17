@@ -1,4 +1,4 @@
-import focusManager from 'components/focusManager';
+import focusManager from 'lib/focusManager';
 import { LazyLoader } from 'components/lazyLoader/lazyLoaderIntersectionObserver';
 
 export function deferSection(section, load) {

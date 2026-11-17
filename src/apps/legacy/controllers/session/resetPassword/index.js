@@ -1,5 +1,5 @@
 import globalize from 'lib/globalize';
-import Dashboard from 'utils/dashboard';
+import Dashboard from 'components/dashboard';
 
 function processForgotPasswordResult(result) {
     if (result.Success) {

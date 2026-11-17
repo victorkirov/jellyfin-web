@@ -3,8 +3,8 @@
  * @module components/autoFocuser
  */
 
-import focusManager from './focusManager';
-import layoutManager from './layoutManager';
+import focusManager from '../lib/focusManager';
+import layoutManager from '../lib/layoutManager';
 
 /**
      * Previously selected element.

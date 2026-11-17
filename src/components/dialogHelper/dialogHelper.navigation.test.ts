@@ -3,11 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { attachRouter, history } from 'lib/navigationHistory';
 import { close, createDialog, open } from './dialogHelper';
 
-vi.mock('../focusManager', () => ({ default: {
+vi.mock('../../lib/focusManager', () => ({ default: {
     focus: vi.fn(), pushScope: vi.fn(), popScope: vi.fn(), autoFocus: vi.fn()
 } }));
 vi.mock('../../scripts/browser', () => ({ default: { tv: true } }));
-vi.mock('../layoutManager', () => ({ default: { tv: true } }));
+vi.mock('../../lib/layoutManager', () => ({ default: { tv: true } }));
 vi.mock('../../scripts/inputManager', () => ({ default: { on: vi.fn(), off: vi.fn() } }));
 vi.mock('../loading/loading.ts', () => ({ hide: vi.fn() }));
 

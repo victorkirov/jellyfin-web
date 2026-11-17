@@ -6,9 +6,9 @@ import { userQueryKey } from 'utils/query/queryKeys';
 const mocks = vi.hoisted(() => ({
     getApi: vi.fn(), getApiClient: vi.fn(), register: vi.fn()
 }));
-vi.mock('../../lib/globalize', () => ({ default: { translate: (key: string) => key } }));
-vi.mock('../emby-button/emby-button', () => ({ default: {} }));
-vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: mocks }));
+vi.mock('../../lib/globalize/index', () => ({ default: { translate: (key: string) => key } }));
+vi.mock('./emby-button', () => ({ default: {} }));
+vi.mock('lib/jellyfin-apiclient/index', () => ({ ServerConnections: mocks }));
 vi.mock('scripts/serverNotifications', () => ({ default: {} }));
 
 beforeEach(() => queryClient.clear());

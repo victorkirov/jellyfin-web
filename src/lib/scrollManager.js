@@ -1,6 +1,6 @@
 /**
  * Module for controlling scroll behavior.
- * @module components/scrollManager
+ * @module lib/scrollManager
  */
 
 import dom from '../utils/dom';

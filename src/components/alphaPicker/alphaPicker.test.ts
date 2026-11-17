@@ -8,9 +8,9 @@ vi.mock('lib/navigationHistory', async () => {
     const { createMemoryHistory } = await import('history');
     return { history: createMemoryHistory() };
 });
-vi.mock('../../elements/emby-button/emby-button', () => ({}));
-vi.mock('../focusManager', () => ({ default: { focus: (element: HTMLElement) => element?.focus(), autoFocus: (element: HTMLElement) => (element.querySelector<HTMLElement>('[autofocus]') || element.querySelector<HTMLElement>('button'))?.focus(), pushScope: vi.fn(), popScope: vi.fn() } }));
-vi.mock('../layoutManager', () => ({ default: { tv: true } }));
+vi.mock('../buttons/emby-button', () => ({}));
+vi.mock('../../lib/focusManager', () => ({ default: { focus: (element: HTMLElement) => element?.focus(), autoFocus: (element: HTMLElement) => (element.querySelector<HTMLElement>('[autofocus]') || element.querySelector<HTMLElement>('button'))?.focus(), pushScope: vi.fn(), popScope: vi.fn() } }));
+vi.mock('../../lib/layoutManager', () => ({ default: { tv: true } }));
 vi.mock('../../lib/globalize', () => ({ default: { translate: (key: string) => key } }));
 vi.mock('../../elements/emby-button/paper-icon-button-light', () => ({}));
 vi.mock('material-design-icons-iconfont', () => ({}));

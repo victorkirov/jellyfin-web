@@ -11,7 +11,7 @@ vi.mock('../../lib/globalize', () => ({
 vi.mock('../router/appRouter', () => ({ appRouter: {} }));
 vi.mock('../itemHelper', () => ({ default: {} }));
 vi.mock('../indicators/indicators', () => ({ default: { getMissingIndicator: () => '' } }));
-vi.mock('../../elements/emby-button/emby-button', () => ({}));
+vi.mock('../buttons/emby-button', () => ({}));
 vi.mock('../../scripts/settings/userSettings', () => ({}));
 
 beforeEach(() => {

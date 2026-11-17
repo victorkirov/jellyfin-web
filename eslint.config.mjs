@@ -326,6 +326,20 @@ export default tseslint.config(
             ]
         },
         rules: {
+            'import/no-restricted-paths': ['error', {
+                zones: [
+                    {
+                        target: ['./src/elements', './src/utils'],
+                        from: ['./src/components', './src/apps'],
+                        message: 'Keep elements and utilities independent of application composition.'
+                    },
+                    {
+                        target: ['./src/components', './src/plugins'],
+                        from: './src/apps/legacy/features',
+                        message: 'Import shared playback and query definitions from the shared layer.'
+                    }
+                ]
+            }],
             // TODO: Add typescript recommended typed rules
             '@typescript-eslint/naming-convention': [
                 'error',

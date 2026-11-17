@@ -5,10 +5,10 @@ import { getParameterByName } from 'utils/url';
 
 import cardBuilder from './cardbuilder/cardBuilder';
 import imageLoader from './images/imageLoader';
-import layoutManager from './layoutManager';
+import layoutManager from '../lib/layoutManager';
 import loading from './loading/loading';
 
-import 'elements/emby-itemscontainer/emby-itemscontainer';
+import 'components/itemscontainer/emby-itemscontainer';
 
 import 'styles/scrollstyles.scss';
 

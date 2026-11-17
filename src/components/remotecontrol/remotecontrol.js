@@ -1,7 +1,7 @@
 import escapeHtml from 'escape-html';
 
-import { getImageUrl } from 'apps/legacy/features/playback/utils/image';
-import { getItemTextLines } from 'apps/legacy/features/playback/utils/itemText';
+import { getImageUrl } from 'lib/playback/utils/image';
+import { getItemTextLines } from 'lib/playback/utils/itemText';
 import { AppFeature } from 'constants/appFeature';
 import { ItemAction } from 'constants/itemAction';
 
@@ -14,7 +14,7 @@ import Events from '../../utils/events.ts';
 import { appHost } from '../apphost';
 import globalize from '../../lib/globalize';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
-import layoutManager from '../layoutManager';
+import layoutManager from '../../lib/layoutManager';
 import * as userSettings from '../../scripts/settings/userSettings';
 import itemContextMenu from '../itemContextMenu';
 import toast from '../toast/toast';
@@ -22,11 +22,11 @@ import { appRouter } from '../router/appRouter';
 import { getDefaultBackgroundClass } from '../cardbuilder/utils/builder';
 
 import '../cardbuilder/card.scss';
-import '../../elements/emby-button/emby-button';
+import '../buttons/emby-button';
 import '../../elements/emby-button/paper-icon-button-light';
-import '../../elements/emby-itemscontainer/emby-itemscontainer';
+import '../itemscontainer/emby-itemscontainer';
 import './remotecontrol.scss';
-import '../../elements/emby-ratingbutton/emby-ratingbutton';
+import '../buttons/emby-ratingbutton';
 import '../../elements/emby-slider/emby-slider';
 
 let showMuteButton = true;

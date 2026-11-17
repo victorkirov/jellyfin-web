@@ -8,7 +8,7 @@ import { deferSection } from './deferSection';
 const emptyLibraries = vi.hoisted(() => ({ fetchQuery: vi.fn(), translate: vi.fn((key: string) => key) }));
 
 vi.mock('./deferSection', () => ({ deferSection: vi.fn(() => vi.fn()) }));
-vi.mock('components/layoutManager', () => ({ default: { tv: true } }));
+vi.mock('lib/layoutManager', () => ({ default: { tv: true } }));
 vi.mock('hooks/api/useUserViews', () => ({ getUserViewsQuery: vi.fn() }));
 vi.mock('lib/globalize', () => ({ default: { translate: emptyLibraries.translate } }));
 vi.mock('lib/jellyfin-apiclient/ServerConnections', () => ({ default: { getApi: () => ({}) } }));
@@ -21,9 +21,9 @@ vi.mock('./sections/nextUp', () => ({ loadNextUp: vi.fn() }));
 vi.mock('./sections/recentlyAdded', () => ({ loadRecentlyAdded: vi.fn() }));
 vi.mock('./sections/resume', () => ({ loadResume: vi.fn() }));
 vi.mock('elements/emby-button/paper-icon-button-light', () => ({}));
-vi.mock('elements/emby-itemscontainer/emby-itemscontainer', () => ({}));
+vi.mock('components/itemscontainer/emby-itemscontainer', () => ({}));
 vi.mock('elements/emby-scroller/emby-scroller', () => ({}));
-vi.mock('elements/emby-button/emby-button', () => ({}));
+vi.mock('components/buttons/emby-button', () => ({}));
 
 beforeEach(() => {
     vi.clearAllMocks();

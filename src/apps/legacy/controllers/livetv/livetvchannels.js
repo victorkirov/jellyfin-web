@@ -7,7 +7,7 @@ import Events from 'utils/events';
 import { clearLiveTvStatus, showLiveTvStatus } from 'components/guide/liveTvStatus';
 import { getFilterStatus, setFilterStatus } from 'components/filterdialog/filterIndicator';
 
-import 'elements/emby-itemscontainer/emby-itemscontainer';
+import 'components/itemscontainer/emby-itemscontainer';
 
 export default function (view, params, tabContent) {
     function getPageData() {

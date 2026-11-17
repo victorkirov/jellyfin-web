@@ -7,7 +7,7 @@ import viewManager from '../components/viewManager/viewManager';
 import { appRouter } from '../components/router/appRouter';
 import { playbackManager } from '../components/playback/playbackmanager';
 import browser from './browser';
-import Dashboard, { pageClassOn } from '../utils/dashboard';
+import Dashboard, { pageClassOn } from '../components/dashboard';
 import Events from '../utils/events.ts';
 import { getParameterByName } from '../utils/url.ts';
 import datetime from '../scripts/datetime';

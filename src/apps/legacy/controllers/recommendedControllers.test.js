@@ -32,10 +32,10 @@ vi.mock('lib/jellyfin-apiclient/ServerConnections', () => ({ default: { getApi: 
 vi.mock('components/cardbuilder/cardBuilder', () => ({ default: { buildCards: vi.fn(), getCardsHtml: vi.fn(() => '') } }));
 vi.mock('components/cardbuilder/utils/shape', () => ({ getBackdropShape: () => 'backdrop', getPortraitShape: () => 'portrait', getSquareShape: () => 'square' }));
 vi.mock('components/images/imageLoader', () => ({ default: { lazyChildren: vi.fn() } }));
-vi.mock('components/focusManager', () => ({ default: { autoFocus: vi.fn(), focus: vi.fn(), isCurrentlyFocusable: () => false } }));
+vi.mock('lib/focusManager', () => ({ default: { autoFocus: vi.fn(), focus: vi.fn(), isCurrentlyFocusable: () => false } }));
 vi.mock('components/autoFocuser', () => ({ default: { autoFocus: vi.fn() } }));
 vi.mock('components/favoriteitems', () => ({ default: { render: vi.fn() } }));
-vi.mock('components/layoutManager', () => ({ default: { tv: true } }));
+vi.mock('lib/layoutManager', () => ({ default: { tv: true } }));
 vi.mock('components/loading/loading', () => ({ default: { show: vi.fn(), hide: vi.fn() } }));
 vi.mock('components/maintabsmanager', () => ({
     setTabs: (...args) => { mocks.tabs = args; },
@@ -48,11 +48,11 @@ vi.mock('scripts/inputManager', () => ({ default: { on: vi.fn(), off: vi.fn() } 
 vi.mock('scripts/libraryMenu', () => ({ default: { getTopParentId: () => 'menu-parent', setTitle: vi.fn() } }));
 vi.mock('scripts/settings/userSettings', () => ({ get: vi.fn(), useEpisodeImagesInNextUpAndResume: () => false }));
 vi.mock('scripts/browser', () => ({ default: { mobile: false } }));
-vi.mock('utils/dashboard', () => ({ default: { navigate: vi.fn() } }));
+vi.mock('components/dashboard', () => ({ default: { navigate: vi.fn() } }));
 vi.mock('elements/emby-scroller/emby-scroller', () => ({}));
-vi.mock('elements/emby-itemscontainer/emby-itemscontainer', () => ({}));
+vi.mock('components/itemscontainer/emby-itemscontainer', () => ({}));
 vi.mock('elements/emby-tabs/emby-tabs', () => ({}));
-vi.mock('elements/emby-button/emby-button', () => ({}));
+vi.mock('components/buttons/emby-button', () => ({}));
 
 import Movies from './movies/moviesrecommended';
 import Shows from './shows/tvrecommended';

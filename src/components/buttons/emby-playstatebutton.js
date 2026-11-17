@@ -1,7 +1,7 @@
-import globalize from '../../lib/globalize';
-import { ServerConnections } from 'lib/jellyfin-apiclient';
+import globalize from '../../lib/globalize/index';
+import { ServerConnections } from 'lib/jellyfin-apiclient/index';
 import { OutboundWebSocketMessageType } from '@jellyfin/sdk/lib/websocket';
-import EmbyButtonPrototype from '../../elements/emby-button/emby-button';
+import EmbyButtonPrototype from './emby-button';
 
 function onClick() {
     const button = this;

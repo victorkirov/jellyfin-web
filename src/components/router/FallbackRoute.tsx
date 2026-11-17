@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 
 import Page from 'components/Page';
 import globalize from 'lib/globalize';
-import LinkButton from 'elements/emby-button/LinkButton';
+import LinkButton from 'components/buttons/LinkButton';
 
 const FallbackRoute = () => {
     const location = useLocation();

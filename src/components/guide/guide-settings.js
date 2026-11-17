@@ -1,7 +1,7 @@
 import dialogHelper from '../dialogHelper/dialogHelper';
 import globalize from '../../lib/globalize';
 import * as userSettings from '../../scripts/settings/userSettings';
-import layoutManager from '../layoutManager';
+import layoutManager from '../../lib/layoutManager';
 import scrollHelper from '../../scripts/scrollHelper';
 import '../../elements/emby-checkbox/emby-checkbox';
 import '../../elements/emby-radio/emby-radio';
