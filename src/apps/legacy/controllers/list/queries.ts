@@ -4,6 +4,9 @@ import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collec
 import type { ItemDto } from 'types/base/models/item-dto';
 import type { ListSettings } from './settings';
 import type { ListParams, ListQuery } from './types';
+import { parseOptionalBoolean } from './policies';
+
+const liveTvBooleanFields = ['IsMovie', 'IsSeries', 'IsNews', 'IsSports', 'IsKids', 'IsAiring'] as const;
 
 function getInitialLiveTvQuery(instance: ListSettings, params: ListParams, startIndex = 0, limit = 300) {
     const query: ListQuery = {
@@ -23,40 +26,9 @@ function getInitialLiveTvQuery(instance: ListSettings, params: ListParams, start
         query.GenreIds = params.genreId;
     }
 
-    if (params.IsMovie === 'true') {
-        query.IsMovie = true;
-    } else if (params.IsMovie === 'false') {
-        query.IsMovie = false;
-    }
-
-    if (params.IsSeries === 'true') {
-        query.IsSeries = true;
-    } else if (params.IsSeries === 'false') {
-        query.IsSeries = false;
-    }
-
-    if (params.IsNews === 'true') {
-        query.IsNews = true;
-    } else if (params.IsNews === 'false') {
-        query.IsNews = false;
-    }
-
-    if (params.IsSports === 'true') {
-        query.IsSports = true;
-    } else if (params.IsSports === 'false') {
-        query.IsSports = false;
-    }
-
-    if (params.IsKids === 'true') {
-        query.IsKids = true;
-    } else if (params.IsKids === 'false') {
-        query.IsKids = false;
-    }
-
-    if (params.IsAiring === 'true') {
-        query.IsAiring = true;
-    } else if (params.IsAiring === 'false') {
-        query.IsAiring = false;
+    for (const field of liveTvBooleanFields) {
+        const value = parseOptionalBoolean(params[field]);
+        if (value !== undefined) query[field] = value;
     }
 
     return modifyQueryWithFilters(instance, query);

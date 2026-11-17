@@ -8,7 +8,6 @@ import AlphaPicker from 'components/alphaPicker/alphaPicker';
 import 'components/itemscontainer/emby-itemscontainer';
 import 'elements/emby-scroller/emby-scroller';
 import LibraryMenu from 'scripts/libraryMenu';
-import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collection-type';
 import type { ItemDto } from 'types/base/models/item-dto';
 import { getItems, getItem } from './list/queries';
 import { ListSettings } from './list/settings';
@@ -16,6 +15,8 @@ import { getItemsHtml } from './list/presentation';
 import { getTitle } from './list/title';
 import { updateSortText, updateItemsContainerForViewType, updateAlphaPickerState, showViewSettingsMenu, showFilterMenu, showSortMenu, hideOrShowAll, bindAll } from './list/controls';
 import type { ListParams, ListResult, ListItemsContainer } from './list/types';
+import { canPlayList } from './list/policies';
+import { clearListLoadStatus, showListLoadStatus } from './list/loadStatus';
 
 class ItemsView extends ListSettings {
     constructor(view: HTMLElement, params: ListParams) {
@@ -31,6 +32,26 @@ class ItemsView extends ListSettings {
 
         let isLoading = false;
         let requestId = 0;
+        let loadId = 0;
+        let active = true;
+        let destroyed = false;
+        let loadingVisible = false;
+        let contentLoaded = false;
+
+        const hideLoading = () => {
+            if (loadingVisible) {
+                loadingVisible = false;
+                loading.hide();
+            }
+        };
+
+        const invalidateLoad = () => {
+            active = false;
+            loadId++;
+            requestId++;
+            hideLoading();
+            clearListLoadStatus(view);
+        };
 
         const updatePaging = (result: ListResult) => {
             let focusRequestId: number;
@@ -43,20 +64,20 @@ class ItemsView extends ListSettings {
                     return refresh;
                 },
                 focus: () => {
-                    if (focusRequestId === requestId && this.itemsContainer && !this.itemsContainer.paused) {
+                    if (active && focusRequestId === requestId && this.itemsContainer && !this.itemsContainer.paused) {
                         window.scrollTo(0, 0);
                         autoFocus();
                     }
                 }
             });
-        }
+        };
 
         const fetchData = () => {
             const request = ++requestId;
             isLoading = true;
 
             return getItems(this, params, this.currentItem, null, query.StartIndex, query.Limit).then((result: ListResult) => {
-                if (request !== requestId || this.itemsContainer?.paused) return result;
+                if (request !== requestId || !active || this.itemsContainer?.paused) return result;
                 if (this.totalItemCount == null) {
                     this.totalItemCount = result.Items ? result.Items.length : result.length;
                 }
@@ -66,7 +87,7 @@ class ItemsView extends ListSettings {
             }).finally(() => {
                 if (request === requestId) isLoading = false;
             });
-        }
+        };
 
         const initAlphaPicker = () => {
             this.scroller = view.querySelector<HTMLElement>('.scrollFrameY');
@@ -78,23 +99,23 @@ class ItemsView extends ListSettings {
                 valueChangeEvent: 'click'
             });
             this.alphaPicker.on('alphavaluechanged', onAlphaPickerValueChanged);
-        }
+        };
 
         const onAlphaPickerValueChanged = () => {
             query.StartIndex = 0;
-            this.itemsContainer.refreshItems();
-        }
+            void this.itemsContainer.refreshItems();
+        };
 
         const setTitle = (item: ItemDto | null) => {
             LibraryMenu.setTitle(getTitle(params, item) || '');
-        }
+        };
 
         const play = () => {
             const currentItem = this.currentItem;
 
             if (currentItem && !this.hasFilters) {
                 const values = this.getSortValues();
-                playbackManager.play({
+                void playbackManager.play({
                     items: [currentItem],
                     queryOptions: {
                         SortBy: values.sortBy,
@@ -103,30 +124,30 @@ class ItemsView extends ListSettings {
                     autoplay: true
                 });
             } else {
-                getItems(this, this.params, currentItem, null, 0, 300).then((result: ListResult) => {
-                    playbackManager.play({
+                void getItems(this, this.params, currentItem, null, 0, 300).then((result: ListResult) => {
+                    void playbackManager.play({
                         items: result.Items!,
                         autoplay: true
                     });
                 });
             }
-        }
+        };
 
         const queue = () => {
             const currentItem = this.currentItem;
 
             if (currentItem && !this.hasFilters) {
-                playbackManager.queue({
+                void playbackManager.queue({
                     items: [currentItem]
                 });
             } else {
-                getItems(this, this.params, currentItem, null, 0, 300).then((result: ListResult) => {
-                    playbackManager.queue({
+                void getItems(this, this.params, currentItem, null, 0, 300).then((result: ListResult) => {
+                    void playbackManager.queue({
                         items: result.Items!
                     });
                 });
             }
-        }
+        };
 
         const shuffle = () => {
             const currentItem = this.currentItem;
@@ -134,25 +155,25 @@ class ItemsView extends ListSettings {
             if (currentItem && !this.hasFilters) {
                 playbackManager.shuffle(currentItem);
             } else {
-                getItems(this, this.params, currentItem, 'Random', 0, 300).then((result: ListResult) => {
-                    playbackManager.play({
+                void getItems(this, this.params, currentItem, 'Random', 0, 300).then((result: ListResult) => {
+                    void playbackManager.play({
                         items: result.Items!,
                         autoplay: true
                     });
                 });
             }
-        }
+        };
 
         const autoFocus = () => {
             const request = requestId;
-            import('components/autoFocuser').then(({ default: autoFocuser }) => {
-                if (request === requestId && this.itemsContainer && !this.itemsContainer.paused) {
+            void import('components/autoFocuser').then(({ default: autoFocuser }) => {
+                if (active && request === requestId && this.itemsContainer && !this.itemsContainer.paused) {
                     autoFocuser.autoFocus(view);
                 }
             });
-        }
+        };
 
-                this.itemsContainer = view.querySelector<ListItemsContainer>('.itemsContainer')!;
+        this.itemsContainer = view.querySelector<ListItemsContainer>('.itemsContainer')!;
 
         if (params.parentId) {
             this.itemsContainer.setAttribute('data-parentid', params.parentId);
@@ -201,74 +222,52 @@ class ItemsView extends ListSettings {
         this.itemsContainer.fetchData = fetchData;
         this.itemsContainer.getItemsHtml = items => getItemsHtml(this, params, items);
         this.itemsContainer.afterRefresh = updatePaging;
-        view.addEventListener('viewshow', (e: Event) => {
-            const isRestored = (e as CustomEvent<{ isRestored: boolean }>).detail.isRestored;
-
-            if (!isRestored) {
+        const loadView = async (isRestored: boolean): Promise<void> => {
+            const request = ++loadId;
+            const refresh = !isRestored || !contentLoaded;
+            if (refresh) contentLoaded = false;
+            active = true;
+            const isCurrent = () => active && !destroyed && request === loadId;
+            clearListLoadStatus(view);
+            if (refresh) {
                 loading.show();
+                loadingVisible = true;
                 updateSortText(this);
                 updateItemsContainerForViewType(this);
             }
-
             setTitle(null);
-            getItem(params).then((item: ItemDto | null) => {
+            try {
+                const item: ItemDto | null = await getItem(params);
+                if (!isCurrent()) return;
                 setTitle(item);
-                if (item && item.Type == 'Genre') {
-                    item.ParentId = params.parentId;
-                }
-
+                if (item?.Type === 'Genre') item.ParentId = params.parentId;
                 this.currentItem = item;
-                const refresh = !isRestored;
-                this.itemsContainer.resume({
-                    refresh: refresh
-                }).then(() => {
-                    loading.hide();
-
-                    if (refresh) {
-                        focusManager.autoFocus(this.itemsContainer);
-                    }
+                if (refresh && item && item.Type !== 'PhotoAlbum' && !this.alphaPicker) initAlphaPicker();
+                const canPlay = canPlayList(item, params);
+                hideOrShowAll(view.querySelectorAll<HTMLElement>('.btnPlay'), !canPlay);
+                hideOrShowAll(view.querySelectorAll<HTMLElement>('.btnShuffle'), !canPlay || params.type === 'nextup');
+                hideOrShowAll(view.querySelectorAll<HTMLElement>('.btnQueue'), !item || !playbackManager.canQueue(item));
+                await this.itemsContainer.resume({ refresh });
+                if (!isCurrent()) return;
+                contentLoaded = true;
+                hideLoading();
+                if (refresh) focusManager.autoFocus(this.itemsContainer);
+            } catch (error) {
+                if (!isCurrent()) return;
+                contentLoaded = false;
+                console.error('Error loading list', error);
+                hideLoading();
+                const retryButton = showListLoadStatus(view, () => {
+                    void loadView(false);
                 });
+                focusManager.autoFocus(retryButton.parentElement);
+            }
+        };
 
-                if (!isRestored && item && item.Type !== 'PhotoAlbum') {
-                    initAlphaPicker();
-                }
-
-                const itemType = item ? item.Type : null;
-
-                if ((itemType === 'MusicGenre' || params.type !== 'Programs' && itemType !== 'Channel')
-                    // Folder, Playlist views
-                    && itemType !== 'UserView'
-                    // Only Photo (homevideos) and Music Video CollectionFolders are supported
-                    && !(itemType === 'CollectionFolder' && item?.CollectionType !== CollectionType.Homevideos && item?.CollectionType !== CollectionType.Musicvideos)
-                ) {
-                    // Show Play All buttons
-                    hideOrShowAll(view.querySelectorAll<HTMLElement>('.btnPlay'), false);
-                } else {
-                    // Hide Play All buttons
-                    hideOrShowAll(view.querySelectorAll<HTMLElement>('.btnPlay'), true);
-                }
-
-                if ((itemType === 'MusicGenre' || params.type !== 'Programs' && params.type !== 'nextup' && itemType !== 'Channel')
-                    // Folder, Playlist views
-                    && itemType !== 'UserView'
-                    // Only Photo (homevideos) and Music Video CollectionFolders are supported
-                    && !(itemType === 'CollectionFolder' && item?.CollectionType !== CollectionType.Homevideos && item?.CollectionType !== CollectionType.Musicvideos)
-                ) {
-                    // Show Shuffle buttons
-                    hideOrShowAll(view.querySelectorAll<HTMLElement>('.btnShuffle'), false);
-                } else {
-                    // Hide Shuffle buttons
-                    hideOrShowAll(view.querySelectorAll<HTMLElement>('.btnShuffle'), true);
-                }
-
-                if (item && playbackManager.canQueue(item)) {
-                    // Show Queue button
-                    hideOrShowAll(view.querySelectorAll<HTMLElement>('.btnQueue'), false);
-                } else {
-                    // Hide Queue button
-                    hideOrShowAll(view.querySelectorAll<HTMLElement>('.btnQueue'), true);
-                }
-            });
+        view.addEventListener('viewshow', (event: Event) => {
+            if (destroyed) return;
+            const isRestored = Boolean((event as CustomEvent<{ isRestored: boolean }>).detail?.isRestored);
+            void loadView(isRestored);
 
             if (!isRestored) {
                 bindAll(view.querySelectorAll<HTMLElement>('.btnPlay'), 'click', play);
@@ -281,6 +280,7 @@ class ItemsView extends ListSettings {
             });
         });
         view.addEventListener('viewhide', () => {
+            invalidateLoad();
             const itemsContainer = this.itemsContainer;
 
             if (itemsContainer) {
@@ -295,6 +295,10 @@ class ItemsView extends ListSettings {
             }
         });
         view.addEventListener('viewdestroy', () => {
+            destroyed = true;
+            invalidateLoad();
+            this.alphaNumericShortcuts?.destroy();
+            this.alphaNumericShortcuts = null;
             if (this.listController) {
                 this.listController.destroy();
             }
@@ -314,7 +318,6 @@ class ItemsView extends ListSettings {
             this.alphaPickerElement = null;
         });
     }
-
 }
 
 export default ItemsView;
