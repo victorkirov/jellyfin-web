@@ -198,48 +198,29 @@ const config = {
                 include: [
                     path.resolve(__dirname, 'node_modules/@jellyfin/libass-wasm'),
                     path.resolve(__dirname, 'node_modules/@jellyfin/sdk'),
-                    path.resolve(__dirname, 'node_modules/@mui/base'),
-                    path.resolve(__dirname, 'node_modules/@mui/lab'),
                     path.resolve(__dirname, 'node_modules/@mui/material'),
                     path.resolve(__dirname, 'node_modules/@mui/private-theming'),
                     path.resolve(__dirname, 'node_modules/@mui/styled-engine'),
                     path.resolve(__dirname, 'node_modules/@mui/system'),
                     path.resolve(__dirname, 'node_modules/@mui/utils'),
-                    path.resolve(__dirname, 'node_modules/@mui/x-date-pickers'),
-                    path.resolve(__dirname, 'node_modules/@react-hook/latest'),
-                    path.resolve(__dirname, 'node_modules/@react-hook/passive-layout-effect'),
-                    path.resolve(__dirname, 'node_modules/@react-hook/resize-observer'),
                     path.resolve(__dirname, 'node_modules/@remix-run/router'),
-                    path.resolve(__dirname, 'node_modules/@tanstack/match-sorter-utils'),
                     path.resolve(__dirname, 'node_modules/@tanstack/query-core'),
                     path.resolve(__dirname, 'node_modules/@tanstack/query-persist-client-core'),
                     path.resolve(__dirname, 'node_modules/@tanstack/react-query'),
-                    path.resolve(__dirname, 'node_modules/@tanstack/react-table'),
-                    path.resolve(__dirname, 'node_modules/@tanstack/react-virtual'),
-                    path.resolve(__dirname, 'node_modules/@tanstack/table-core'),
-                    path.resolve(__dirname, 'node_modules/@tanstack/virtual-core'),
                     path.resolve(__dirname, 'node_modules/@uupaa/dynamic-import-polyfill'),
                     path.resolve(__dirname, 'node_modules/axios'),
                     path.resolve(__dirname, 'node_modules/blurhash'),
-                    path.resolve(__dirname, 'node_modules/compare-versions'),
                     path.resolve(__dirname, 'node_modules/date-fns'),
-                    path.resolve(__dirname, 'node_modules/dom7'),
                     path.resolve(__dirname, 'node_modules/flv.js'),
-                    path.resolve(__dirname, 'node_modules/highlight-words'),
                     path.resolve(__dirname, 'node_modules/idb-keyval'),
                     path.resolve(__dirname, 'node_modules/libbitsub'),
                     path.resolve(__dirname, 'node_modules/linkify-it'),
                     path.resolve(__dirname, 'node_modules/markdown-it'),
-                    path.resolve(__dirname, 'node_modules/material-react-table'),
                     path.resolve(__dirname, 'node_modules/mdurl'),
                     path.resolve(__dirname, 'node_modules/proxy-polyfill'),
                     path.resolve(__dirname, 'node_modules/punycode'),
-                    path.resolve(__dirname, 'node_modules/react-blurhash'),
-                    path.resolve(__dirname, 'node_modules/react-lazy-load-image-component'),
                     path.resolve(__dirname, 'node_modules/react-router'),
-                    path.resolve(__dirname, 'node_modules/remove-accents'),
                     path.resolve(__dirname, 'node_modules/screenfull'),
-                    path.resolve(__dirname, 'node_modules/ssr-window'),
                     path.resolve(__dirname, 'node_modules/swiper'),
                     path.resolve(__dirname, 'node_modules/usehooks-ts'),
                     path.resolve(__dirname, 'src')
@@ -347,13 +328,6 @@ const config = {
             {
                 test: /\.(mp3)$/i,
                 type: 'asset/resource'
-            },
-            {
-                test: require.resolve('jquery'),
-                loader: 'expose-loader',
-                options: {
-                    exposes: ['$', 'jQuery']
-                }
             }
         ]
     }

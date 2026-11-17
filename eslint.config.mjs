@@ -159,11 +159,6 @@ export default tseslint.config(
                             allowTypeImports: true
                         },
                         {
-                            name: '@mui/icons-material',
-                            message: 'Use direct file imports for tree-shaking',
-                            allowTypeImports: true
-                        },
-                        {
                             name: '@mui/material',
                             message: 'Use direct file imports for tree-shaking',
                             allowTypeImports: true
@@ -213,9 +208,6 @@ export default tseslint.config(
                 'webapis': false,
                 // WebOS globals
                 'webOS': false,
-                // Dependency globals
-                '$': false,
-                'jQuery': false,
                 // Jellyfin globals
                 'ApiClient': true,
                 'Events': true,

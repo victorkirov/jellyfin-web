@@ -38,9 +38,7 @@ export function loadView(options) {
             pageIndex = 0;
         }
 
-        const isPluginpage = options.url.includes('configurationpage');
-        const newViewInfo = normalizeNewView(options, isPluginpage);
-        const newView = newViewInfo.elem;
+        const newView = normalizeNewView(options);
 
         const currentPage = allPages[pageIndex];
 
@@ -65,14 +63,7 @@ export function loadView(options) {
         }
 
         if (currentPage) {
-            if (newViewInfo.hasScript && window.$) {
-                mainAnimatedPages.removeChild(currentPage);
-                view = $(view).appendTo(mainAnimatedPages)[0];
-            } else {
-                mainAnimatedPages.replaceChild(view, currentPage);
-            }
-        } else if (newViewInfo.hasScript && window.$) {
-            view = $(view).appendTo(mainAnimatedPages)[0];
+            mainAnimatedPages.replaceChild(view, currentPage);
         } else {
             mainAnimatedPages.appendChild(view);
         }
@@ -109,59 +100,21 @@ export function loadView(options) {
                     afterAnimate(allPages, pageIndex);
                 }
 
-                if (window.$) {
-                    $.mobile = $.mobile || {};
-                    $.mobile.activePage = view;
-                }
-
                 return view;
             });
     }
 }
 
-function parseHtml(html, hasScript) {
-    if (hasScript) {
-        html = html
-            .replaceAll('\x3c!--<script', '<script')
-            .replaceAll('</script>--\x3e', '</script>');
-    }
-
-    const wrapper = document.createElement('div');
-    wrapper.innerHTML = html;
-    return wrapper.querySelector('div[data-role="page"]');
-}
-
-function normalizeNewView(options, isPluginpage) {
+function normalizeNewView(options) {
     const viewHtml = options.view;
 
     if (viewHtml.indexOf('data-role="page"') === -1) {
         return viewHtml;
     }
 
-    let hasScript = viewHtml.indexOf('<script') !== -1;
-    const elem = parseHtml(viewHtml, hasScript);
-
-    if (hasScript) {
-        hasScript = elem.querySelector('script') != null;
-    }
-
-    let hasjQuery = false;
-    let hasjQuerySelect = false;
-    let hasjQueryChecked = false;
-
-    if (isPluginpage) {
-        hasjQuery = viewHtml.indexOf('jQuery') != -1 || viewHtml.indexOf('$(') != -1 || viewHtml.indexOf('$.') != -1;
-        hasjQueryChecked = viewHtml.indexOf('.checked(') != -1;
-        hasjQuerySelect = viewHtml.indexOf('.selectmenu(') != -1;
-    }
-
-    return {
-        elem: elem,
-        hasScript: hasScript,
-        hasjQuerySelect: hasjQuerySelect,
-        hasjQueryChecked: hasjQueryChecked,
-        hasjQuery: hasjQuery
-    };
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = viewHtml;
+    return wrapper.querySelector('div[data-role="page"]');
 }
 
 function beforeAnimate(allPages, newPageIndex, oldPageIndex) {
@@ -211,11 +164,6 @@ export function tryRestoreView(options) {
 
                 if (!options.cancel && previousAnimatable) {
                     afterAnimate(allPages, index);
-                }
-
-                if (window.$) {
-                    $.mobile = $.mobile || {};
-                    $.mobile.activePage = view;
                 }
 
                 return view;
