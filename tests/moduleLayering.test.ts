@@ -1,10 +1,17 @@
 // @vitest-environment node
 import { ESLint } from 'eslint';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 const eslint = new ESLint();
 const restrictions = (results: ESLint.LintResult[]) => results.flatMap(result => result.messages
     .filter(message => message.ruleId === 'import/no-restricted-paths'));
+
+// Parser/configuration startup is setup, not part of a five-second fixture assertion.
+beforeAll(async () => {
+    await eslint.lintText("import 'lib/navigationHistory';\n", {
+        filePath: 'src/elements/emby-button/Button.tsx'
+    });
+}, 60000);
 
 describe('resolved module layers', () => {
     it.each([
