@@ -8,7 +8,6 @@ vi.mock('scripts/settings/userSettings', () => ({
         dateTimeLocale: () => settings.culture
     }
 }));
-vi.mock('utils/dateFnsLocale', () => ({ updateLocale: vi.fn() }));
 
 describe('translated numbers', () => {
     it('reuses number formatting and clears it on culture change', () => {

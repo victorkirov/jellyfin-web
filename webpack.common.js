@@ -146,10 +146,7 @@ const config = {
                         // get the name. E.g. node_modules/packageName/not/this/part.js
                         // or node_modules/packageName
                         const packageName = module.context.match(/[\\/]node_modules[\\/](.*?)([\\/]|$)/)[1];
-                        // Keep locale chunks named separately, but leave other lazy modules async.
-                        const isDateLocale = packageName === 'date-fns'
-                            && /[\\/]locale([\\/]|$)/.test(module.context);
-                        if (!isDateLocale && !chunks.some(chunk => chunk.canBeInitial())) {
+                        if (!chunks.some(chunk => chunk.canBeInitial())) {
                             return undefined;
                         }
 
@@ -159,23 +156,6 @@ const config = {
                                 .substring(module.context.lastIndexOf(packageName))
                                 .split(/[\\/]/);
                             return `node_modules.${parts[0]}.${parts[1]}`;
-                        }
-
-                        if (packageName === 'date-fns') {
-                            const parts = module.context
-                                .substring(module.context.lastIndexOf(packageName))
-                                .split(/[\\/]/);
-
-                            let name = `node_modules.${parts[0]}`;
-                            if (parts[1]) {
-                                name += `.${parts[1]}`;
-
-                                if (parts[1] === 'locale' && parts[2]) {
-                                    name += `.${parts[2]}`;
-                                }
-                            }
-
-                            return name;
                         }
 
                         return `node_modules.${packageName}`;

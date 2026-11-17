@@ -27,21 +27,21 @@ describe('Vendor chunk names', () => {
         )).toBe('node_modules.@mui.material');
     });
 
-    it('keeps async locales in separate named chunks', () => {
+    it('leaves unused async locale modules out of startup packages', () => {
         expect(getChunkName(
             { context: '/project/node_modules/date-fns/locale/ru' },
             [asyncChunk]
-        )).toBe('node_modules.date-fns.locale.ru');
+        )).toBeUndefined();
         expect(getChunkName(
             { context: '/project/node_modules/date-fns/locale/uk' },
             [asyncChunk]
-        )).toBe('node_modules.date-fns.locale.uk');
+        )).toBeUndefined();
     });
 
-    it('recognizes locale paths on Windows', () => {
+    it('leaves lazy modules async on Windows', () => {
         expect(getChunkName(
             { context: 'C:\\project\\node_modules\\date-fns\\locale\\ru' },
             [asyncChunk]
-        )).toBe('node_modules.date-fns.locale.ru');
+        )).toBeUndefined();
     });
 });
