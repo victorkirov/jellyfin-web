@@ -425,6 +425,10 @@ a[data-role="button"],
     }
 }
 
+.button-link-inherit:not(:focus) {
+    color: inherit;
+}
+
 .emby-button.show-focus:focus {
     background: var(--jf-palette-primary-main, $primary-main);
     color: var(--jf-palette-primary-contrastText, $primary-contrastText);
