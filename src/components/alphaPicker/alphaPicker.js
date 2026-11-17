@@ -189,6 +189,8 @@ export class AlphaPicker {
             }
         }
 
+        const boundOnAlphaPickerClick = onAlphaPickerClick.bind(this);
+
         this.enabled = function (enabled) {
             if (enabled) {
                 if (itemsContainer) {
@@ -202,7 +204,7 @@ export class AlphaPicker {
                 if (options.valueChangeEvent !== 'click') {
                     element.addEventListener('focus', onAlphaPickerFocusIn, true);
                 } else {
-                    element.addEventListener('click', onAlphaPickerClick.bind(this));
+                    element.addEventListener('click', boundOnAlphaPickerClick);
                 }
             } else {
                 if (itemsContainer) {
@@ -211,7 +213,7 @@ export class AlphaPicker {
 
                 element.removeEventListener('click', onAlphaPickerInKeyboardModeClick);
                 element.removeEventListener('focus', onAlphaPickerFocusIn, true);
-                element.removeEventListener('click', onAlphaPickerClick.bind(this));
+                element.removeEventListener('click', boundOnAlphaPickerClick);
             }
         };
 
