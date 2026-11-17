@@ -24,6 +24,8 @@ import './listview.scss';
 import '../../elements/emby-ratingbutton/emby-ratingbutton';
 import '../../elements/emby-playstatebutton/emby-playstatebutton';
 
+let overviewMarkdown;
+
 function getIndex(item, options) {
     if (options.index === 'disc') {
         return item.ParentIndexNumber == null ? '' : globalize.translate('ValueDiscNumber', item.ParentIndexNumber);
@@ -195,10 +197,12 @@ export function getListViewHtml(options) {
     for (let i = 0, length = items.length; i < length; i++) {
         const item = items[i];
 
-        const safeOverviewHtml = item.Overview ?
+        let safeOverviewHtml = '';
+        if (enableOverview && item.Overview) {
             // eslint-disable-next-line sonarjs/disabled-auto-escaping
-            DOMPurify.sanitize(markdownIt({ html: true }).render(item.Overview)) :
-            '';
+            overviewMarkdown = overviewMarkdown || markdownIt({ html: true });
+            safeOverviewHtml = DOMPurify.sanitize(overviewMarkdown.render(item.Overview));
+        }
 
         let html = '';
 
