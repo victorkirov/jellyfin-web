@@ -259,12 +259,10 @@ function buildCardsHtmlInternal(items, options) {
  * @param {string} cssClass - Base CSS class to use for the lines.
  * @param {boolean} forceLines - Flag to force the rendering of all lines.
  * @param {boolean} isOuterFooter - Flag to mark the text lines as outer footer.
- * @param {string} cardLayout - DEPRECATED
- * @param {boolean} addRightMargin - Flag to add a right margin to the text.
  * @param {number} maxLines - Maximum number of lines to render.
  * @returns {string} HTML markup for the card's text.
  */
-function getCardTextLines(lines, cssClass, forceLines, isOuterFooter, cardLayout, addRightMargin, maxLines) {
+function getCardTextLines(lines, cssClass, forceLines, isOuterFooter, maxLines) {
     let html = '';
 
     let valid = 0;
@@ -276,10 +274,6 @@ function getCardTextLines(lines, cssClass, forceLines, isOuterFooter, cardLayout
             currentCssClass += ' cardText-secondary';
         } else if (valid === 0 && isOuterFooter) {
             currentCssClass += ' cardText-first';
-        }
-
-        if (addRightMargin) {
-            currentCssClass += ' cardText-rightmargin';
         }
 
         if (text) {
@@ -570,7 +564,7 @@ function getCardFooterText(item, apiClient, options, footerClass, progressHtml, 
         lines = [escapeHtml(item.Name)];
     }
 
-    html += getCardTextLines(lines, cssClass, !options.overlayText, flags.isOuterFooter, options.cardLayout, false, options.lines);
+    html += getCardTextLines(lines, cssClass, !options.overlayText, flags.isOuterFooter, options.lines);
 
     if (progressHtml) {
         html += progressHtml;
@@ -914,7 +908,6 @@ function buildCard(index, item, apiClient, options, api) {
         cardClass: options.cardClass,
         isTV: layoutManager.tv,
         enableFocusTransform: enableFocusTransform,
-        isDesktop: false,
         showChildCountIndicator: options.showChildCountIndicator,
         childCount: item.ChildCount,
         tagName: tagName,

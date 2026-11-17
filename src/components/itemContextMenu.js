@@ -136,7 +136,7 @@ function getResolveFunction(resolve, commandId) {
     };
 }
 
-function executeCommand(item, id, options) {
+function executeCommand(item, id) {
     const itemId = item.Id;
     const serverId = item.ServerId;
 
@@ -190,11 +190,7 @@ function executeCommand(item, id, options) {
                 getResolveFunction(resolve, id)();
                 break;
             case 'lyrics': {
-                if (options.isMobile) {
-                    appRouter.show('lyrics');
-                } else {
-                    appRouter.showItem(item.Id, item.ServerId);
-                }
+                appRouter.showItem(item.Id, item.ServerId);
                 getResolveFunction(resolve, id)();
                 break;
             }
@@ -258,7 +254,7 @@ export async function show(options) {
         positionTo: options.positionTo
     });
 
-    return executeCommand(options.item, id, options);
+    return executeCommand(options.item, id);
 }
 
 export default {

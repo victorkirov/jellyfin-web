@@ -1317,18 +1317,6 @@ export default function (view) {
                     playbackManager.nextTrack(currentPlayer);
                 }
                 break;
-            case 'NavigationLeft':
-                if (document.hasFocus()) {
-                    playbackManager.rewind(currentPlayer);
-                    showOsd(btnRewind);
-                }
-                break;
-            case 'NavigationRight':
-                if (document.hasFocus()) {
-                    playbackManager.fastForward(currentPlayer);
-                    showOsd(btnFastForward);
-                }
-                break;
             case 'Home':
                 if (!e.shiftKey) {
                     e.preventDefault();

@@ -79,8 +79,7 @@ type CardCssClassOpts = {
     childCount?: number,
     showChildCountIndicator: boolean,
     isTV: boolean,
-    enableFocusTransform: boolean,
-    isDesktop: boolean
+    enableFocusTransform: boolean
 };
 
 /**
@@ -93,7 +92,6 @@ export const resolveCardCssClasses = (opts: CardCssClassOpts): string => {
         [`${opts.shape}Card`]: opts.shape,
         [`${opts.cardCssClass}`]: opts.cardCssClass,
         [`${opts.cardClass}`]: opts.cardClass,
-        'card-hoverable': opts.isDesktop,
         'show-focus': opts.isTV,
         'show-animation': opts.isTV && opts.enableFocusTransform,
         'groupedCard': opts.showChildCountIndicator && opts.childCount,

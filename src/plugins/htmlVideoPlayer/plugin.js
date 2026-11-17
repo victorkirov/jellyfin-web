@@ -344,10 +344,6 @@ export class HtmlVideoPlayer {
 
     /**
      * @private (used in other files)
-     * @type {any | undefined}
-     */
-    /**
-     * @private (used in other files)
      * @type {any | null | undefined}
      */
     _castPlayer;

@@ -154,10 +154,6 @@ html {
     color: var(--jf-palette-secondary-main, $secondary-main);
 }
 
-.emby-scrollbuttons {
-    color: var(--jf-palette-text-secondary, $text-secondary);
-}
-
 a[data-role="button"],
 .fab,
 .raised {
@@ -230,8 +226,7 @@ a[data-role="button"],
 .cardContent,
 .cardImageContainer,
 .blurhash-canvas,
-.itemDetailImage,
-.cardOverlayContainer {
+.itemDetailImage {
     border-radius: var(--jf-card-borderRadius, $card-borderRadius);
 }
 
@@ -281,14 +276,6 @@ a[data-role="button"],
             border-radius: 50%;
         }
 
-        .cardOverlayContainer {
-            clip-path: circle(50% at 50% 50%);
-        }
-
-        .cardOverlayButton-br {
-            right: 20%;
-        }
-
         .cardPadder-overflowPortrait,
         .cardPadder-portrait {
             padding-bottom: 100%;
@@ -306,26 +293,6 @@ a[data-role="button"],
 .playlistSectionButton {
     background: var(--jf-palette-background-paper, $background-paper);
     color: var(--jf-palette-text-secondary, $text-secondary);
-}
-
-.itemSelectionPanel {
-    border-color: var(--jf-palette-primary-main, $primary-main);
-    border-width: 1px;
-    border-style: solid;
-}
-
-.selectionCommandsPanel {
-    background: var(--jf-palette-primary-main, $primary-main);
-    color: var(--jf-palette-primary-contrastText, $primary-contrastText) !important;
-
-    .paper-icon-button-light:not(:disabled) {
-        color: var(--jf-palette-primary-contrastText, $primary-contrastText);
-
-        &:hover,
-        &:focus {
-            background-color: var(--jf-palette-primary-dark, $primary-dark);
-        }
-    }
 }
 
 .upNextDialog-countdownText {

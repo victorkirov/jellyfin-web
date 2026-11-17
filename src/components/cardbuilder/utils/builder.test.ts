@@ -480,8 +480,7 @@ describe('resolveCardCssClasses', () => {
             itemType: 'non-music',
             showChildCountIndicator: false,
             isTV: false,
-            enableFocusTransform: false,
-            isDesktop: false
+            enableFocusTransform: false
         })
         ).toEqual('card custom-class card-withuserdata');
     });
@@ -492,8 +491,7 @@ describe('resolveCardCssClasses', () => {
             itemType: 'non-music',
             showChildCountIndicator: false,
             isTV: false,
-            enableFocusTransform: false,
-            isDesktop: false
+            enableFocusTransform: false
         })
         ).toEqual('card custom-card card-withuserdata');
     });
@@ -504,21 +502,9 @@ describe('resolveCardCssClasses', () => {
             itemType: 'non-music',
             showChildCountIndicator: false,
             isTV: false,
-            enableFocusTransform: false,
-            isDesktop: false
+            enableFocusTransform: false
         })
         ).toEqual('card portraitCard card-withuserdata');
-    });
-
-    test('desktop', () => {
-        expect(resolveCardCssClasses({
-            itemType: 'non-music',
-            showChildCountIndicator: false,
-            isTV: false,
-            enableFocusTransform: false,
-            isDesktop: true
-        })
-        ).toEqual('card card-hoverable card-withuserdata');
     });
 
     test('tv', () => {
@@ -526,8 +512,7 @@ describe('resolveCardCssClasses', () => {
             itemType: 'non-music',
             showChildCountIndicator: false,
             isTV: true,
-            enableFocusTransform: false,
-            isDesktop: false
+            enableFocusTransform: false
         })
         ).toEqual('card show-focus card-withuserdata');
     });
@@ -537,8 +522,7 @@ describe('resolveCardCssClasses', () => {
             itemType: 'non-music',
             showChildCountIndicator: false,
             isTV: true,
-            enableFocusTransform: true,
-            isDesktop: false
+            enableFocusTransform: true
         })
         ).toEqual('card show-focus show-animation card-withuserdata');
     });
@@ -548,8 +532,7 @@ describe('resolveCardCssClasses', () => {
             itemType: 'non-music',
             showChildCountIndicator: false,
             isTV: false,
-            enableFocusTransform: false,
-            isDesktop: false
+            enableFocusTransform: false
         })
         ).toEqual('card card-withuserdata');
     });
@@ -559,8 +542,7 @@ describe('resolveCardCssClasses', () => {
             itemType: 'MusicAlbum',
             showChildCountIndicator: false,
             isTV: false,
-            enableFocusTransform: false,
-            isDesktop: false
+            enableFocusTransform: false
         })
         ).toEqual('card');
 
@@ -568,8 +550,7 @@ describe('resolveCardCssClasses', () => {
             itemType: 'MusicArtist',
             showChildCountIndicator: false,
             isTV: false,
-            enableFocusTransform: false,
-            isDesktop: false
+            enableFocusTransform: false
         })
         ).toEqual('card');
 
@@ -577,8 +558,7 @@ describe('resolveCardCssClasses', () => {
             itemType: 'Audio',
             showChildCountIndicator: false,
             isTV: false,
-            enableFocusTransform: false,
-            isDesktop: false
+            enableFocusTransform: false
         })
         ).toEqual('card');
     });
@@ -589,8 +569,7 @@ describe('resolveCardCssClasses', () => {
             showChildCountIndicator: true,
             childCount: 5,
             isTV: false,
-            enableFocusTransform: false,
-            isDesktop: false
+            enableFocusTransform: false
         })
         ).toEqual('card groupedCard card-withuserdata');
     });
@@ -601,8 +580,7 @@ describe('resolveCardCssClasses', () => {
             itemType: 'non-music',
             showChildCountIndicator: false,
             isTV: false,
-            enableFocusTransform: false,
-            isDesktop: false
+            enableFocusTransform: false
         })
         ).toEqual('card card-withuserdata itemAction');
     });
@@ -617,10 +595,9 @@ describe('resolveCardCssClasses', () => {
             childCount: 5,
             tagName: 'button',
             isTV: true,
-            enableFocusTransform: true,
-            isDesktop: true
+            enableFocusTransform: true
         })
-        ).toEqual('card portraitCard card-css card-hoverable show-focus show-animation groupedCard card-withuserdata itemAction');
+        ).toEqual('card portraitCard card-css show-focus show-animation groupedCard card-withuserdata itemAction');
     });
 });
 

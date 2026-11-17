@@ -40,8 +40,6 @@ export enum AppFeature {
     RemoteVideo = 'remotevideo',
     /** The app supports displaying a screensaver */
     Screensaver = 'screensaver',
-    /** The app supports sharing content */
-    Sharing = 'sharing',
     /** The app supports configuring subtitle appearance */
     SubtitleAppearance = 'subtitleappearancesettings',
     /** The app supports configuring subtitle burn-in */

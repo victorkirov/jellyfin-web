@@ -26,8 +26,7 @@ const BrowserName = {
 
 function getBaseProfileOptions() {
     return {
-        enableMkvProgressive: false,
-        disableHlsVideoAudioCodecs: []
+        enableMkvProgressive: false
     };
 }
 
@@ -208,10 +207,6 @@ function onAppHidden() {
 
 const supportedFeatures = function () {
     const features = [];
-
-    if (navigator.share) {
-        features.push(AppFeature.Sharing);
-    }
 
     if (!browser.edgeUwp && !browser.tv && !browser.xboxOne && !browser.ps4) {
         features.push(AppFeature.FileDownload);

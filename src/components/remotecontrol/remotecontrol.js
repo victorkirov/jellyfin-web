@@ -178,8 +178,7 @@ function updateNowPlayingInfo(context, state, serverId) {
                 contextButton.addEventListener('click', function () {
                     itemContextMenu.show(Object.assign({
                         item: fullItem,
-                        user: user,
-                        isMobile: false
+                        user: user
                     }, options))
                         .catch(() => { /* no-op */ });
                 });
@@ -444,13 +443,12 @@ export default function () {
             }
 
             let html = '';
-            const favoritesEnabled = true;
 
             html += listView.getListViewHtml({
                 items: items,
                 smallIcon: true,
                 action: 'setplaylistindex',
-                enableUserDataButtons: favoritesEnabled,
+                enableUserDataButtons: true,
                 rightButtons: [{
                     icon: 'remove_circle_outline',
                     title: globalize.translate('ButtonRemove'),

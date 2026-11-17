@@ -133,14 +133,6 @@ button::-moz-focus-inner {
     font-weight: inherit !important;
 }
 
-.btnCardOptions {
-    position: absolute;
-    bottom: 0.25em;
-    right: 0;
-    margin: 0 !important;
-    z-index: 1;
-}
-
 .mediaSourceIndicator {
     display: flex;
     position: absolute;
@@ -375,10 +367,6 @@ button::-moz-focus-inner {
     text-align: center !important;
 }
 
-.cardText-rightmargin {
-    margin-right: 2em;
-}
-
 .cardImageContainer > .cardDefaultText {
     white-space: normal;
     text-align: center;
@@ -440,68 +428,6 @@ button::-moz-focus-inner {
     padding: 0.18em 0.5em;
     color: #fff;
     font-weight: 500;
-}
-
-.cardOverlayButton {
-    color: rgba(255, 255, 255, 0.76);
-    margin: 0;
-    z-index: 1;
-    padding: 0.75em;
-    font-size: 88%;
-
-    /* The "modern" layout needs additional specificity to prevent MUI styles from overriding */
-    &.paper-icon-button-light {
-        color: rgba(255, 255, 255, 0.76);
-    }
-}
-
-.cardOverlayButton-br {
-    position: absolute;
-    bottom: 0;
-
-    [dir="ltr"] & {
-        right: 0;
-    }
-
-    [dir="rtl"] & {
-        left: 0;
-    }
-}
-
-.cardOverlayButtonIcon {
-    background-color: rgba(0, 0, 0, 0.7) !important;
-    border-radius: 100em;
-    width: 1.5em !important;
-    height: 1.5em !important;
-    justify-content: center;
-    align-items: center;
-    display: flex;
-    font-size: 1.66956521739130434em !important;
-}
-
-.cardOverlayButtonIcon.material-icons {
-    /* material-icons override display, so we need to
-       make a better matching selector to set it to flex */
-    display: flex;
-}
-
-.cardOverlayButton-centered {
-    bottom: initial;
-    right: initial;
-    position: static;
-    position: absolute;
-    display: flex;
-    font-size: 112%;
-    margin: -1.3em 0 0 -1.3em;
-    width: 2.6em;
-    height: 2.6em;
-    top: 50%;
-    left: 50%;
-    background-color: rgba(0, 0, 0, 0.5) !important;
-    border: 0.06em solid rgba(255, 255, 255, 0.6);
-    padding: 0.38em !important;
-    color: rgba(255, 255, 255, 0.76);
-    transition: transform 200ms ease-out;
 }
 
 .bannerCard {
@@ -820,66 +746,8 @@ button::-moz-focus-inner {
     width: 18.8vw;
 }
 
-.cardOverlayContainer {
-    background: rgba(0, 0, 0, 0.5);
-    opacity: 0;
-    transition: opacity 0.2s;
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
-    user-select: none;
-    border-radius: 0.2em;
-
-    /** Disable pointer events for the overlay container, but allow them for its children */
-    pointer-events: none;
-
-    * {
-        pointer-events: auto;
-    }
-}
-
 .visualCardBox .blurhash-canvas,
-.visualCardBox .cardContent,
-.visualCardBox .cardOverlayContainer {
+.visualCardBox .cardContent {
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
-}
-
-.cardOverlayButton-hover {
-    opacity: 0;
-    transition: 0.2s;
-    background: transparent;
-    padding: 0.25em;
-}
-
-.cardOverlayButtonIcon-hover {
-    background: transparent !important;
-}
-
-.card-hoverable:focus-within,
-.card-hoverable:hover {
-    .cardOverlayContainer,
-    .cardOverlayButton-hover {
-        opacity: 1;
-    }
-}
-
-.cardOverlayContainer > .cardOverlayFab-primary {
-    background-color: rgba(0, 0, 0, 0.7);
-    font-size: 130%;
-    padding: 0;
-    width: 3em;
-    height: 3em;
-    margin-top: -1.5em;
-    margin-left: -1.5em;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-}
-
-.cardOverlayContainer > .cardOverlayFab-primary:hover {
-    transform: scale(1.4, 1.4);
-    transition: 0.2s;
 }

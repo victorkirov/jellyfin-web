@@ -1,7 +1,5 @@
 import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collection-type';
 
-import { appHost } from './apphost';
-import { AppFeature } from 'constants/appFeature';
 import globalize from 'lib/globalize';
 
 export function getDisplayName(item, options = {}) {
@@ -50,28 +48,6 @@ export function getDisplayName(item, options = {}) {
 
 export function isLocalItem(item) {
     return item?.Id && typeof item.Id === 'string' && item.Id.indexOf('local') === 0;
-}
-
-export function canShare (item, user) {
-    if (item.Type === 'Program') {
-        return false;
-    }
-    if (item.Type === 'TvChannel') {
-        return false;
-    }
-    if (item.Type === 'Timer') {
-        return false;
-    }
-    if (item.Type === 'SeriesTimer') {
-        return false;
-    }
-    if (item.Type === 'Recording' && item.Status !== 'Completed') {
-        return false;
-    }
-    if (isLocalItem(item)) {
-        return false;
-    }
-    return user.Policy.EnablePublicSharing && appHost.supports(AppFeature.Sharing);
 }
 
 export function enableDateAddedDisplay (item) {
@@ -173,7 +149,6 @@ export function sortTracks (trackA, trackB) {
 export default {
     getDisplayName: getDisplayName,
     isLocalItem: isLocalItem,
-    canShare: canShare,
     enableDateAddedDisplay: enableDateAddedDisplay,
     canMarkPlayed: canMarkPlayed,
     canRate: canRate,

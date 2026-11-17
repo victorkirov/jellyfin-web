@@ -85,7 +85,7 @@ function buildSection(
     html += '</div>';
 
     if (options.enableOverflow) {
-        html += '<div is="emby-scroller" class="padded-top-focusscale padded-bottom-focusscale" data-centerfocus="true" data-scrollbuttons="false">';
+        html += '<div is="emby-scroller" class="padded-top-focusscale padded-bottom-focusscale" data-centerfocus="true">';
         html += '<div class="padded-top padded-bottom scrollSlider focuscontainer-x">';
     } else {
         html += '<div class="padded-top padded-bottom focuscontainer-x">';

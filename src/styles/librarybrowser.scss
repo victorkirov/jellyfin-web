@@ -363,38 +363,8 @@
     }
 }
 
-.itemBackdrop {
-    background-size: cover;
-    background-repeat: no-repeat;
-    background-position: center center;
-    background-attachment: fixed;
-    height: 40vh;
-    position: relative;
-    animation: backdrop-fadein 800ms ease-in normal both;
-
-    .layout-tv & {
-        display: none;
-    }
-}
-
 .detailSectionContent a {
     color: inherit;
-}
-
-.personBackdrop {
-    background-size: contain;
-}
-
-.itemBackdropProgressBar {
-    position: absolute !important;
-    bottom: 0;
-    left: 0;
-    right: 0;
-}
-
-.desktopMiscInfoContainer {
-    position: absolute;
-    bottom: 0.75em;
 }
 
 .parentName {
@@ -689,10 +659,6 @@ div.itemDetailGalleryLink.defaultCardBackground {
 }
 
 @media all and (min-width: 100em) {
-    .personBackdrop {
-        display: none !important;
-    }
-
     .mainDetailButtons {
         font-size: 108%;
         margin: 1.25em 0;
@@ -721,10 +687,6 @@ div.itemDetailGalleryLink.defaultCardBackground {
     }
 }
 
-.detailVerticalSection .emby-scrollbuttons {
-    padding-top: 0.4em;
-}
-
 .layout-tv .detailVerticalSection {
     margin-bottom: 3.4em !important;
 }
@@ -732,10 +694,6 @@ div.itemDetailGalleryLink.defaultCardBackground {
 .detailPageWrapperContainer {
     border-spacing: 0;
     border-collapse: collapse;
-}
-
-.mediaInfoContent .btnCopy .material-icons {
-    font-size: inherit;
 }
 
 .mediaInfoStream {
@@ -790,12 +748,6 @@ div.itemDetailGalleryLink.defaultCardBackground {
 
 .itemsContainer {
     margin: 0 auto;
-}
-
-@media all and (max-height: 31.25em) {
-    .itemBackdrop {
-        height: 52vh;
-    }
 }
 
 .listViewUserDataButtons {
