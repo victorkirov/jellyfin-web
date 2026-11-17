@@ -369,14 +369,31 @@ function getStarIconsHtml(item) {
 }
 
 function dynamicEndTime(elem, item) {
-    const interval = setInterval(() => {
+    const view = elem.closest('.mainAnimatedPage');
+
+    function stop() {
+        clearInterval(interval);
+        if (view) {
+            view.removeEventListener('viewshow', update);
+            view.removeEventListener('viewdestroy', stop);
+        }
+    }
+
+    function update() {
         if (!document.body.contains(elem)) {
-            clearInterval(interval);
+            stop();
             return;
         }
+        if (!elem.closest('.hide')) {
+            elem.innerHTML = getEndsAt(item);
+        }
+    }
 
-        elem.innerHTML = getEndsAt(item);
-    }, 60000);
+    const interval = setInterval(update, 60000);
+    if (view) {
+        view.addEventListener('viewshow', update);
+        view.addEventListener('viewdestroy', stop);
+    }
 }
 
 export function fillPrimaryMediaInfo(elem, item, options) {

@@ -2,6 +2,10 @@
 const ProgressBarPrototype = Object.create(HTMLDivElement.prototype);
 
 function onAutoTimeProgress() {
+    if (this.closest('.hide')) {
+        return;
+    }
+
     const start = parseInt(this.getAttribute('data-starttime'), 10);
     const end = parseInt(this.getAttribute('data-endtime'), 10);
 
@@ -17,16 +21,24 @@ function onAutoTimeProgress() {
 }
 
 ProgressBarPrototype.attachedCallback = function () {
-    if (this.timeInterval) {
-        clearInterval(this.timeInterval);
-    }
+    ProgressBarPrototype.detachedCallback.call(this);
 
     if (this.getAttribute('data-automode') === 'time') {
-        this.timeInterval = setInterval(onAutoTimeProgress.bind(this), 60000);
+        this.onTimeProgress = onAutoTimeProgress.bind(this);
+        this.progressView = this.closest('.mainAnimatedPage');
+        if (this.progressView) {
+            this.progressView.addEventListener('viewshow', this.onTimeProgress);
+        }
+        this.timeInterval = setInterval(this.onTimeProgress, 60000);
     }
 };
 
 ProgressBarPrototype.detachedCallback = function () {
+    if (this.progressView) {
+        this.progressView.removeEventListener('viewshow', this.onTimeProgress);
+        this.progressView = null;
+    }
+    this.onTimeProgress = null;
     if (this.timeInterval) {
         clearInterval(this.timeInterval);
         this.timeInterval = null;
@@ -38,3 +50,4 @@ document.registerElement('emby-progressbar', {
     extends: 'div'
 });
 
+export {};
