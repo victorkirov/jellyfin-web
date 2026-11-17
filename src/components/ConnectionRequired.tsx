@@ -69,6 +69,8 @@ const ConnectionRequired: FunctionComponent<ConnectionRequiredProps> = ({
 
     const bounce = useCallback(async (connectionResponse: ConnectResult) => {
         switch (connectionResponse.State) {
+            case ConnectionState.Superseded:
+                return;
             case ConnectionState.SignedIn:
                 // Already logged in, bounce to the home page
                 console.debug('[ConnectionRequired] already logged in, redirecting to home');
@@ -142,6 +144,7 @@ const ConnectionRequired: FunctionComponent<ConnectionRequiredProps> = ({
     }, [bounce, level]);
 
     useEffect(() => {
+        let active = true;
         setErrorState(undefined);
 
         // Check connection status on initial page load
@@ -151,6 +154,7 @@ const ConnectionRequired: FunctionComponent<ConnectionRequiredProps> = ({
         if (shouldConnect) setIsLoading(true);
         const connection = Promise.resolve(shouldConnect ? ServerConnections.connect() : null);
         connection.then(firstConnection => {
+            if (!active || firstConnection?.State === ConnectionState.Superseded) return;
             console.debug('[ConnectionRequired] connection state', firstConnection?.State);
             ServerConnections.firstConnection = true;
 
@@ -170,9 +174,13 @@ const ConnectionRequired: FunctionComponent<ConnectionRequiredProps> = ({
                     });
             }
         }).catch(err => {
+            if (!active) return;
             console.error('[ConnectionRequired] failed to connect', err);
             setErrorState(ConnectionState.Unavailable);
         });
+        return () => {
+            active = false;
+        };
     }, [handleServerSignIn, level, location.pathname, validateUserAccess]);
 
     if (errorState) {

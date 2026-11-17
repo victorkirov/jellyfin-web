@@ -85,6 +85,8 @@ export function tryReconnect(serverInfo: ServerInfo) {
 
     console.info('[ConnectionManager] tryReconnect addresses', addressesStrings);
 
+    if (!addresses.length) return Promise.reject(new Error('No eligible server address'));
+
     return new Promise<ReconnectResult>((resolve, reject) => {
         const state: ReconnectState = { numAddresses: addresses.length, rejects: 0 };
 
@@ -97,4 +99,3 @@ export function tryReconnect(serverInfo: ServerInfo) {
         });
     });
 };
-

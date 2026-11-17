@@ -7,5 +7,7 @@ export const enum ConnectionState {
     ServerSignIn = 'ServerSignIn',
     ServerSelection = 'ServerSelection',
     ServerUpdateNeeded = 'ServerUpdateNeeded',
+    /** A newer connection or session action owns the continuation. */
+    Superseded = 'Superseded',
     Unavailable = 'Unavailable'
 }

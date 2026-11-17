@@ -29,6 +29,7 @@ const ConnectionErrorPage: FC<ConnectionErrorPageProps> = ({
 
         try {
             const server = ServerConnections.getLastUsedServer();
+            if (!server) throw new Error('No saved server');
             await ServerConnections.updateSavedServerId(server);
             window.location.reload();
         } catch (err) {

@@ -35,7 +35,7 @@ export function getServerCardsHtml(servers: ServerInfo[]) {
 
         const innerOpening = '<div class="' + cardBoxCssClass + '">';
         let cardContainer = '';
-        cardContainer += '<button raised class="' + cssClass + '" style="display:inline-block;" data-id="' + item.id + '" data-url="' + '' + '" data-cardtype="' + item.cardType + '">';
+        cardContainer += '<button raised class="' + cssClass + '" style="display:inline-block;" data-id="' + item.id + '" data-url="" data-cardtype="' + item.cardType + '">';
         cardContainer += innerOpening;
         cardContainer += '<div class="cardScalable">';
         cardContainer += '<div class="cardPadder cardPadder-square">';

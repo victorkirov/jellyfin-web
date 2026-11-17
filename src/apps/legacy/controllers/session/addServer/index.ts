@@ -8,6 +8,7 @@ import Dashboard from 'components/dashboard';
 import 'components/buttons/emby-button';
 
 function handleConnectionResult(result: ConnectResult) {
+    if (result.State === ConnectionState.Superseded) return;
     loading.hide();
     switch (result.State) {
         case ConnectionState.SignedIn: {
@@ -41,9 +42,7 @@ function submitServer(page: HTMLElement) {
     const host = page.querySelector<HTMLInputElement>('#txtServerHost')!.value.replace(/\/+$/, '');
     void ServerConnections.connectToAddress(host, {
         enableAutoLogin: appSettings.enableAutoLogin()
-    }).then(function(result) {
-        handleConnectionResult(result);
-    }, function() {
+    }).then(handleConnectionResult, function() {
         handleConnectionResult({
             State: ConnectionState.Unavailable
         });

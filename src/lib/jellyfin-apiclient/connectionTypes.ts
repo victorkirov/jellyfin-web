@@ -48,7 +48,7 @@ export type ConnectResult = {
     ApiClient: ConnectionClient;
     SystemInfo: PublicSystemInfo;
 } | {
-    State: ConnectionState.ServerMismatch | ConnectionState.ServerSelection | ConnectionState.ServerUpdateNeeded | ConnectionState.Unavailable;
+    State: ConnectionState.ServerMismatch | ConnectionState.ServerSelection | ConnectionState.ServerUpdateNeeded | ConnectionState.Superseded | ConnectionState.Unavailable;
     Servers?: ServerInfo[];
 };
 export type SocketMessage = { ServerId?: string; Data?: unknown };

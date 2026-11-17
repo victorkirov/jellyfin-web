@@ -52,6 +52,7 @@ export default function (view: HTMLElement, params: { showuser?: string }) {
         void ServerConnections.connectToServer(server, {
             enableAutoLogin: appSettings.enableAutoLogin()
         }).then(function (result) {
+            if (result.State === ConnectionState.Superseded) return;
             loading.hide();
 
             switch (result.State) {

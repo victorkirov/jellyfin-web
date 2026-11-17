@@ -116,3 +116,51 @@ describe('session connection controllers', () => {
         expect(mocks.dashboard.navigate).not.toHaveBeenCalled();
     });
 });
+
+function deferredConnection() {
+    let resolve!: (result: typeof success | { State: string }) => void;
+    const promise = new Promise<typeof success | { State: string }>(done => {
+        resolve = done;
+    });
+    return { promise, resolve };
+}
+
+it.each([
+    ['selection', 'old-first'], ['selection', 'latest-first'],
+    ['form', 'old-first'], ['form', 'latest-first']
+])('ignores a superseded %s request when settling %s', async (origin, order) => {
+    const first = deferredConnection();
+    const latest = deferredConnection();
+    const view = origin === 'selection' ? await selectPage() : addPage();
+    vi.clearAllMocks();
+    const connect = origin === 'selection' ? mocks.connectToServer : mocks.connectToAddress;
+    connect.mockReturnValueOnce(first.promise).mockReturnValueOnce(latest.promise);
+    const submit = () => {
+        if (origin === 'selection') view.querySelector<HTMLButtonElement>('.card')!.click();
+        else view.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }));
+    };
+    submit();
+    submit();
+    await flush();
+    expect(connect).toHaveBeenCalledTimes(2);
+    expect(mocks.loading.show).toHaveBeenCalledTimes(2);
+    if (order === 'latest-first') {
+        latest.resolve(success);
+        await flush();
+    }
+    const hidesBeforeStale = mocks.loading.hide.mock.calls.length;
+    const navigationsBeforeStale = mocks.dashboard.navigate.mock.calls.length;
+    first.resolve({ State: 'Superseded' });
+    await flush();
+    expect(mocks.loading.hide).toHaveBeenCalledTimes(hidesBeforeStale);
+    expect(mocks.dashboard.navigate).toHaveBeenCalledTimes(navigationsBeforeStale);
+    expect(mocks.alert).not.toHaveBeenCalled();
+    expect(mocks.dashboard.alert).not.toHaveBeenCalled();
+    if (order === 'old-first') {
+        latest.resolve(success);
+        await flush();
+    }
+    expect(mocks.loading.hide).toHaveBeenCalledOnce();
+    expect(mocks.dashboard.navigate).toHaveBeenCalledExactlyOnceWith('home');
+    expect(mocks.dashboard.onServerChanged).toHaveBeenCalledExactlyOnceWith('user', 'token', client);
+});

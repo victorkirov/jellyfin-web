@@ -2,16 +2,13 @@ import type { UserDto } from '@jellyfin/sdk/lib/generated-client';
 import type { ConnectOptions, ConnectionClient, ImageOptions, CredentialStore } from './connectionTypes';
 import { Credentials } from 'jellyfin-apiclient';
 
-import { appHost } from 'components/apphost';
-import appSettings from 'scripts/settings/appSettings';
-import { setUserInfo } from 'scripts/settings/userSettings';
 import { getMaxBandwidth } from 'utils/getMaxBandwidth';
-import { detectBitrate } from 'utils/bitrateTest';
-import Dashboard from 'components/dashboard';
 import Events from 'utils/events';
 import { createApiClient } from 'utils/jellyfin-apiclient/createApiClient';
 
 import ConnectionManager from './connectionManager';
+import { connectionServices as services, clientCapabilities as capabilities } from './connectionServices';
+export { configureServerConnections } from './connectionServices';
 
 const normalizeImageOptions = (options: ImageOptions) => {
     if (!options.quality && (options.maxWidth || options.width || options.maxHeight || options.height || options.fillWidth || options.fillHeight)) {
@@ -29,7 +26,7 @@ class ServerConnections extends ConnectionManager {
         this.firstConnection = null;
 
         Events.on(this, 'localusersignedout', (_e, logoutInfo) => {
-            void setUserInfo(null, null);
+            void services.setUserInfo(null, null);
             // Ensure the updated credentials are persisted to storage
             credentialProvider.credentials(credentialProvider.credentials());
 
@@ -53,10 +50,10 @@ class ServerConnections extends ConnectionManager {
 
         const apiClient = createApiClient(
             server,
-            appHost.appName(),
-            appHost.appVersion(),
-            appHost.deviceName(),
-            appHost.deviceId()
+            services.appName(),
+            services.appVersion(),
+            services.deviceName(),
+            services.deviceId()
         ) as ConnectionClient;
 
         apiClient.enableAutomaticNetworking = false;
@@ -69,18 +66,19 @@ class ServerConnections extends ConnectionManager {
         console.debug('loaded ApiClient singleton');
     }
 
-    /**
-     * @returns {Promise<import('jellyfin-apiclient').ConnectResponse>} The result of the connection attempt.
-     */
     connect(options?: ConnectOptions) {
         return super.connect({
-            enableAutoLogin: appSettings.enableAutoLogin(),
+            enableAutoLogin: services.enableAutoLogin(),
             ...options
         });
     }
 
-    setLocalApiClient(apiClient: ConnectionClient | null | undefined) {
+    setLocalApiClient(apiClient: ConnectionClient | null | undefined, preserveAuthentication = false) {
         if (apiClient) {
+            if (this.localApiClient !== apiClient && !preserveAuthentication) {
+                this.invalidateAuthentication();
+                void services.setUserInfo(null, null);
+            }
             this.localApiClient = apiClient;
             window.ApiClient = apiClient;
             // Calling getApi will ensure apiClient._sdk is initialized.
@@ -92,12 +90,9 @@ class ServerConnections extends ConnectionManager {
         return this.localApiClient;
     }
 
-    /**
-     * Gets the ApiClient that is currently connected.
-     * @returns {import('jellyfin-apiclient').ApiClient|undefined} apiClient
-     */
+    /** Gets the currently connected legacy client. */
     currentApiClient() {
-        let apiClient = this.getLocalApiClient();
+        let apiClient: ConnectionClient | null | undefined = this.getLocalApiClient();
 
         if (!apiClient) {
             const server = this.getLastUsedServer();
@@ -110,11 +105,7 @@ class ServerConnections extends ConnectionManager {
         return apiClient;
     }
 
-    /**
-     * Gets the ApiClient that is currently connected or throws if not defined.
-     * @async
-     * @returns {Promise<ApiClient>} The current ApiClient instance.
-     */
+    /** Gets the connected client or throws when no connection exists. */
     async getCurrentApiClientAsync() {
         const apiClient = this.currentApiClient();
         if (!apiClient) throw new Error('[ServerConnection] No current ApiClient instance');
@@ -122,11 +113,17 @@ class ServerConnections extends ConnectionManager {
         return apiClient;
     }
 
-    onLocalUserSignedIn = (user: UserDto) => {
-        const apiClient = this.getApiClient(user.ServerId);
-        this.setLocalApiClient(apiClient);
-        setTimeout(() => detectBitrate(this.getApi(user.ServerId)!, true), 6000);
-        return setUserInfo(user.Id, apiClient).then(() => {
+    onLocalUserSignedIn = (user: UserDto, isCurrent: () => boolean) => {
+        if (!isCurrent()) return Promise.resolve();
+        // ConnectionManager registers this client before invoking the sign-in hook.
+        const apiClient = this.getApiClient(user.ServerId)!;
+        this.setLocalApiClient(apiClient, true);
+        setTimeout(() => {
+            const api = isCurrent() ? this.getApi(user.ServerId) : undefined;
+            if (api) void services.detectBitrate(api, true).catch(error => console.warn('Bitrate detection failed', error));
+        }, 6000);
+        return services.setUserInfo(user.Id, apiClient).then(() => {
+            if (!isCurrent()) return;
             if (window.NativeShell && typeof window.NativeShell.onLocalUserSignedIn === 'function') {
                 return window.NativeShell.onLocalUserSignedIn(user, apiClient.accessToken());
             }
@@ -137,12 +134,10 @@ class ServerConnections extends ConnectionManager {
 
 const credentialProvider = new Credentials();
 
-const capabilities = Dashboard.capabilities(appHost);
-
 export default new ServerConnections(
     credentialProvider as CredentialStore,
-    () => appHost.appName(),
-    () => appHost.appVersion(),
-    () => appHost.deviceName(),
-    () => appHost.deviceId(),
+    () => services.appName(),
+    () => services.appVersion(),
+    () => services.deviceName(),
+    () => services.deviceId(),
     capabilities);

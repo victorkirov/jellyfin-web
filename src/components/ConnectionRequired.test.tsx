@@ -1,6 +1,6 @@
 import React, { act, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Link, MemoryRouter, Outlet, Route, Routes } from 'react-router-dom';
+import { Link, MemoryRouter, Outlet, Route, Routes, useNavigate } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const connection = vi.hoisted(() => ({
@@ -13,7 +13,7 @@ vi.mock('lib/jellyfin-apiclient', () => ({
     ServerConnections: connection,
     ConnectionState: {
         SignedIn: 'SignedIn', ServerSignIn: 'ServerSignIn', ServerSelection: 'ServerSelection',
-        ServerMismatch: 'ServerMismatch', ServerUpdateNeeded: 'ServerUpdateNeeded', Unavailable: 'Unavailable'
+        ServerMismatch: 'ServerMismatch', ServerUpdateNeeded: 'ServerUpdateNeeded', Unavailable: 'Unavailable', Superseded: 'Superseded'
     }
 }));
 vi.mock('./ConnectionErrorPage', () => ({ default: ({ state }: { state: string }) => <div><span data-state>{state}</span><Link to='/selectserver'>Change server</Link></div> }));
@@ -118,4 +118,49 @@ describe('Authenticated navigation', () => {
             act(() => root.unmount());
         }
     });
+});
+
+it.each(['Superseded', 'Unavailable'])('ignores an obsolete startup %s result after a path change', async staleState => {
+    connection.firstConnection = false;
+    connection.connect.mockReset();
+    connection.currentApiClient.mockReturnValue({ ...client, isLoggedIn: () => true });
+    let completeFirst!: (value: { State: string }) => void;
+    let completeSecond!: (value: { State: string }) => void;
+    connection.connect.mockReturnValueOnce(new Promise(resolve => {
+        completeFirst = resolve;
+    }))
+        .mockReturnValueOnce(new Promise(resolve => {
+            completeSecond = resolve;
+        }));
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    let changePath!: ReturnType<typeof useNavigate>;
+    function RouterControl() {
+        changePath = useNavigate();
+        return <ConnectionRequired />;
+    }
+    const container = document.createElement('div');
+    const root = createRoot(container);
+    try {
+        await act(async () => root.render(
+            <MemoryRouter initialEntries={['/first']}>
+                <Routes>
+                    <Route element={<RouterControl />}>
+                        <Route path='/first' element={<div>First</div>} />
+                        <Route path='/second' element={<div>Second</div>} />
+                    </Route>
+                </Routes>
+            </MemoryRouter>
+        ));
+        await act(async () => changePath('/second'));
+        expect(connection.connect).toHaveBeenCalledTimes(2);
+        await act(async () => completeFirst({ State: staleState }));
+        expect(container.textContent).toBe('Loading');
+        expect(container.querySelector('[data-state]')).toBeNull();
+        expect(connection.firstConnection).toBe(false);
+        await act(async () => completeSecond({ State: 'SignedIn' }));
+        expect(container.textContent).toBe('Second');
+        expect(container.querySelector('[data-state]')).toBeNull();
+    } finally {
+        act(() => root.unmount());
+    }
 });
