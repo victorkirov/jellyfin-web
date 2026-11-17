@@ -1,7 +1,6 @@
 import type { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collection-type';
-import React, { type FC } from 'react';
+import React, { type FC, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useDebounceValue } from 'usehooks-ts';
 
 import SearchFields from 'apps/legacy/features/search/components/SearchFields';
 import SearchResults from 'apps/legacy/features/search/components/SearchResults';
@@ -19,7 +18,12 @@ const Search: FC = () => {
     const parentIdQuery = searchParams.get(PARENT_ID_PARAM) || undefined;
     const collectionTypeQuery = (searchParams.get(COLLECTION_TYPE_PARAM) || undefined) as CollectionType | undefined;
     const [ query, setQuery ] = useSearchParam(QUERY_PARAM);
-    const [debouncedQuery] = useDebounceValue(query, 500);
+    const [debouncedQuery, setDebouncedQuery] = useState(query);
+
+    useEffect(() => {
+        const timeout = setTimeout(() => setDebouncedQuery(query), 500);
+        return () => clearTimeout(timeout);
+    }, [query]);
 
     return (
         <Page
