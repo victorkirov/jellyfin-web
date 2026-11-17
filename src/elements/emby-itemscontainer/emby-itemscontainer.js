@@ -111,6 +111,7 @@ function onDrop(evt, itemsContainer) {
         loading.hide();
     }, function () {
         loading.hide();
+        itemsContainer.itemsHtml = null;
         itemsContainer.refreshItems();
     });
 }
@@ -328,6 +329,7 @@ ItemsContainerPrototype.detachedCallback = function () {
 
     this.fetchData = null;
     this.getItemsHtml = null;
+    this.itemsHtml = null;
     this.parentContainer = null;
 };
 
@@ -430,21 +432,25 @@ function onDataFetched(result) {
         }
     }
 
-    const activeElement = document.activeElement;
-    let focusId;
-    let hasActiveElement;
+    const html = this.getItemsHtml(items);
+    if (this.itemsHtml !== html) {
+        const activeElement = document.activeElement;
+        let focusId;
+        let hasActiveElement;
 
-    if (this.contains(activeElement)) {
-        hasActiveElement = true;
-        focusId = activeElement.getAttribute('data-id');
-    }
+        if (this.contains(activeElement)) {
+            hasActiveElement = true;
+            focusId = activeElement.getAttribute('data-id');
+        }
 
-    this.innerHTML = this.getItemsHtml(items);
+        this.innerHTML = html;
+        this.itemsHtml = html;
 
-    imageLoader.lazyChildren(this);
+        imageLoader.lazyChildren(this);
 
-    if (hasActiveElement) {
-        setFocus(this, focusId);
+        if (hasActiveElement) {
+            setFocus(this, focusId);
+        }
     }
 
     resetRefreshInterval(this);
