@@ -41,6 +41,7 @@ import { setBackdropTransparency, TRANSPARENCY_LEVEL } from '../../components/ba
 import Events from '../../utils/events.ts';
 import { includesAny } from '../../utils/container.ts';
 import { isHls } from '../../utils/mediaSource.ts';
+import { requestSubtitleData } from './subtitleRequest';
 
 const NATIVE_UNSUPPORTED_SUBTITLE_CODECS = ['ssa', 'ass', 'pgssub', 'dvdsub', 'vobsub'];
 const ASS_SUBTITLE_CODECS = ['ssa', 'ass'];
@@ -1278,18 +1279,7 @@ export class HtmlVideoPlayer {
             return this.fetchSubtitlesUwp(track, item);
         }
 
-        this.incrementFetchQueue();
-        try {
-            const response = await fetch(getTextTrackUrl(track, item, '.js'));
-
-            if (!response.ok) {
-                throw new Error(response);
-            }
-
-            return response.json();
-        } finally {
-            this.decrementFetchQueue();
-        }
+        return requestSubtitleData(this, () => getTextTrackUrl(track, item, '.js'));
     }
 
     /**

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import DOMPurify from 'dompurify';
 import HtmlVideoPlayer from './plugin';
 
@@ -15,7 +15,7 @@ vi.mock('../../scripts/settings/appSettings', () => ({ default: {} }));
 vi.mock('../../components/apphost', () => ({ appHost: { supports: () => true } }));
 vi.mock('../../components/loading/loading', () => ({ default: {} }));
 vi.mock('../../utils/dom', () => ({ default: {} }));
-vi.mock('../../components/playback/playbackmanager', () => ({ playbackManager: {} }));
+vi.mock('../../components/playback/playbackmanager', () => ({ playbackManager: { getSubtitleUrl: () => '/subtitles.vtt' } }));
 vi.mock('../../components/router/appRouter', () => ({ appRouter: {} }));
 vi.mock('../../components/htmlMediaHelper', () => ({
     getSavedVolume: () => 1,
@@ -26,7 +26,7 @@ vi.mock('../../components/htmlMediaHelper', () => ({
     },
     playWithPromise: () => Promise.resolve()
 }));
-vi.mock('../../components/itemHelper', () => ({ default: {} }));
+vi.mock('../../components/itemHelper', () => ({ default: { isLocalItem: () => false } }));
 vi.mock('../../lib/globalize', () => ({ default: {} }));
 vi.mock('../../scripts/browserDeviceProfile', () => ({ default: {}, canPlaySecondaryAudio: {} }));
 vi.mock('../../scripts/settings/webSettings', () => ({ getIncludeCorsCredentials: vi.fn().mockResolvedValue(false) }));
@@ -43,7 +43,7 @@ type SubtitlePlayer = {
     ensureValidVideo: (element: HTMLVideoElement) => void;
     _currentPlayOptions: { transcodingOffsetTicks: number };
     createMediaElement: (options: object) => Promise<HTMLVideoElement>;
-    fetchSubtitles: () => Promise<{ TrackEvents: {
+    fetchSubtitles: (track?: object, item?: object) => Promise<{ TrackEvents: {
         StartPositionTicks: number;
         EndPositionTicks: number;
         Text: string;
@@ -53,6 +53,8 @@ type SubtitlePlayer = {
     destroyCustomTrack: (element: HTMLVideoElement | null, index: number) => void;
 };
 
+afterEach(() => vi.unstubAllGlobals());
+
 describe('Custom subtitle cues', () => {
     let player: SubtitlePlayer;
 
@@ -61,6 +63,14 @@ describe('Custom subtitle cues', () => {
         player = new HtmlVideoPlayer() as unknown as SubtitlePlayer;
         vi.spyOn(player, 'setSubtitleAppearance').mockImplementation(() => undefined);
         await player.createMediaElement({});
+    });
+
+    it('loads network subtitles through the shared response request', async () => {
+        const data = { TrackEvents: [{ StartPositionTicks: 12_500_000, EndPositionTicks: 27_500_000, Text: 'Network subtitle' }] };
+        const request = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(data) });
+        vi.stubGlobal('fetch', request);
+        expect(await player.fetchSubtitles({}, { ServerId: 'server' })).toEqual(data);
+        expect(request).toHaveBeenCalledExactlyOnceWith('/subtitles.js');
     });
 
     it('converts a fractional resume position from ticks to seconds in the media URL', async () => {
