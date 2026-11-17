@@ -28,10 +28,6 @@ interface Options {
     callback?: (id: string) => void;
     dialogClass?: string;
     enableHistory?: boolean;
-    entryAnimationDuration?: number;
-    entryAnimation?: string;
-    exitAnimationDuration?: number;
-    exitAnimation?: string;
     menuItemClass?: string;
     offsetLeft?: number;
     offsetTop?: number;
@@ -55,10 +51,6 @@ interface Offset {
 interface DialogOptions {
     autoFocus?: boolean;
     enableHistory?: boolean;
-    entryAnimationDuration?: number;
-    entryAnimation?: string;
-    exitAnimationDuration?: number;
-    exitAnimation?: string;
     modal?: boolean;
     removeOnClose?: boolean;
     scrollY?: boolean;
@@ -156,10 +148,6 @@ export function show(options: Options) {
         dialogOptions.autoFocus = true;
     } else {
         dialogOptions.modal = false;
-        dialogOptions.entryAnimation = options.entryAnimation;
-        dialogOptions.exitAnimation = options.exitAnimation;
-        dialogOptions.entryAnimationDuration = options.entryAnimationDuration || 140;
-        dialogOptions.exitAnimationDuration = options.exitAnimationDuration || 100;
         dialogOptions.autoFocus = false;
     }
 

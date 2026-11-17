@@ -59,47 +59,39 @@
 .animate-0-25-a {
     transform: rotate(90deg);
     transform-origin: 100% 100%;
-    transition: transform 180ms ease-out;
 }
 
 .animate-0-25-b {
     transform: rotate(-90deg);
     transform-origin: 100% 100%;
-    transition: transform 180ms ease-out;
 }
 
 .animate-25-50-a {
     transform: rotate(180deg);
     transform-origin: 100% 100%;
-    transition: transform 180ms ease-out;
 }
 
 .animate-25-50-b {
     transform: rotate(-90deg);
     transform-origin: 100% 100%;
-    transition: transform 180ms ease-out;
 }
 
 .animate-50-75-a {
     transform: rotate(270deg);
     transform-origin: 100% 100%;
-    transition: transform 180ms ease-out;
 }
 
 .animate-50-75-b {
     transform: rotate(-90deg);
     transform-origin: 100% 100%;
-    transition: transform 180ms ease-out;
 }
 
 .animate-75-100-a {
     transform: rotate(0deg);
     transform-origin: 100% 100%;
-    transition: transform 180ms ease-out;
 }
 
 .animate-75-100-b {
     transform: rotate(-90deg);
     transform-origin: 100% 100%;
-    transition: transform 180ms ease-out;
 }

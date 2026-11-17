@@ -29,7 +29,7 @@ describe('legacy DOM utilities', () => {
         expect(listener).toHaveBeenCalledOnce();
     });
 
-    it('retains the animation end event used by the excluded video plugin', () => {
-        expect(dom.whichAnimationEvent()).toBe('animationend');
+    it('removes the unused animation completion probe', () => {
+        expect(dom).not.toHaveProperty('whichAnimationEvent');
     });
 });

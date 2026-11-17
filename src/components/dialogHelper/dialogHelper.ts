@@ -13,7 +13,7 @@ import '../../styles/scrollstyles.scss';
 
 import type { DialogElement, DialogOptions } from './dialogTypes';
 import type { Update } from 'history';
-import { animateDialogOpen, animateDialogClose, enableAnimation } from './dialogAnimation';
+import { focusDialog } from './dialogFocus';
 
 let globalOnOpenCallback: ((dialog: DialogElement) => void) | undefined;
 
@@ -39,9 +39,18 @@ function tryRemoveElement(elem: Element) {
     }
 }
 
-function DialogHashHandler(this: { originalUrl?: string }, dlg: DialogElement, hash: string, resolve: (result: { element: DialogElement }) => void) {
-    const self = this;
-    self.originalUrl = window.location.href;
+function removeDialogElement(dlg: DialogElement) {
+    removeCenterFocus(dlg);
+    const dialogContainer = dlg.dialogContainer;
+    if (dialogContainer) {
+        tryRemoveElement(dialogContainer);
+        dlg.dialogContainer = null;
+    } else {
+        tryRemoveElement(dlg);
+    }
+}
+
+function handleDialogHistory(dlg: DialogElement, hash: string, resolve: (result: { element: DialogElement }) => void) {
     const activeElement = document.activeElement;
     let removeScrollLockOnClose = false;
     let unlisten: (() => void) | null = null;
@@ -103,15 +112,18 @@ function DialogHashHandler(this: { originalUrl?: string }, dlg: DialogElement, h
             document.body.classList.remove('noScroll');
         }
 
+        let closesWithHistory = false;
         if (isHistoryEnabled(dlg)) {
             const state = history.location.state || {};
             if (state.dialogs?.length > 0) {
                 if (state.dialogs[state.dialogs.length - 1] === hash) {
+                    closesWithHistory = true;
                     unlisten = history.listen(finishClose);
                     history.back();
                 } else if (state.dialogs.includes(hash)) {
                     console.warn('[dialogHelper] dialog "%s" was closed, but is not the last dialog opened', hash);
 
+                    closesWithHistory = true;
                     unlisten = history.listen(finishClose);
 
                     // Remove the closed dialog hash from the history state
@@ -131,18 +143,10 @@ function DialogHashHandler(this: { originalUrl?: string }, dlg: DialogElement, h
         }
 
         if (toBoolean(dlg.getAttribute('data-removeonclose'), true)) {
-            removeCenterFocus(dlg);
-
-            const dialogContainer = dlg.dialogContainer;
-            if (dialogContainer) {
-                tryRemoveElement(dialogContainer);
-                dlg.dialogContainer = null;
-            } else {
-                tryRemoveElement(dlg);
-            }
+            removeDialogElement(dlg);
         }
 
-        if (!unlisten) {
+        if (!closesWithHistory) {
             finishClose();
         }
     }
@@ -169,7 +173,7 @@ function DialogHashHandler(this: { originalUrl?: string }, dlg: DialogElement, h
         removeScrollLockOnClose = true;
     }
 
-    animateDialogOpen(dlg);
+    focusDialog(dlg);
 
     if (isHistoryEnabled(dlg)) {
         const state = history.location.state || {};
@@ -199,8 +203,6 @@ function addBackdropOverlay(dlg: DialogElement) {
     backdropParent.parentNode!.insertBefore(backdrop, backdropParent);
     dlg.backdrop = backdrop;
 
-    // trigger reflow or the backdrop will not animate
-    void backdrop.offsetWidth;
     backdrop.classList.add('dialogBackdropOpened');
 
     let clickedElement: EventTarget | null;
@@ -210,7 +212,7 @@ function addBackdropOverlay(dlg: DialogElement) {
     });
 
     dom.addEventListener((dlg.dialogContainer || backdrop), 'click', (e: MouseEvent) => {
-        if (e.target === dlg.dialogContainer && e.target == clickedElement) {
+        if (dlg.dialogContainer?.isSameNode(e.target as Node) && e.target == clickedElement) {
             close(dlg);
         }
     }, {
@@ -218,7 +220,7 @@ function addBackdropOverlay(dlg: DialogElement) {
     });
 
     dom.addEventListener((dlg.dialogContainer || backdrop), 'contextmenu', (e: MouseEvent) => {
-        if (e.target === dlg.dialogContainer) {
+        if (dlg.dialogContainer?.isSameNode(e.target as Node)) {
             // Close the application dialog menu
             close(dlg);
             // Prevent the default browser context menu from appearing
@@ -248,7 +250,7 @@ export function open(dlg: DialogElement) {
     document.body.appendChild(dialogContainer);
 
     return new Promise<{ element: DialogElement }>((resolve) => {
-        DialogHashHandler.call({}, dlg, `dlg${new Date().getTime()}`, resolve);
+        handleDialogHistory(dlg, `dlg${new Date().getTime()}`, resolve);
     });
 }
 
@@ -273,7 +275,7 @@ export function close(dlg: DialogElement) {
             }));
         };
 
-        animateDialogClose(dlg, onAnimationFinish);
+        onAnimationFinish();
     }
 }
 
@@ -308,23 +310,11 @@ function removeBackdrop(dlg: DialogElement) {
 
     dlg.backdrop = null;
 
-    const onAnimationFinish = () => {
-        tryRemoveElement(backdrop);
-    };
-
-    if (enableAnimation()) {
-        backdrop.classList.remove('dialogBackdropOpened');
-
-        // this is not firing animationend
-        setTimeout(onAnimationFinish, 300);
-        return;
-    }
-
-    onAnimationFinish();
+    tryRemoveElement(backdrop);
 }
 
 function centerFocus(elem: HTMLElement, horiz: boolean, on: boolean) {
-    import('../../scripts/scrollHelper').then((scrollHelper) => {
+    void import('../../scripts/scrollHelper').then((scrollHelper) => {
         const fn = on ? 'on' : 'off';
         scrollHelper.centerFocus[fn](elem, horiz);
     });
@@ -364,35 +354,6 @@ export function createDialog(options: DialogOptions = {}) {
         dlg.setAttribute('data-autofocus', 'true');
     }
 
-    const defaultEntryAnimation = 'scaleup';
-    const defaultExitAnimation = 'scaledown';
-    const entryAnimation = options.entryAnimation || defaultEntryAnimation;
-    const exitAnimation = options.exitAnimation || defaultExitAnimation;
-
-    // If it's not fullscreen then lower the default animation speed to make it open really fast
-    const entryAnimationDuration = options.entryAnimationDuration || (options.size !== 'fullscreen' ? 180 : 280);
-    const exitAnimationDuration = options.exitAnimationDuration || (options.size !== 'fullscreen' ? 120 : 220);
-
-    dlg.animationConfig = {
-        // scale up
-        'entry': {
-            name: entryAnimation,
-            timing: {
-                duration: entryAnimationDuration,
-                easing: 'ease-out'
-            }
-        },
-        // fade out
-        'exit': {
-            name: exitAnimation,
-            timing: {
-                duration: exitAnimationDuration,
-                easing: 'ease-out',
-                fill: 'both'
-            }
-        }
-    };
-
     dlg.classList.add('dialog');
 
     if (options.scrollX) {
@@ -417,25 +378,6 @@ export function createDialog(options: DialogOptions = {}) {
     if (options.size) {
         dlg.classList.add('dialog-fixedSize');
         dlg.classList.add(`dialog-${options.size}`);
-    }
-
-    if (enableAnimation()) {
-        switch (dlg.animationConfig!.entry.name) {
-            case 'fadein':
-                dlg.style.animation = `fadein ${entryAnimationDuration}ms ease-out normal`;
-                break;
-            case 'scaleup':
-                dlg.style.animation = `scaleup ${entryAnimationDuration}ms ease-out normal both`;
-                break;
-            case 'slideup':
-                dlg.style.animation = `slideup ${entryAnimationDuration}ms ease-out normal`;
-                break;
-            case 'slidedown':
-                dlg.style.animation = `slidedown ${entryAnimationDuration}ms ease-out normal`;
-                break;
-            default:
-                break;
-        }
     }
 
     return dlg;

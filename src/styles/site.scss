@@ -4,18 +4,7 @@
     height: 100%;
 }
 
-@keyframes fadein {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
 .splashLogo {
-    animation: fadein 0.5s;
     width: 30%;
     height: 30%;
     background-image: url(@jellyfin/ux-web/icon-transparent.png);

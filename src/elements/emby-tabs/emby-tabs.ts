@@ -2,7 +2,6 @@ import 'webcomponents.js/webcomponents-lite';
 import dom from '../../utils/dom';
 import ScrollerFactory from 'lib/scroller';
 import type { ScrollerOptions } from 'lib/scroller/types';
-import browser from '../../scripts/browser';
 import focusManager from '../../lib/focusManager';
 import layoutManager from '../../lib/layoutManager';
 import './emby-tabs.scss';
@@ -17,31 +16,6 @@ function setActiveTabButton(newButton: Element) {
     newButton.classList.add(activeButtonClass);
 }
 
-function getTabPanel(): HTMLElement | null {
-    return null;
-}
-
-function removeActivePanelClass() {
-    const tabPanel = getTabPanel();
-    if (tabPanel) {
-        tabPanel.classList.remove('is-active');
-    }
-}
-
-function fadeInRight(elem: HTMLElement) {
-    const pct = browser.mobile ? '4%' : '0.5%';
-
-    const keyframes = [
-        { opacity: '0', transform: 'translate3d(' + pct + ', 0, 0)', offset: 0 },
-        { opacity: '1', transform: 'none', offset: 1 }];
-
-    elem.animate(keyframes, {
-        duration: 160,
-        iterations: 1,
-        easing: 'ease-out'
-    });
-}
-
 function triggerBeforeTabChange(tabs: Tabs, index: number, previousIndex?: number | null) {
     tabs.dispatchEvent(new CustomEvent('beforetabchange', {
         detail: {
@@ -49,26 +23,10 @@ function triggerBeforeTabChange(tabs: Tabs, index: number, previousIndex?: numbe
             previousIndex: previousIndex
         }
     }));
-    if (previousIndex != null && previousIndex !== index) {
-        removeActivePanelClass();
-    }
-
-    const newPanel = getTabPanel();
-
-    if (newPanel) {
-        // animate new panel ?
-        if (typeof newPanel.animate === 'function') {
-            fadeInRight(newPanel);
-        }
-
-        newPanel.classList.add('is-active');
-    }
 }
 
 function onClick(this: Tabs, e: { target: EventTarget | null }) {
-    const tabs = this;
-
-    const current = tabs.querySelector('.' + activeButtonClass);
+    const current = this.querySelector('.' + activeButtonClass);
     const tabButton = dom.parentWithClass(e.target as HTMLElement, buttonClass);
 
     if (tabButton && tabButton !== current) {
@@ -82,13 +40,13 @@ function onClick(this: Tabs, e: { target: EventTarget | null }) {
 
         const index = parseInt(tabButton.getAttribute('data-index')!, 10);
 
-        triggerBeforeTabChange(tabs, index, previousIndex);
+        triggerBeforeTabChange(this, index, previousIndex);
 
         // If toCenter is called syncronously within the click event, it sometimes ends up canceling it
-        setTimeout(function () {
-            tabs.selectedTabIndex = index;
+        setTimeout(() => {
+            this.selectedTabIndex = index;
 
-            tabs.dispatchEvent(new CustomEvent('tabchange', {
+            this.dispatchEvent(new CustomEvent('tabchange', {
                 detail: {
                     selectedTabIndex: index,
                     previousIndex: previousIndex
@@ -96,17 +54,16 @@ function onClick(this: Tabs, e: { target: EventTarget | null }) {
             }));
         }, 120);
 
-        if (tabs.scroller) {
-            tabs.scroller.toCenter(tabButton, false);
+        if (this.scroller) {
+            this.scroller.toCenter(tabButton, false);
         }
     }
 }
 
 function onFocusIn(this: Tabs, e: Event) {
-    const tabs = this;
     const tabButton = dom.parentWithClass(e.target as HTMLElement, buttonClass);
-    if (tabButton && tabs.scroller) {
-        tabs.scroller.toCenter(tabButton, false);
+    if (tabButton && this.scroller) {
+        this.scroller.toCenter(tabButton, false);
     }
 }
 
@@ -135,16 +92,12 @@ function initScroller(tabs: Tabs) {
             smart: true,
             releaseSwing: true,
             scrollBy: 200,
-            speed: 120,
             elasticBounds: 1,
             dragHandle: 1,
             dynamicHandle: 1,
             clickBar: 1,
-            hiddenScroll: true,
+            hiddenScroll: true
 
-            // In safari the transform is causing the headers to occasionally disappear or flicker
-            requireAnimation: !browser.safari,
-            allowNativeSmoothScroll: true
         };
         tabs.scroller = new ScrollerFactory(tabs, options);
         tabs.scroller.init();
@@ -236,22 +189,20 @@ function getSelectedTabButton(elem: Tabs) {
 }
 
 EmbyTabs.selectedIndex = function (selected, triggerEvent) {
-    const tabs = this;
-
     if (selected == null) {
-        return tabs.selectedTabIndex || 0;
+        return this.selectedTabIndex || 0;
     }
 
-    const current = tabs.selectedIndex()!;
+    const current = this.selectedIndex()!;
 
-    tabs.selectedTabIndex = selected;
+    this.selectedTabIndex = selected;
 
-    const tabButtons = tabs.querySelectorAll('.' + buttonClass);
+    const tabButtons = this.querySelectorAll('.' + buttonClass);
 
     if (current === selected || triggerEvent === false) {
-        triggerBeforeTabChange(tabs, selected, current);
+        triggerBeforeTabChange(this, selected, current);
 
-        tabs.dispatchEvent(new CustomEvent('tabchange', {
+        this.dispatchEvent(new CustomEvent('tabchange', {
             detail: {
                 selectedTabIndex: selected
             }
@@ -264,7 +215,7 @@ EmbyTabs.selectedIndex = function (selected, triggerEvent) {
             currentTabButton.classList.remove(activeButtonClass);
         }
     } else {
-        onClick.call(tabs, {
+        onClick.call(this, {
             target: tabButtons[selected]
         });
     }
@@ -309,17 +260,13 @@ EmbyTabs.selectPrevious = function () {
 };
 
 EmbyTabs.triggerBeforeTabChange = function () {
-    const tabs = this;
-
-    triggerBeforeTabChange(tabs, tabs.selectedIndex()!);
+    triggerBeforeTabChange(this, this.selectedIndex()!);
 };
 
 EmbyTabs.triggerTabChange = function () {
-    const tabs = this;
-
-    tabs.dispatchEvent(new CustomEvent('tabchange', {
+    this.dispatchEvent(new CustomEvent('tabchange', {
         detail: {
-            selectedTabIndex: tabs.selectedIndex()
+            selectedTabIndex: this.selectedIndex()
         }
     }));
 };

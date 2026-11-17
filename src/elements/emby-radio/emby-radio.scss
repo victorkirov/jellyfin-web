@@ -73,8 +73,6 @@
 }
 
 .mdl-radio__inner-circle {
-    transition-duration: 0.2s;
-    transition-property: transform;
     transform: scale(0);
     transform-origin: 50% 50%;
 }
@@ -102,8 +100,6 @@
     border-radius: 50%;
     background: #00a4dc;
     opacity: 0.26;
-    transition-duration: 0.2s;
-    transition-property: transform;
     transform: scale(0);
 }
 

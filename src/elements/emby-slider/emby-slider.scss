@@ -60,7 +60,6 @@
     border-radius: 50%;
     background: #00a4dc;
     border: none;
-    transition: 0.2s;
     pointer-events: none;
 }
 
@@ -81,7 +80,6 @@
     background: #00a4dc;
     background-image: none;
     border: none;
-    transition: 0.2s;
 }
 
 .mdl-slider-hoverthumb:hover::-moz-range-thumb {
@@ -101,7 +99,6 @@
     background: #00a4dc;
     border: none;
     transform: scale(0.771429);
-    transition: 0.2s;
 }
 
 .mdl-slider-hoverthumb:hover::-ms-thumb {
@@ -174,7 +171,6 @@
 }
 
 .mdl-slider-background-lower {
-    /* transition: width 0.18s cubic-bezier(0.4, 0, 0.2, 1); */
     position: absolute;
     width: 0;
     top: 0;
@@ -197,13 +193,11 @@
 .mdl-slider-background-lower-withtransform {
     width: 100%;
 
-    /* transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1); */
     transform-origin: left center;
     transform: scaleX(0);
 }
 
 .mdl-slider-background-upper {
-    /* transition: left 0.18s cubic-bezier(0.4, 0, 0.2, 1), width 0.18s cubic-bezier(0.4, 0, 0.2, 1); */
     background: #666;
     background: rgba(255, 255, 255, 0.4);
     position: absolute;

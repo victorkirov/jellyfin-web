@@ -49,6 +49,7 @@ it('updates sort fields and resets paging through the existing callback', async 
     const callback = vi.fn();
     showSortMenu({ items: [{ id: 'SortName', name: 'Name' }, { id: 'DateCreated,SortName', name: 'Added' }], query, callback });
     await vi.waitFor(() => expect(mocks.open).toHaveBeenCalled());
+    expect(mocks.createDialog).toHaveBeenCalledWith({ removeOnClose: true, modal: false });
     const dialog = mocks.createDialog.mock.results[0].value as HTMLDivElement;
     const by = dialog.querySelector<HTMLInputElement>('[value="DateCreated_SortName"]')!;
     by.checked = true;

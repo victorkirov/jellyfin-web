@@ -195,7 +195,7 @@ export async function getPlaybackInfo(player: PlaybackPlayer, apiClient: Playbac
         query.DirectPlayProtocols = player.getDirectPlayProtocols();
     }
 
-    query.AlwaysBurnInSubtitleWhenTranscoding = appSettings.alwaysBurnInSubtitleWhenTranscoding(undefined);
+    query.AlwaysBurnInSubtitleWhenTranscoding = appSettings.alwaysBurnInSubtitleWhenTranscoding();
 
     query.DeviceProfile = deviceProfile;
 

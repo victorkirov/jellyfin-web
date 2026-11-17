@@ -1,26 +1,6 @@
 import globalize from '../globalize';
 
 /**
-* Return type of the value.
-*
-* @param  {Mixed} value
-*
-* @return {String}
-*/
-export function type(value: unknown) {
-    if (value == null) {
-        return String(value);
-    }
-
-    if (typeof value === 'object' || typeof value === 'function') {
-        // eslint-disable-next-line sonarjs/prefer-regexp-exec
-        return Object.prototype.toString.call(value).match(/\s([a-z]+)/i)![1].toLowerCase() || 'object';
-    }
-
-    return typeof value;
-}
-
-/**
  * Disables an event it was triggered on and unbinds itself.
  *
  * @param  {Event} event

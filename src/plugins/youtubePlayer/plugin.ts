@@ -25,10 +25,9 @@ class YoutubePlayer {
     }
     play(options: YoutubePlayOptions) {
         this.started = false;
-        const instance = this;
 
-        return createMediaElement(this, options).then(function (elem) {
-            return setCurrentSrc(instance, elem, options);
+        return createMediaElement(this, options).then((elem) => {
+            return setCurrentSrc(this, elem, options);
         });
     }
     stop(destroyPlayer?: boolean) {
@@ -112,11 +111,9 @@ class YoutubePlayer {
         if (currentYoutubePlayer) {
             currentYoutubePlayer.pauseVideo();
 
-            const instance = this;
-
             // This needs a delay before the youtube player will report the correct player state
-            setTimeout(function () {
-                Events.trigger(instance, 'pause');
+            setTimeout(() => {
+                Events.trigger(this, 'pause');
             }, 200);
         }
     }
@@ -126,11 +123,9 @@ class YoutubePlayer {
         if (currentYoutubePlayer) {
             currentYoutubePlayer.playVideo();
 
-            const instance = this;
-
             // This needs a delay before the youtube player will report the correct player state
-            setTimeout(function () {
-                Events.trigger(instance, 'unpause');
+            setTimeout(() => {
+                Events.trigger(this, 'unpause');
             }, 200);
         }
     }

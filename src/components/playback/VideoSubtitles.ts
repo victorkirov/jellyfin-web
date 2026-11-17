@@ -750,7 +750,7 @@ export abstract class VideoSubtitles {
 
         // This play method can only check if it is real direct play, and will mark Remux as Transcode as well
         const isDirectPlay = this._currentPlayOptions.playMethod === 'DirectPlay';
-        const burnInWhenTranscoding = appSettings.alwaysBurnInSubtitleWhenTranscoding(undefined);
+        const burnInWhenTranscoding = appSettings.alwaysBurnInSubtitleWhenTranscoding();
 
         let sessionPromise;
         if (!isDirectPlay && burnInWhenTranscoding) {

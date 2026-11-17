@@ -16,19 +16,6 @@ function getToastContainer() {
     return toastContainer;
 }
 
-function remove(elem: HTMLElement) {
-    setTimeout(function () {
-        elem.parentNode?.removeChild(elem);
-    }, 300);
-}
-
-function animateRemove(elem: HTMLElement) {
-    setTimeout(function () {
-        elem.classList.add('toastHide');
-        remove(elem);
-    }, 3300);
-}
-
 export default function (options: string | Toast) {
     if (typeof options === 'string') {
         options = {
@@ -42,9 +29,8 @@ export default function (options: string | Toast) {
 
     getToastContainer().appendChild(elem);
 
+    elem.classList.add('toastVisible');
     setTimeout(function () {
-        elem.classList.add('toastVisible');
-
-        animateRemove(elem);
-    }, 300);
+        elem.parentNode?.removeChild(elem);
+    }, 3300);
 }

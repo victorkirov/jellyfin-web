@@ -41,9 +41,7 @@ export function showSortMenu (options: SortMenuOptions) {
 
         const dialogOptions = {
             removeOnClose: true,
-            modal: false,
-            entryAnimationDuration: 160,
-            exitAnimationDuration: 200
+            modal: false
         };
         const dlg = dialogHelper.createDialog(dialogOptions);
         dlg.classList.add('ui-body-a');

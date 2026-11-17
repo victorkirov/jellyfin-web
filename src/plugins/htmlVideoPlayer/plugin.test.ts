@@ -3,6 +3,12 @@ import DOMPurify from 'dompurify';
 import HtmlVideoPlayer from './plugin';
 import itemHelper from '../../components/itemHelper';
 
+const motion = vi.hoisted(() => ({
+    supportsCssAnimation: vi.fn(() => true),
+    addEventListener: vi.fn((target: EventTarget, type: string, handler: EventListener, options?: AddEventListenerOptions) => target.addEventListener(type, handler, options)),
+    loading: vi.fn()
+}));
+
 vi.mock('screenfull', () => ({ default: {} }));
 vi.mock('lib/playback/utils/subtitleStyles', () => ({ useCustomSubtitles: {} }));
 vi.mock('components/subtitlesettings/subtitleappearancehelper', () => ({ default: {} }));
@@ -11,11 +17,11 @@ vi.mock('constants/pluginType', () => ({ PluginType: {} }));
 vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: {} }));
 vi.mock('scripts/settings/userSettings', () => ({ currentSettings: { getSubtitleAppearanceSettings: () => ({ verticalPosition: '0' }) } }));
 vi.mock('types/mediaError', () => ({ MediaError: {} }));
-vi.mock('../../scripts/browser', () => ({ default: {} }));
+vi.mock('../../scripts/browser', () => ({ default: { slow: false, supportsCssAnimation: motion.supportsCssAnimation } }));
 vi.mock('../../scripts/settings/appSettings', () => ({ default: {} }));
 vi.mock('../../components/apphost', () => ({ appHost: { supports: () => true } }));
-vi.mock('../../components/loading/loading', () => ({ default: {} }));
-vi.mock('../../utils/dom', () => ({ default: {} }));
+vi.mock('../../components/loading/loading', () => ({ default: { show: motion.loading } }));
+vi.mock('../../utils/dom', () => ({ default: { addEventListener: motion.addEventListener, whichAnimationEvent: () => 'animationend' } }));
 vi.mock('../../components/playback/playbackmanager', () => ({ playbackManager: { getSubtitleUrl: () => '/subtitles.vtt' } }));
 vi.mock('../../components/router/appRouter', () => ({ appRouter: {} }));
 vi.mock('../../components/htmlMediaHelper', () => ({
@@ -152,4 +158,21 @@ describe('Custom subtitle cues', () => {
         expect(sanitize).toHaveBeenCalledTimes(3);
         expect(document.querySelector('.videoSecondarySubtitlesInner')?.textContent).toBe('\u200eReplacement');
     });
+});
+
+it('creates and reuses fullscreen video without an animation completion event', async () => {
+    document.body.innerHTML = '';
+    motion.addEventListener.mockClear();
+    const player = new HtmlVideoPlayer();
+    const options = { fullscreen: true } as Parameters<HtmlVideoPlayer['createMediaElement']>[0];
+    const creation = player.createMediaElement(options);
+    let element: HTMLVideoElement | undefined;
+    void creation.then(value => {
+        element = value;
+    });
+    await vi.dynamicImportSettled();
+    expect(element).toBe(document.querySelector('video'));
+    expect(motion.addEventListener).not.toHaveBeenCalledWith(expect.anything(), 'animationend', expect.anything(), expect.anything());
+    expect(document.querySelector<HTMLElement>('.videoPlayerContainer')?.style.animation).toBe('');
+    expect(await player.createMediaElement(options)).toBe(element);
 });

@@ -1,4 +1,3 @@
-import dom from '../../utils/dom';
 import { playbackManager } from '../playback/playbackmanager';
 import Events from '../../utils/events';
 import mediaInfo from '../mediainfo/mediainfo';
@@ -12,8 +11,6 @@ import './upnextdialog.scss';
 import '../buttons/emby-button';
 import '../../styles/flexstyles.scss';
 
-const transitionEndEventName = dom.whichTransitionEvent();
-
 import getHtml from './upNextMarkup';
 import type { PlaybackItem } from 'lib/playback/types';
 import type { PlaybackPlayer } from 'types/plugin';
@@ -21,23 +18,21 @@ import type { PlaybackPlayer } from 'types/plugin';
 type UpNextOptions = { parent: HTMLElement; player?: PlaybackPlayer; nextItem: PlaybackItem };
 
 function setNextVideoText(this: UpNextDialog) {
-    const instance = this;
+    const elem = this.options!.parent;
 
-    const elem = instance.options!.parent;
-
-    const secondsRemaining = Math.max(Math.round(getTimeRemainingMs(instance) / 1000), 0);
+    const secondsRemaining = Math.max(Math.round(getTimeRemainingMs(this) / 1000), 0);
 
     console.debug('up next seconds remaining: ' + secondsRemaining);
 
     const timeText = '<span class="upNextDialog-countdownText">' + globalize.translate('HeaderSecondsValue', secondsRemaining) + '</span>';
 
     let nextVideoText;
-    if (instance.itemType === 'Episode') {
-        nextVideoText = instance.showStaticNextText ?
+    if (this.itemType === 'Episode') {
+        nextVideoText = this.showStaticNextText ?
             globalize.translate('HeaderNextEpisode') :
             globalize.translate('HeaderNextEpisodePlayingInValue', timeText);
     } else {
-        nextVideoText = instance.showStaticNextText ?
+        nextVideoText = this.showStaticNextText ?
             globalize.translate('HeaderNextVideo') :
             globalize.translate('HeaderNextVideoPlayingInValue', timeText);
     }
@@ -46,9 +41,7 @@ function setNextVideoText(this: UpNextDialog) {
 }
 
 function fillItem(this: UpNextDialog, item: PlaybackItem) {
-    const instance = this;
-
-    const elem = instance.options!.parent;
+    const elem = this.options!.parent;
 
     elem.querySelector<HTMLElement>('.upNextDialog-mediainfo')!.innerHTML = mediaInfo.getPrimaryMediaInfoHtml(item, {
         criticRating: true,
@@ -64,9 +57,9 @@ function fillItem(this: UpNextDialog, item: PlaybackItem) {
 
     elem.querySelector<HTMLElement>('.upNextDialog-title')!.innerText = title || '';
 
-    instance.itemType = item.Type;
+    this.itemType = item.Type;
 
-    instance.show();
+    this.show();
 }
 
 function clearCountdownTextTimeout(instance: UpNextDialog) {
@@ -88,76 +81,42 @@ async function onStartNowClick(this: UpNextDialog) {
     }
 }
 
-async function init(instance: UpNextDialog, options: UpNextOptions) {
-    instance.showStaticNextText = await showStaticNextText(options.nextItem);
+function init(instance: UpNextDialog, options: UpNextOptions) {
+    void showStaticNextText(options.nextItem).then(value => {
+        instance.showStaticNextText = value;
 
-    options.parent.innerHTML = getHtml();
+        options.parent.innerHTML = getHtml();
 
-    options.parent.classList.add('hide');
-    options.parent.classList.add('upNextDialog');
-    options.parent.classList.add('upNextDialog-hidden');
+        options.parent.classList.add('hide');
+        options.parent.classList.add('upNextDialog');
+        options.parent.classList.add('upNextDialog-hidden');
 
-    fillItem.call(instance, options.nextItem);
+        fillItem.call(instance, options.nextItem);
 
-    options.parent.querySelector<HTMLElement>('.btnHide')!.addEventListener('click', instance.hide.bind(instance));
-    options.parent.querySelector<HTMLElement>('.btnStartNow')!.addEventListener('click', onStartNowClick.bind(instance));
-}
-
-function clearHideAnimationEventListeners(instance: UpNextDialog, elem: HTMLElement) {
-    const fn = instance._onHideAnimationComplete;
-
-    if (fn) {
-        dom.removeEventListener(elem, transitionEndEventName, fn, {
-            once: true
-        });
-    }
-}
-
-function onHideAnimationComplete(this: UpNextDialog, e: Event) {
-    const instance = this;
-    const elem = e.target as HTMLElement;
-
-    elem.classList.add('hide');
-
-    clearHideAnimationEventListeners(instance, elem);
-    Events.trigger(instance, 'hide');
+        options.parent.querySelector<HTMLElement>('.btnHide')!.addEventListener('click', instance.hide.bind(instance));
+        options.parent.querySelector<HTMLElement>('.btnStartNow')!.addEventListener('click', onStartNowClick.bind(instance));
+    });
 }
 
 async function hideComingUpNext(this: UpNextDialog) {
-    const instance = this;
     clearCountdownTextTimeout(this);
 
-    if (!instance.options) {
+    if (!this.options) {
         return;
     }
 
-    const elem = instance.options!.parent;
+    const elem = this.options!.parent;
 
     if (!elem) {
         return;
     }
 
-    clearHideAnimationEventListeners(this, elem);
-
     if (elem.classList.contains('upNextDialog-hidden')) {
         return;
     }
 
-    const fn = onHideAnimationComplete.bind(instance);
-    instance._onHideAnimationComplete = fn;
-
-    const transitionEvent = await new Promise<Event>((resolve) => {
-        dom.addEventListener(elem, transitionEndEventName, resolve, {
-            once: true
-        });
-
-        // trigger a reflow to force it to animate again
-        void elem.offsetWidth;
-
-        elem.classList.add('upNextDialog-hidden');
-    });
-
-    instance._onHideAnimationComplete!(transitionEvent);
+    elem.classList.add('upNextDialog-hidden', 'hide');
+    Events.trigger(this, 'hide');
 }
 
 function getTimeRemainingMs(instance: UpNextDialog) {
@@ -197,9 +156,8 @@ async function showStaticNextText(nextItem: PlaybackItem) {
 class UpNextDialog {
     options: UpNextOptions | null;
     showStaticNextText: boolean;
-    itemType: PlaybackItem["Type"] | null = null;
+    itemType: PlaybackItem['Type'] | null = null;
     _countdownTextTimeout: ReturnType<typeof setInterval> | null = null;
-    _onHideAnimationComplete?: (event: Event) => void;
     constructor(options: UpNextOptions) {
         this.options = options;
         this.showStaticNextText = false; // default to showing countdown text
@@ -209,19 +167,12 @@ class UpNextDialog {
     show() {
         const elem = this.options!.parent;
 
-        clearHideAnimationEventListeners(this, elem);
-
         elem.classList.remove('hide');
-
-        // trigger a reflow to force it to animate again
-        void elem.offsetWidth;
 
         elem.classList.remove('upNextDialog-hidden');
 
         if (layoutManager.tv) {
-            setTimeout(function () {
-                focusManager.focus(elem.querySelector<HTMLElement>('.btnStartNow')!);
-            }, 50);
+            focusManager.focus(elem.querySelector<HTMLElement>('.btnStartNow')!);
         }
 
         startComingUpNextHideTimer(this);
@@ -230,7 +181,7 @@ class UpNextDialog {
         await hideComingUpNext.bind(this)();
     }
     destroy() {
-        hideComingUpNext.call(this);
+        void hideComingUpNext.call(this);
 
         this.options = null;
         this.showStaticNextText = false;

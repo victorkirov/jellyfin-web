@@ -1,7 +1,5 @@
 import type { PlaybackPlayer } from 'types/plugin';
 import { playbackManager } from './playbackmanager';
-import dom from '../../utils/dom';
-import browser from '../../scripts/browser';
 import Events from '../../utils/events';
 
 import './iconosd.scss';
@@ -11,8 +9,6 @@ let currentPlayer: PlaybackPlayer | null;
 let osdElement: HTMLElement | undefined;
 let iconElement: HTMLElement | null;
 let progressElement: HTMLElement | null;
-
-let enableAnimation: boolean;
 
 function getOsdElementHtml() {
     let html = '';
@@ -27,8 +23,6 @@ function getOsdElementHtml() {
 function ensureOsdElement() {
     let elem = osdElement;
     if (!elem) {
-        enableAnimation = browser.supportsCssAnimation();
-
         elem = document.createElement('div');
         elem.classList.add('hide');
         elem.classList.add('iconOsd');
@@ -44,30 +38,14 @@ function ensureOsdElement() {
     }
 }
 
-function onHideComplete(this: HTMLElement) {
-    this.classList.add('hide');
-}
-
 let hideTimeout: ReturnType<typeof setTimeout> | null;
 function showOsd() {
     clearHideTimeout();
 
     const elem = osdElement!;
 
-    dom.removeEventListener(elem, dom.whichTransitionEvent(), onHideComplete, {
-        once: true
-    });
-
-    elem.classList.remove('hide');
-
-    // trigger reflow
-    void elem.offsetWidth;
-
-    requestAnimationFrame(function () {
-        elem.classList.remove('iconOsd-hidden');
-
-        hideTimeout = setTimeout(hideOsd, 3000);
-    });
+    elem.classList.remove('hide', 'iconOsd-hidden');
+    hideTimeout = setTimeout(hideOsd, 3000);
 }
 
 function clearHideTimeout() {
@@ -80,22 +58,8 @@ function clearHideTimeout() {
 function hideOsd() {
     clearHideTimeout();
 
-    const elem = osdElement!;
-    if (elem) {
-        if (enableAnimation) {
-            // trigger reflow
-            void elem.offsetWidth;
-
-            requestAnimationFrame(function () {
-                elem.classList.add('iconOsd-hidden');
-
-                dom.addEventListener(elem, dom.whichTransitionEvent(), onHideComplete, {
-                    once: true
-                });
-            });
-        } else {
-            onHideComplete.call(elem);
-        }
+    if (osdElement) {
+        osdElement.classList.add('iconOsd-hidden', 'hide');
     }
 }
 
@@ -130,11 +94,9 @@ function releaseCurrentPlayer() {
 }
 
 function onBrightnessChanged(this: PlaybackPlayer) {
-    const player = this;
-
     ensureOsdElement();
 
-    updateElementsFromPlayer(playbackManager.getBrightness(player)!);
+    updateElementsFromPlayer(playbackManager.getBrightness(this)!);
 
     showOsd();
 }

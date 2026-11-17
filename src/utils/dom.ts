@@ -1,8 +1,7 @@
 import { addEventListener, removeEventListener } from './domEvents';
 import { getWindowSize, getScreenWidth } from './domWindow';
-import { whichAnimationEvent, whichAnimationCancelEvent, whichTransitionEvent } from './domAnimation';
 
-export { addEventListener, removeEventListener, getWindowSize, getScreenWidth, whichAnimationEvent, whichAnimationCancelEvent, whichTransitionEvent };
+export { addEventListener, removeEventListener, getWindowSize, getScreenWidth };
 
 /**
  * Useful DOM utilities.
@@ -110,8 +109,5 @@ export default {
     removeEventListener,
     getWindowSize,
     getScreenWidth,
-    setElementTitle,
-    whichTransitionEvent,
-    whichAnimationEvent,
-    whichAnimationCancelEvent
+    setElementTitle
 };

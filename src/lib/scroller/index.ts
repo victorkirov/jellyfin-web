@@ -3,7 +3,6 @@
  * It is a legacy library that should be replaced at some point.
  */
 
-import browser from '../../scripts/browser';
 import layoutManager from '../layoutManager';
 import dom from '../../utils/dom';
 import focusManager from '../focusManager';
@@ -33,33 +32,14 @@ function initializeScroller(self: Scroller, frame: HTMLElement, options: Scrolle
         dragSource: null, // Selector or DOM element for catching dragging events. Default is FRAME.
         mouseDragging: 1, // Enable navigation by dragging the SLIDEE with mouse cursor.
         dragThreshold: 3, // Distance in pixels before Sly recognizes dragging.
-        intervactive: null, // Selector for special interactive elements.
-
-        // Mixed options
-        speed: 0 // Animations speed in milliseconds. 0 to disable animations.
+        intervactive: null // Selector for special interactive elements.
 
     }, options);
 
     const isSmoothScrollSupported = 'scrollBehavior' in document.documentElement.style;
 
-    // also use native scroll when scrolling vertically in desktop mode - excluding horizontal because the mouse wheel support is choppy at the moment
-    // in cases with firefox, if the smooth scroll api is supported then use that because their implementation is very good
-    if (options.allowNativeScroll === false) {
-        options.enableNativeScroll = false;
-    } else if (isSmoothScrollSupported && ((browser.firefox && !layoutManager.tv) || options.allowNativeSmoothScroll)) {
-        // native smooth scroll
-        options.enableNativeScroll = true;
-    } else if (options.requireAnimation && (browser.animate || browser.supportsCssAnimation())) {
-        // transform is the only way to guarantee animation
-        options.enableNativeScroll = false;
-    } else if (!layoutManager.tv || !browser.animate) {
-        options.enableNativeScroll = true;
-    }
-
-    // Need this for the magic wheel. With the animated scroll the magic wheel will run off of the screen
-    if (browser.web0s) {
-        options.enableNativeScroll = true;
-    }
+    // The TV uses native scrolling; retain explicit transform positioning for callers that need it.
+    options.enableNativeScroll = options.allowNativeScroll !== false;
 
     // Private variables
     self.options = o;
@@ -168,11 +148,11 @@ function initializeScroller(self: Scroller, frame: HTMLElement, options: Scrolle
         return frame;
     };
 
-    function nativeScrollTo(container: HTMLElement, pos: number, immediate?: boolean | number) {
+    function nativeScrollTo(container: HTMLElement, pos: number) {
         if (container.scroll) {
             const coordinates = o.horizontal ? { left: pos } : { top: pos };
-            container.scroll({ ...coordinates, behavior: immediate ? 'instant' : 'smooth' });
-        } else if (!immediate && container.scrollTo) {
+            container.scroll({ ...coordinates, behavior: 'instant' });
+        } else if (container.scrollTo) {
             container.scrollTo(o.horizontal ? Math.round(pos) : 0, o.horizontal ? 0 : Math.round(pos));
         } else if (o.horizontal) {
             container.scrollLeft = Math.round(pos);
@@ -181,13 +161,11 @@ function initializeScroller(self: Scroller, frame: HTMLElement, options: Scrolle
         }
     }
 
-    let lastAnimate: number | undefined;
-
     /**
-         * Animate to a position.
+         * Scroll to a position.
          *
          * @param {Int}  newPos    New position.
-         * @param {Bool} immediate Reposition immediately without an animation.
+         * @param {Bool} immediate Legacy flag retained for callers.
          *
          * @return {Void}
          */
@@ -204,46 +182,17 @@ function initializeScroller(self: Scroller, frame: HTMLElement, options: Scrolle
         }
 
         if (!transform) {
-            nativeScrollTo(nativeScrollElement, newPos, immediate);
+            nativeScrollTo(nativeScrollElement, newPos);
             return;
-        }
-
-        // Update the animation object
-        const from = pos.cur;
-        immediate = immediate || dragging.init || !o.speed;
-
-        const now = new Date().getTime();
-
-        if (o.autoImmediate && !immediate && (now - (lastAnimate || 0)) <= 50) {
-            immediate = true;
         }
 
         if (!immediate && o.skipSlideToWhenVisible && fullItemPos?.isVisible) {
             return;
         }
 
-        // Start animation rendering
-        // NOTE the dependency was modified here to fix a scrollbutton issue
         pos.dest = newPos;
-        renderAnimateWithTransform(from, newPos, immediate);
-        lastAnimate = now;
+        renderTransform(newPos);
     };
-
-    function forceReflow(elem: HTMLElement) {
-        return elem.offsetWidth;
-    }
-
-    function setStyleProperty(elem: HTMLElement, name: 'transform', value: string, speed: number, resetTransition?: boolean) {
-        const style = elem.style;
-
-        if (resetTransition || browser.edge) {
-            style.transition = 'none';
-            forceReflow(elem);
-        }
-
-        style.transition = 'transform ' + speed + 'ms ease-out';
-        style[name] = value;
-    }
 
     function dispatchScrollEventIfNeeded() {
         if (o.dispatchScrollEvent) {
@@ -254,18 +203,9 @@ function initializeScroller(self: Scroller, frame: HTMLElement, options: Scrolle
         }
     }
 
-    function renderAnimateWithTransform(fromPosition: number, toPosition: number, immediate?: boolean | number) {
-        let speed = o.speed;
-
-        if (immediate) {
-            speed = o.immediateSpeed || 50;
-        }
-
-        if (o.horizontal) {
-            setStyleProperty(slideeElement, 'transform', 'translateX(' + (-Math.round(toPosition)) + 'px)', speed);
-        } else {
-            setStyleProperty(slideeElement, 'transform', 'translateY(' + (-Math.round(toPosition)) + 'px)', speed);
-        }
+    function renderTransform(toPosition: number) {
+        const offset = -Math.round(toPosition);
+        slideeElement.style.transform = o.horizontal ? 'translateX(' + offset + 'px)' : 'translateY(' + offset + 'px)';
         self._pos.cur = toPosition;
 
         dispatchScrollEventIfNeeded();
@@ -651,9 +591,6 @@ function initializeScroller(self: Scroller, frame: HTMLElement, options: Scrolle
                 frame.style.overflow = 'hidden';
             }
 
-            slideeElement.style.willChange = 'transform';
-            slideeElement.style.transition = 'transform ' + o.speed + 'ms ease-out';
-
             if (o.horizontal) {
                 slideeElement.classList.add('animatedScrollX');
             } else {
@@ -731,7 +668,7 @@ const scrollerFactory = function (this: Scroller, frame: HTMLElement, options: S
  * Slide SLIDEE by amount of pixels.
  *
  * @param {Int}  delta     Pixels/Items. Positive means forward, negative means backward.
- * @param {Bool} immediate Reposition immediately without an animation.
+ * @param {Bool} immediate Legacy flag retained for callers.
  *
  * @return {Void}
  */
@@ -770,10 +707,10 @@ scrollerFactory.prototype.to = function (this: Scroller, location: 'start' | 'ce
 };
 
 /**
- * Animate element or the whole SLIDEE to the start of the frame.
+ * Position element or the whole SLIDEE to the start of the frame.
  *
- * @param {Mixed} item      Item DOM element, or index starting at 0. Omitting will animate SLIDEE.
- * @param {Bool}  immediate Reposition immediately without an animation.
+ * @param {Mixed} item      Item DOM element, or index starting at 0. Omitting positions SLIDEE.
+ * @param {Bool}  immediate Legacy flag retained for callers.
  *
  * @return {Void}
  */
@@ -782,10 +719,10 @@ scrollerFactory.prototype.toStart = function (this: Scroller, item?: HTMLElement
 };
 
 /**
- * Animate element or the whole SLIDEE to the end of the frame.
+ * Position element or the whole SLIDEE to the end of the frame.
  *
- * @param {Mixed} item      Item DOM element, or index starting at 0. Omitting will animate SLIDEE.
- * @param {Bool}  immediate Reposition immediately without an animation.
+ * @param {Mixed} item      Item DOM element, or index starting at 0. Omitting positions SLIDEE.
+ * @param {Bool}  immediate Legacy flag retained for callers.
  *
  * @return {Void}
  */
@@ -794,10 +731,10 @@ scrollerFactory.prototype.toEnd = function (this: Scroller, item?: HTMLElement |
 };
 
 /**
- * Animate element or the whole SLIDEE to the center of the frame.
+ * Position element or the whole SLIDEE to the center of the frame.
  *
- * @param {Mixed} item      Item DOM element, or index starting at 0. Omitting will animate SLIDEE.
- * @param {Bool}  immediate Reposition immediately without an animation.
+ * @param {Mixed} item      Item DOM element, or index starting at 0. Omitting positions SLIDEE.
+ * @param {Bool}  immediate Legacy flag retained for callers.
  *
  * @return {Void}
  */

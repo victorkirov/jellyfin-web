@@ -5,7 +5,7 @@ vi.mock('../../scripts/browser', () => ({ default: {} }));
 vi.mock('../../lib/layoutManager', () => ({ default: { tv: true } }));
 vi.mock('../../lib/focusManager', () => ({ default: { focus: vi.fn(), autoFocus: vi.fn() } }));
 vi.mock('../../utils/dom', () => ({ default: {
-    parentWithClass: (element: HTMLElement, className: string) => element.closest('.' + className),
+    parentWithClass: (element: HTMLElement, className: string) => element.classList.contains(className) ? element : null,
     addEventListener: (element: Element, type: string, handler: EventListener) => element.addEventListener(type, handler),
     removeEventListener: (element: Element, type: string, handler: EventListener) => element.removeEventListener(type, handler)
 } }));
@@ -19,7 +19,9 @@ afterEach(() => {
 it('preserves selected-tab events and overflow classes without panel animation', async () => {
     vi.useFakeTimers();
     let prototype: object = {};
-    Object.defineProperty(document, 'registerElement', { configurable: true, value: (_name: string, options: { prototype: object }) => { prototype = options.prototype; } });
+    Object.defineProperty(document, 'registerElement', { configurable: true, value: (_name: string, options: { prototype: object }) => {
+        prototype = options.prototype;
+    } });
     await import('./emby-tabs');
     const tabs = document.createElement('div') as Tabs;
     Object.setPrototypeOf(tabs, prototype);

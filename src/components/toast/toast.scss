@@ -28,7 +28,6 @@
     box-shadow: 0 0.0725em 0.29em 0 rgba(0, 0, 0, 0.37);
     border-radius: 0.15em;
     cursor: default;
-    transition: transform 0.3s ease-out;
     min-height: initial;
     padding: 1em 1.5em;
     font-size: 110%;
@@ -43,14 +42,4 @@
 
 .toast:last-child {
     margin-bottom: 0;
-    transform: translateY(16em);
-}
-
-.toast.toastVisible {
-    transform: none;
-}
-
-.toast.toastHide {
-    opacity: 0;
-    transition: opacity 0.3s ease-out;
 }

@@ -85,3 +85,8 @@ describe('legacy platform detection characterization', () => {
         expect(result.tv).toBe(false);
     });
 });
+
+it('does not expose the unused CSS animation capability probe', () => {
+    expect('supportsCssAnimation' in detectBrowser('unknown')).toBe(false);
+    expect('animate' in detectBrowser('unknown')).toBe(false);
+});

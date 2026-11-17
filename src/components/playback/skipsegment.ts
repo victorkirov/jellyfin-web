@@ -7,21 +7,19 @@ import { isInSegment } from 'lib/playback/utils/mediaSegments';
 import Events, { type Event } from 'utils/events';
 import { EventType } from 'constants/eventType';
 import './skipbutton.scss';
-import dom from 'utils/dom';
 import globalize from 'lib/globalize';
 import * as userSettings from 'scripts/settings/userSettings';
 import focusManager from 'lib/focusManager';
 import layoutManager from 'lib/layoutManager';
 
 interface ShowOptions {
-    animate?: boolean;
     keep?: boolean;
     focus?: boolean;
 }
 
 function onHideComplete(this: HTMLButtonElement) {
     if (this) {
-        // Handle focus after the hide transition completes
+        // Restore remote focus before removing the button.
         if (document.activeElement === this) {
             this.blur();
             const pauseButton = document.querySelector('.btnPause');
@@ -82,48 +80,25 @@ class SkipSegment extends PlaybackSubscriber {
         const elem = this.skipElement;
         if (elem) {
             this.clearHideTimeout();
-            dom.removeEventListener(elem, dom.whichTransitionEvent(), onHideComplete, {
-                once: true
-            });
-            elem.classList.remove('hide');
-            if (!options.animate) {
-                elem.classList.add('no-transition');
-            } else {
-                elem.classList.remove('no-transition');
-            }
-
-            // eslint-disable-next-line sonarjs/void-use
-            void elem.offsetWidth;
+            elem.classList.remove('hide', 'skip-button-hidden');
 
             const hasFocus = document.activeElement && focusManager.isCurrentlyFocusable(document.activeElement);
             if (options.focus && !hasFocus) {
                 focusManager.focus(elem);
             }
 
-            requestAnimationFrame(() => {
-                elem.classList.remove('skip-button-hidden');
-
-                if (!options.keep) {
-                    this.hideTimeout = setTimeout(this.hideSkipButton.bind(this), 8000);
-                }
-            });
+            if (!options.keep) {
+                this.hideTimeout = setTimeout(this.hideSkipButton.bind(this), 8000);
+            }
         }
     }
 
     hideSkipButton() {
         const elem = this.skipElement;
         if (elem) {
-            elem.classList.remove('no-transition');
-            // eslint-disable-next-line sonarjs/void-use
-            void elem.offsetWidth;
-
-            requestAnimationFrame(() => {
-                elem.classList.add('skip-button-hidden');
-
-                dom.addEventListener(elem, dom.whichTransitionEvent(), onHideComplete, {
-                    once: true
-                });
-            });
+            this.clearHideTimeout();
+            elem.classList.add('skip-button-hidden');
+            onHideComplete.call(elem);
         }
     }
 
@@ -138,7 +113,6 @@ class SkipSegment extends PlaybackSubscriber {
         if (this.currentSegment) {
             if (isOpen) {
                 this.showSkipButton({
-                    animate: false,
                     keep: true,
                     focus: false
                 });
@@ -165,7 +139,6 @@ class SkipSegment extends PlaybackSubscriber {
             this.setButtonText();
 
             this.showSkipButton({
-                animate: true,
                 focus: layoutManager.tv
             });
         }

@@ -1,4 +1,3 @@
-import browser from 'scripts/browser';
 import AppSettingsStorage from './AppSettingsStorage';
 import { toBoolean } from '../../utils/string';
 
@@ -9,19 +8,6 @@ class AppSettings extends AppSettingsStorage {
         }
 
         return toBoolean(this.get('enableAutoLogin'), true);
-    }
-
-    /**
-     * Get or set 'Enable smooth scroll' state.
-     * @param {boolean|undefined} val - Flag to enable 'Enable smooth scroll' or undefined.
-     * @return {boolean} 'Enable smooth scroll' state.
-     */
-    enableSmoothScroll(val?: boolean) {
-        if (val !== undefined) {
-            return this.set('enableSmoothScroll', val.toString());
-        }
-
-        return toBoolean(this.get('enableSmoothScroll'), !!browser.tizen);
     }
 
     enableSystemExternalPlayers(val?: boolean) {

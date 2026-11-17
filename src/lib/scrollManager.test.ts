@@ -1,20 +1,14 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import appSettings from '../scripts/settings/appSettings';
-import Events from '../utils/events';
 import { scrollToElement } from './scrollManager';
 
-vi.mock('../scripts/settings/appSettings', () => ({
-    default: { enableSmoothScroll: vi.fn(() => false) }
-}));
 vi.mock('./layoutManager', () => ({ default: { tv: true } }));
 
 beforeEach(() => {
     document.body.innerHTML = '';
     vi.useFakeTimers();
-    vi.mocked(appSettings.enableSmoothScroll).mockReturnValue(false);
     vi.spyOn(window, 'scroll').mockImplementation(vi.fn());
     vi.spyOn(window, 'scrollTo').mockImplementation(vi.fn());
-    Events.trigger(appSettings, 'change', ['enableSmoothScroll']);
 });
 
 afterEach(() => {
@@ -72,24 +66,27 @@ it('resolves parents again when content starts overflowing or the target moves',
     expect(scroller.scrollTop).toBe(0);
 });
 
-it('reads the smooth-scroll setting once until its change event', () => {
-    const { target } = createScroller();
-    const readSetting = vi.mocked(appSettings.enableSmoothScroll);
-    readSetting.mockClear();
-    const focus = () => {
-        target.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
-        vi.runOnlyPendingTimers();
-    };
+it('positions focused elements immediately without animation frames', () => {
+    const { target, scroller } = createScroller();
+    const frame = vi.spyOn(window, 'requestAnimationFrame');
+    target.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+    vi.runOnlyPendingTimers();
+    expect(scroller.scrollLeft).toBe(210);
+    expect(scroller.scrollTop).toBe(310);
+    expect(frame).not.toHaveBeenCalled();
+});
 
-    focus();
-    focus();
-    expect(readSetting).toHaveBeenCalledTimes(1);
-    Events.trigger(appSettings, 'change', ['unrelated']);
-    focus();
-    expect(readSetting).toHaveBeenCalledTimes(1);
-    Events.trigger(appSettings, 'change', ['enableSmoothScroll']);
-    focus();
-    expect(readSetting).toHaveBeenCalledTimes(2);
+it('ignores legacy smooth-scroll requests and saved values', () => {
+    const { target, scroller } = createScroller();
+    localStorage.setItem('enableSmoothScroll', 'true');
+    scrollToElement(target, true);
+    expect(scroller.scrollLeft).toBe(210);
+    expect(scroller.scrollTop).toBe(310);
+    localStorage.removeItem('enableSmoothScroll');
+});
+
+it('removes the smooth-scroll settings API', () => {
+    expect('enableSmoothScroll' in appSettings).toBe(false);
 });
 
 it('leaves a shared custom scroller untouched without measuring rectangles', () => {

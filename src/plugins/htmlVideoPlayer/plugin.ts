@@ -1,7 +1,7 @@
 import { destroyHlsPlayer, handleHlsJsMediaError, startHlsPlayback } from 'components/playback/hlsPlayer';
 import { enableHlsJsPlayerForCodecs } from 'lib/playback/hlsSupport';
 import { VideoSubtitles } from 'components/playback/VideoSubtitles';
-import { getMediaStreamAudioTracks, zoomIn, getSubtitleTimeOffset } from 'components/playback/videoTrackHelpers';
+import { getMediaStreamAudioTracks, getSubtitleTimeOffset } from 'components/playback/videoTrackHelpers';
 import type { BrowserDetection, PlayerOptions, PlayerProfile, PlayerStream } from 'types/legacyPlayer';
 
 import Screenfull from 'screenfull';
@@ -626,13 +626,6 @@ export class HtmlVideoPlayer extends VideoSubtitles {
                         });
                         return videoElement;
                     }
-
-                    // don't animate on smart tv's, too slow
-                    if (!browser.slow && browser.supportsCssAnimation()) {
-                        return zoomIn(playerDlg).then(function () {
-                            return videoElement;
-                        });
-                    }
                 }
 
                 return videoElement;
@@ -1024,7 +1017,7 @@ export class HtmlVideoPlayer extends VideoSubtitles {
     }
 
     getAspectRatio() {
-        return appSettings.aspectRatio(undefined) || 'auto';
+        return appSettings.aspectRatio() || 'auto';
     }
 
     getSupportedAspectRatios() {

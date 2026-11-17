@@ -24,8 +24,6 @@
     display: flex;
     flex-direction: row;
     justify-content: center;
-    will-change: opacity;
-    transition: opacity 0.3s ease-out;
     color: #fff;
     user-select: none;
     -webkit-touch-callout: none;
@@ -35,7 +33,6 @@
 }
 
 .skinHeader-withBackground.osdHeader {
-    transition: opacity 0.3s ease-out;
     position: relative;
     z-index: 1;
     background: linear-gradient(180deg, rgba(16, 16, 16, 0.75) 0%, rgba(16, 16, 16, 0) 100%);
@@ -193,10 +190,6 @@
 
 .osdMediaStatus span:first-child {
     margin-right: 0.125rem;
-}
-
-.osdMediaStatus .animate {
-    animation: spin-clockwise 4s linear infinite;
 }
 
 @media all and (max-width: 30em) {

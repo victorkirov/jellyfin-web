@@ -8,7 +8,6 @@ import dialogHelper from '../dialogHelper/dialogHelper';
 import inputManager from '../../scripts/inputManager';
 import browser from '../../scripts/browser';
 import { appHost } from '../apphost';
-import dom from '../../utils/dom';
 
 import './style.scss';
 import type Swiper from 'swiper';
@@ -17,11 +16,6 @@ import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client/models/base
 import type { Slide, SlideshowOptions } from './slideshowTypes';
 import { getImgUrl } from './slideshowImages';
 import { getSwiperSlideHtmlFromSlide } from './slideshowMarkup';
-
-/**
- * Name of transition event.
- */
-const transitionEndEventName = dom.whichTransitionEvent();
 
 /**
  * Flag to use fake image to fix blurry zoomed image.
@@ -46,7 +40,6 @@ export default class Slideshow {
     hide!: () => void;
 
     constructor(options: SlideshowOptions) {
-        const self = this;
         /** Initialized instance of Swiper. */
         let swiperInstance: Swiper | null;
         /** Initialized instance of the dialog containing the Swiper instance. */
@@ -62,11 +55,9 @@ export default class Slideshow {
             currentOptions = slideshowOptions;
 
             const dialogOptions = {
-                exitAnimationDuration: slideshowOptions.interactive ? 400 : 800,
                 size: 'fullscreen',
                 autoFocus: false,
                 scrollY: false,
-                exitAnimation: 'fadeout',
                 removeOnClose: true
             };
             dialog = dialogHelper.createDialog(dialogOptions);
@@ -83,7 +74,7 @@ export default class Slideshow {
 
             setUserScalable(true);
 
-            dialogHelper.open(dialog).then(function () {
+            void dialogHelper.open(dialog).then(function () {
                 setUserScalable(false);
             });
 
@@ -97,35 +88,11 @@ export default class Slideshow {
         /**
      * Handles zoom changes.
      */
-        function onZoomChange(swiper: Swiper, scale: number, imageEl: HTMLElement, slideEl: HTMLElement) {
+        function onZoomChange(_swiper: Swiper, scale: number, _imageEl: HTMLElement, slideEl: HTMLElement) {
             const zoomImage = slideEl.querySelector<HTMLElement>('.swiper-zoom-fakeimg');
-
             if (zoomImage) {
                 zoomImage.style.width = zoomImage.style.height = scale * 100 + '%';
-
-                if (scale > 1) {
-                    if (zoomImage.classList.contains('swiper-zoom-fakeimg-hidden')) {
-                    // Await for Swiper style changes
-                        setTimeout(() => {
-                            const callback = () => {
-                                imageEl.removeEventListener(transitionEndEventName, callback);
-                                zoomImage.classList.remove('swiper-zoom-fakeimg-hidden');
-                            };
-
-                            // Swiper set 'transition-duration: 300ms' for auto zoom
-                            // and 'transition-duration: 0s' for touch zoom
-                            const transitionDuration = parseFloat(imageEl.style.transitionDuration.replace(/[a-z]/i, ''));
-
-                            if (transitionDuration > 0) {
-                                imageEl.addEventListener(transitionEndEventName, callback);
-                            } else {
-                                callback();
-                            }
-                        }, 0);
-                    }
-                } else {
-                    zoomImage.classList.add('swiper-zoom-fakeimg-hidden');
-                }
+                zoomImage.classList.toggle('swiper-zoom-fakeimg-hidden', scale <= 1);
             }
         }
 
@@ -142,12 +109,10 @@ export default class Slideshow {
                 slides = currentOptions.items;
             }
 
-            //eslint-disable-next-line import/no-unresolved
-            import('swiper/css/bundle');
-
-            // eslint-disable-next-line import/no-unresolved
-            import('swiper/bundle').then(({ Swiper }) => {
-                const config: SwiperOptions & { preloadImages: boolean; slidesPerColumn: number } = {
+            // eslint-disable-next-line import/no-unresolved -- Swiper exposes modules through package exports.
+            void Promise.all([import('swiper'), import('swiper/modules')]).then(([{ Swiper }, { Virtual, Keyboard, Autoplay, Zoom, A11y }]) => {
+                const config: SwiperOptions = {
+                    modules: [Virtual, Keyboard, Autoplay, Zoom, A11y],
                     direction: 'horizontal',
                     // Loop is disabled due to the virtual slides option not supporting it.
                     loop: false,
@@ -159,11 +124,9 @@ export default class Slideshow {
                     keyboard: {
                         enabled: true
                     },
-                    preloadImages: true,
                     slidesPerView: 1,
-                    slidesPerColumn: 1,
                     initialSlide: swiperOptions.startIndex || 0,
-                    speed: 240,
+                    speed: 0,
                     // Virtual slides reduce memory consumption for large libraries while allowing preloading of images;
                     virtual: {
                         slides: slides || [],
@@ -246,7 +209,7 @@ export default class Slideshow {
      * Closes the dialog and destroys the Swiper instance.
      */
         function onDialogClosed() {
-            if (screenfull.isFullscreen) screenfull.exit();
+            if (screenfull.isFullscreen) void screenfull.exit();
 
             const swiper = swiperInstance;
             if (swiper) {
@@ -282,14 +245,14 @@ export default class Slideshow {
         /**
      * Shows the slideshow component.
      */
-        self.show = function () {
+        this.show = function () {
             createElements(options);
         };
 
         /**
      * Hides the slideshow element.
      */
-        self.hide = function () {
+        this.hide = function () {
             if (dialog) {
                 dialogHelper.close(dialog);
             }

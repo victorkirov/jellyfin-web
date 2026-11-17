@@ -28,7 +28,6 @@
     /* Not crazy about this but it normalizes heights between anchors and buttons */
     line-height: 1.35;
     transform-origin: center;
-    transition: 0.2s;
 }
 
 .emby-button.show-focus:focus {
@@ -114,7 +113,6 @@
     -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
     justify-content: center;
     transform-origin: center;
-    transition: 0.2s;
 }
 
 .paper-icon-button-light.show-focus:focus {

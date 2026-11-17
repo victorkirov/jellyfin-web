@@ -1,4 +1,3 @@
-import browser from '../../scripts/browser';
 import { appRouter } from '../../components/router/appRouter';
 import loading from '../../components/loading/loading';
 import { setBackdropTransparency, TRANSPARENCY_LEVEL } from '../../components/backdrop/backdrop';
@@ -17,22 +16,12 @@ const errorCodes: Record<number, string> = {
     150: 'YoutubeDenied'
 };
 
-function zoomIn(elem: HTMLElement, iterations: number) {
-    const keyframes = [
-        { transform: 'scale3d(.2, .2, .2)  ', opacity: '.6', offset: 0 },
-        { transform: 'none', opacity: '1', offset: 1 }
-    ];
-
-    const timing = { duration: 240, iterations: iterations };
-    return elem.animate(keyframes, timing);
-}
-
 export function createMediaElement(instance: YoutubePlayer, options: YoutubePlayOptions) {
     return new Promise<HTMLElement | null>(function (resolve) {
         const dlg = document.querySelector('.youtubePlayerContainer');
 
         if (!dlg) {
-            import('./style.scss').then(() => {
+            void import('./style.scss').then(() => {
                 loading.show();
 
                 const playerDlg = document.createElement('div');
@@ -53,13 +42,7 @@ export function createMediaElement(instance: YoutubePlayer, options: YoutubePlay
                     document.body.classList.add('hide-scroll');
                 }
 
-                if (options.fullscreen && typeof playerDlg.animate === 'function' && !browser.slow) {
-                    zoomIn(playerDlg, 1).onfinish = function () {
-                        resolve(videoElement);
-                    };
-                } else {
-                    resolve(videoElement);
-                }
+                resolve(videoElement);
             });
         } else {
             // we need to hide scrollbar when starting playback from page with animated background
@@ -73,9 +56,8 @@ export function createMediaElement(instance: YoutubePlayer, options: YoutubePlay
 }
 
 function onVideoResize(this: YoutubePlayer) {
-    const instance = this;
-    const player = instance.currentYoutubePlayer;
-    const dlg = instance.videoDialog;
+    const player = this.currentYoutubePlayer;
+    const dlg = this.videoDialog;
     if (player && dlg) {
         player.setSize(dlg.offsetWidth, dlg.offsetHeight);
     }
@@ -127,7 +109,7 @@ function onPlaying(instance: YoutubePlayer, playOptions: YoutubePlayOptions, res
         instance.timeUpdateInterval = setInterval(onTimeUpdate.bind(instance), 500);
 
         if (playOptions.fullscreen) {
-            appRouter.showVideoOsd().then(function () {
+            void appRouter.showVideoOsd().then(function () {
                 instance.videoDialog!.classList.remove('onTop');
             });
         } else {

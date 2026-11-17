@@ -165,7 +165,6 @@
     color: rgba(255, 255, 255, 0.6);
     background: rgba(0, 0, 0, 0.4);
     font-size: 1.6em;
-    transition: 200ms ease-out;
     display: flex;
 }
 
@@ -269,10 +268,6 @@
 
 .listItem:focus .secondary {
     color: inherit !important;
-}
-
-.listItem-focusscale {
-    transition: transform 0.2s ease-out;
 }
 
 .listItem-focusscale:focus {

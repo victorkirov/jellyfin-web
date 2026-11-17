@@ -14,7 +14,9 @@ vi.mock('resize-observer-polyfill', () => ({
 beforeEach(() => {
     document.body.innerHTML = '<div class="frame"><div><button>Focused item</button></div></div>';
 });
-afterEach(() => { document.body.innerHTML = ''; });
+afterEach(() => {
+    document.body.innerHTML = '';
+});
 
 function createScroller() {
     const frame = document.querySelector<HTMLElement>('.frame')!;
@@ -35,4 +37,31 @@ it('keeps native TV scroller classes and positions items without scrollTo APIs',
     expect(scroller.getScrollPosition()).toBe(125);
     scroller.destroy();
     expect(frame.hasAttribute('data-scroll-mode-x')).toBe(false);
+});
+
+it('requests instant native scrolling even when the caller allows animation', () => {
+    const { frame, scroller } = createScroller();
+    const scroll = vi.fn();
+    frame.scroll = scroll;
+    scroller.init();
+    scroller.slideTo(125, false);
+    expect(scroll).toHaveBeenCalledWith({ left: 125, behavior: 'instant' });
+    scroller.destroy();
+});
+
+it('positions an explicit transform scroller without transitions or layers', () => {
+    const frame = document.querySelector<HTMLElement>('.frame')!;
+    const slidee = frame.firstElementChild as HTMLElement;
+    const scroller = new ScrollerFactory(frame, {
+        horizontal: true, slidee, allowNativeScroll: false, dispatchScrollEvent: true
+    });
+    const onScroll = vi.fn();
+    frame.addEventListener('scrollanimate', onScroll);
+    scroller.init();
+    scroller.slideTo(125);
+    expect(slidee.style.transform).toBe('translateX(-125px)');
+    expect(slidee.style.transition).toBe('');
+    expect(slidee.style.willChange).toBe('');
+    expect(onScroll).toHaveBeenCalledOnce();
+    scroller.destroy();
 });

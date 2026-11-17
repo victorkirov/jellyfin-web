@@ -9,15 +9,11 @@ export type ScrollerOptions = {
     mouseDragging?: number | boolean;
     dragThreshold?: number;
     intervactive?: string | null;
-    speed?: number;
     allowNativeScroll?: boolean;
     allowNativeSmoothScroll?: boolean;
     enableNativeScroll?: boolean;
-    requireAnimation?: boolean;
-    autoImmediate?: boolean;
     skipSlideToWhenVisible?: boolean;
     dispatchScrollEvent?: boolean;
-    immediateSpeed?: number;
     centerOffset?: number;
     scrollWidth?: number;
     forceHideScrollbars?: boolean;

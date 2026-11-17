@@ -6,8 +6,6 @@
     border-width: 0;
     padding: 1.25em 1.25em;
     height: 0;
-    transition-property: height;
-    transition-duration: 300ms;
     overflow: hidden;
 }
 
@@ -36,7 +34,6 @@
 
 .emby-collapse-expandIcon {
     transform-origin: 50% 50%;
-    transition: transform 180ms ease-out;
     position: absolute;
     font-size: 1.5em;
 

@@ -15,7 +15,6 @@ vi.mock('screenfull', () => ({ default: mocks.screenfull }));
 vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: {} }));
 vi.mock('../apphost', () => ({ appHost: { setUserScalable: vi.fn() } }));
 vi.mock('../../scripts/browser', () => ({ default: {} }));
-vi.mock('../../utils/dom', () => ({ default: { whichTransitionEvent: () => 'transitionend' } }));
 vi.mock('../../scripts/inputManager', () => ({
     default: { on: mocks.inputOn, off: mocks.inputOff }
 }));
@@ -30,13 +29,14 @@ vi.mock('../dialogHelper/dialogHelper', () => ({
         close: (dialog: HTMLElement) => dialog.dispatchEvent(new Event('close'))
     }
 }));
-vi.mock('swiper/css/bundle', () => ({}));
-vi.mock('swiper/bundle', () => ({
+vi.mock('swiper', () => ({
     Swiper: function (...args: unknown[]) {
         mocks.swiper(...args);
         return { autoplay: mocks.autoplay, destroy: mocks.destroy };
     }
 }));
+
+vi.mock('swiper/modules', () => ({ Virtual: vi.fn(), Keyboard: vi.fn(), Autoplay: vi.fn(), Zoom: vi.fn(), A11y: vi.fn() }));
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -80,4 +80,12 @@ describe('TV slideshow playback', () => {
         expect(mocks.inputOff).toHaveBeenCalledWith(window, onInput);
         expect(onClose).toHaveBeenCalledOnce();
     });
+});
+
+it('switches slides without a transition duration', async () => {
+    const slideshow = new Slideshow({ slides: [] });
+    slideshow.show();
+    await vi.waitFor(() => expect(mocks.swiper).toHaveBeenCalledOnce());
+    expect(mocks.swiper.mock.calls[0][1]).toMatchObject({ speed: 0 });
+    slideshow.hide();
 });

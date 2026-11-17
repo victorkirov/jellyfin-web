@@ -4,7 +4,6 @@ import detectedBrowser from 'scripts/browser';
 import { currentSettings as userSettings } from 'scripts/settings/userSettings';
 import itemHelper from 'components/itemHelper';
 import { playbackManager } from './playbackmanager';
-import dom from 'utils/dom';
 import { isHls } from 'utils/mediaSource';
 const browser = detectedBrowser as BrowserDetection;
 
@@ -92,16 +91,6 @@ export function getMediaStreamAudioTracks(mediaSource: PlayerOptions['mediaSourc
 export function getMediaStreamTextTracks(mediaSource: PlayerOptions['mediaSource']) {
     return (mediaSource.MediaStreams as PlayerStream[]).filter(function (s) {
         return s.Type === 'Subtitle';
-    });
-}
-
-export function zoomIn(elem: HTMLElement) {
-    return new Promise(resolve => {
-        const duration = 240;
-        elem.style.animation = `htmlvideoplayer-zoomin ${duration}ms ease-in normal`;
-        dom.addEventListener(elem, dom.whichAnimationEvent(), resolve, {
-            once: true
-        });
     });
 }
 

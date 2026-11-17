@@ -1,4 +1,3 @@
-import supportsCssAnimation from './browserCssAnimation';
 import uaMatch from './browserUserAgent';
 import { isTv, isWeb0s, isMobile, hasKeyboard, iOSversion, web0sVersion } from './browserPlatform';
 import type { Browser, BrowserFlag } from './browserTypes';
@@ -82,7 +81,6 @@ export const detectBrowser = (userAgent = navigator.userAgent): Browser => {
     browser.ps4 = normalizedUA.includes('playstation 4');
     browser.xboxOne = normalizedUA.includes('xbox');
 
-    browser.animate = typeof document !== 'undefined' && document.documentElement.animate != null;
     browser.hisense = normalizedUA.includes('hisense');
     browser.tizen = normalizedUA.includes('tizen') || (window as Window & { tizen?: unknown }).tizen != null;
     browser.vega = normalizedUA.includes('kepler');
@@ -105,7 +103,6 @@ export const detectBrowser = (userAgent = navigator.userAgent): Browser => {
     }
 
     browser.keyboard = hasKeyboard(browser);
-    browser.supportsCssAnimation = supportsCssAnimation;
 
     browser.iOS = browser.ipad || browser.iphone || browser.ipod;
 

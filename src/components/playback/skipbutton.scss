@@ -20,14 +20,9 @@
     border-radius: 0.2em;
     font-weight: bold;
     font-size: 1.2em;
-    transition: opacity 200ms ease-out;
     gap: 3px;
     cursor: pointer;
     pointer-events: auto;
-}
-
-.no-transition {
-    transition: none;
 }
 
 .skip-button-hidden {

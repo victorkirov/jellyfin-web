@@ -11,7 +11,6 @@ import { useApi } from 'hooks/useApi';
 import { useQuickConnectEnabled } from 'hooks/useQuickConnect';
 import { useUsers } from 'hooks/useUsers';
 import globalize from 'lib/globalize';
-import browser from 'scripts/browser';
 import Dashboard from 'components/dashboard';
 import shell from 'scripts/shell';
 
@@ -189,26 +188,6 @@ const UserSettingsPage: FC = () => {
                             </LinkButton>
                         )}
 
-                        {isLoggedInUser && !browser.mobile && (
-                            <LinkButton
-                                href={`#/mypreferencescontrols?userId=${userId}`}
-                                className='lnkControlsPreferences listItem-border'
-                                style={{
-                                    display: 'block',
-                                    margin: 0,
-                                    padding: 0
-                                }}
-                            >
-                                <div className='listItem'>
-                                    <span className='material-icons listItemIcon listItemIcon-transparent keyboard' aria-hidden='true' />
-                                    <div className='listItemBody'>
-                                        <div className='listItemBodyText'>
-                                            {globalize.translate('Controls')}
-                                        </div>
-                                    </div>
-                                </div>
-                            </LinkButton>
-                        )}
                     </div>
 
                     {isLoggedInUser && (

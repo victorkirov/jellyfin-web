@@ -23,10 +23,8 @@ describe('collapse lifecycle', () => {
         const button = collapse.querySelector('button')!;
         const content = collapse.querySelector('.collapseContent')!;
         button.click();
-        vi.runAllTimers();
         expect(content.classList.contains('hide')).toBe(false);
         button.click();
-        vi.runAllTimers();
         expect(content.classList.contains('hide')).toBe(true);
     });
 });

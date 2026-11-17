@@ -40,7 +40,7 @@ export function clearBackdrop(clearAll?: boolean) {
 
     // Remove backdrop images from each slot element
     document.querySelectorAll<HTMLElement>('.backdropImage').forEach(elem => {
-        elem.classList.remove('displayingBackdropImage', 'backdropImageFadeIn');
+        elem.classList.remove('displayingBackdropImage');
         elem.style.backgroundImage = 'none';
         elem.removeAttribute('data-url');
     });
