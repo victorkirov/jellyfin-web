@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ItemDetails from './index';
 
-const { apiClient, playbackManager, fixture, hideLoading } = vi.hoisted(() => {
+const { apiClient, playbackManager, fixture, hideLoading, getListViewHtml } = vi.hoisted(() => {
     const data = { item: null };
     const client = {
         getItem: vi.fn(() => Promise.resolve(data.item)),
@@ -17,7 +17,7 @@ const { apiClient, playbackManager, fixture, hideLoading } = vi.hoisted(() => {
         getSimilarItems: vi.fn(() => Promise.resolve({ Items: [] })),
         subscribe: vi.fn()
     };
-    return { apiClient: client, fixture: data, hideLoading: vi.fn(), playbackManager: { canPlay: () => true, getSupportedCommands: () => [], play: vi.fn() } };
+    return { apiClient: client, fixture: data, hideLoading: vi.fn(), getListViewHtml: vi.fn(() => ''), playbackManager: { canPlay: () => true, getSupportedCommands: () => [], play: vi.fn() } };
 });
 const strings = JSON.parse(readFileSync('src/strings/en-us.json', 'utf8'));
 const template = readFileSync('src/apps/legacy/controllers/itemDetails/index.html', 'utf8');
@@ -41,7 +41,7 @@ vi.mock('components/mediainfo/mediainfo', () => ({ default: { fillPrimaryMediaIn
 vi.mock('components/homesections/deferSection', () => ({ deferSection: () => vi.fn() }));
 vi.mock('components/focusManager', () => ({ default: { isCurrentlyFocusable: () => false, focus: vi.fn(), autoFocus: vi.fn() } }));
 vi.mock('components/layoutManager', () => ({ default: { tv: true } }));
-vi.mock('components/listview/listview', () => ({ default: { getListViewHtml: () => '' } }));
+vi.mock('components/listview/listview', () => ({ default: { getListViewHtml } }));
 vi.mock('components/loading/loading', () => ({ default: { show: vi.fn(), hide: hideLoading } }));
 vi.mock('components/itemDetails/ItemDetailsMetadataGroup', () => ({ default: vi.fn() }));
 vi.mock('components/router/appRouter', () => ({ appRouter: {} }));
@@ -122,5 +122,17 @@ describe('Details metadata order by item type', () => {
             const isAfterChildren = Boolean(children.compareDocumentPosition(metadata) & Node.DOCUMENT_POSITION_FOLLOWING);
             expect(isAfterChildren).toBe(viewingFirst);
         }
+    });
+});
+
+describe('Season details controller', () => {
+    it('uses the compact renderer without fetching unused episode synopses', async () => {
+        const page = document.querySelector('#itemDetailPage');
+        fixture.item = { Id: 'season', Type: 'Season', IsFolder: true, SeriesId: 'series' };
+        new ItemDetails(page, { id: 'season' });
+        page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+        await vi.waitFor(() => expect(getListViewHtml).toHaveBeenCalled());
+        expect(getListViewHtml).toHaveBeenCalledWith(expect.objectContaining({ imageSize: 'episode', showIndexNumber: false, enableOverview: false, action: 'link', imagePlayButton: true }));
+        expect(apiClient.getEpisodes).toHaveBeenCalledWith('series', expect.objectContaining({ Fields: 'ItemCounts,PrimaryImageAspectRatio,CanDelete,MediaSourceCount' }));
     });
 });

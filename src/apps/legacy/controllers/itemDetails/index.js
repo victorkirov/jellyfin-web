@@ -1240,7 +1240,7 @@ function renderChildren(page, item) {
     const childrenCollapsible = page.querySelector(LIST_VIEW_TYPES.includes(item.Type) ? '#listChildrenCollapsible' : '#childrenCollapsible');
     const childrenItemsContainer = childrenCollapsible.querySelector('.itemsContainer');
 
-    let fields = 'ItemCounts,PrimaryImageAspectRatio,CanDelete,MediaSourceCount';
+    const fields = 'ItemCounts,PrimaryImageAspectRatio,CanDelete,MediaSourceCount';
     const query = {
         ParentId: item.Id,
         Fields: fields
@@ -1262,7 +1262,6 @@ function renderChildren(page, item) {
             Fields: fields
         });
     } else if (item.Type == 'Season') {
-        fields += ',Overview';
         promise = apiClient.getEpisodes(item.SeriesId, {
             seasonId: item.Id,
             userId: userId,
@@ -1338,10 +1337,10 @@ function renderChildren(page, item) {
                 html = listView.getListViewHtml({
                     items: result.Items,
                     showIndexNumber: false,
-                    enableOverview: true,
+                    enableOverview: false,
                     enablePlayedButton: true,
                     infoButton: true,
-                    imageSize: 'large',
+                    imageSize: 'episode',
                     enableSideMediaInfo: false,
                     highlight: false,
                     action: 'link',

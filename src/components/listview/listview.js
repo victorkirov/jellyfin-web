@@ -244,6 +244,11 @@ export function getListViewHtml(options) {
             downloadWidth = 500;
         }
 
+        if (options.imageSize === 'episode') {
+            cssClass += ' listItem-episode';
+            downloadWidth = 240;
+        }
+
         const playlistItemId = item.PlaylistItemId ? (` data-playlistitemid="${item.PlaylistItemId}"`) : '';
 
         const positionTicksData = item.UserData?.PlaybackPositionTicks ? (` data-positionticks="${item.UserData.PlaybackPositionTicks}"`) : '';
