@@ -56,7 +56,7 @@ function getCardLogo(context: FooterContext): string | null | undefined {
 }
 
 function getCardFooters(context: FooterContext) {
-    const { item, options, apiClient, imgUrl, forceName } = context;
+    const { item, options, imgUrl, forceName } = context;
     const overlayText = options.overlayText;
     let footerCssClass;
     let progressHtml = indicators.getProgressBarHtml(item);
@@ -69,7 +69,7 @@ function getCardFooters(context: FooterContext) {
         logoUrl = null;
 
         footerCssClass = progressHtml ? 'innerCardFooter fullInnerCardFooter' : 'innerCardFooter';
-        innerCardFooter += getCardFooterText(item, apiClient, options, footerCssClass, progressHtml, { forceName, overlayText, isOuterFooter: false }, { imgUrl, logoUrl });
+        innerCardFooter += getCardFooterText({ item, options, footerClass: footerCssClass, progressHtml, forceName, overlayText, isOuterFooter: false, imgUrl, logoUrl });
     } else if (progressHtml) {
         innerCardFooter += '<div class="innerCardFooter fullInnerCardFooter innerCardFooterClear">';
         innerCardFooter += progressHtml;
@@ -95,7 +95,7 @@ function getCardFooters(context: FooterContext) {
             logoUrl = null;
         }
 
-        outerCardFooter = getCardFooterText(item, apiClient, options, footerCssClass, progressHtml, { forceName, overlayText, isOuterFooter: true }, { imgUrl, logoUrl });
+        outerCardFooter = getCardFooterText({ item, options, footerClass: footerCssClass, progressHtml, forceName, overlayText, isOuterFooter: true, imgUrl, logoUrl });
     }
 
     return { innerCardFooter, outerCardFooter };

@@ -1,4 +1,3 @@
-import type { ApiClient } from 'jellyfin-apiclient';
 import type { ItemDto } from 'types/base/models/item-dto';
 import type { CardItem, CardRenderOptions, FooterFlags, FooterUrls } from './cardTypes';
 import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
@@ -128,11 +127,7 @@ export type CardFooterContext = FooterFlags & FooterUrls & {
     progressHtml: string;
 };
 
-export function getCardFooterText(item: CardItem, apiClient: ApiClient | undefined, options: CardRenderOptions, footerClass: string, progressHtml: string, flags: FooterFlags, urls: FooterUrls) {
-    return renderCardFooter({ item, options, footerClass, progressHtml, forceName: flags.forceName, overlayText: flags.overlayText, isOuterFooter: flags.isOuterFooter, imgUrl: urls.imgUrl, logoUrl: urls.logoUrl });
-}
-
-function renderCardFooter(context: CardFooterContext) {
+export function getCardFooterText(context: CardFooterContext) {
     const { options, footerClass, progressHtml } = context;
     const flags = context;
     const urls = context;

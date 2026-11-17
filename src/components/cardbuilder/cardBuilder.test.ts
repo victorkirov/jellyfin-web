@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { compile } from 'sass';
+import { getCardFooterText } from './cardCaptions';
 import { getCardsHtml, onUserDataChanged, onTimerCreated, onTimerCancelled, onSeriesTimerCancelled } from './cardBuilder';
 
 vi.mock('scripts/browser', () => ({ default: {} }));
@@ -218,5 +219,25 @@ describe('card indicator updates', () => {
         onSeriesTimerCancelled('series', document.body);
         expect(document.querySelector('.timerIndicator')).toBeNull();
         expect(document.querySelector('[data-seriestimerid]')).toBeNull();
+    });
+});
+
+describe('named footer context', () => {
+    it('keeps title escaping and optional callback lines separate from markup', () => {
+        expect(getCardFooterText({
+            item: { Id: 'movie', Type: 'Movie', Name: '<Movie & title>' },
+            options: { showTitle: true, overlayText: false, textLines: () => ['<em>custom</em>'], lines: 2 },
+            footerClass: 'cardFooter', progressHtml: '', forceName: false,
+            overlayText: false, isOuterFooter: true
+        })).toBe("<div class='cardText cardText-first'><bdi>&lt;Movie &amp; title&gt;</bdi></div><div class='cardText cardText-secondary'><bdi><em>custom</em></bdi></div>");
+    });
+
+    it('preserves explicit false and null options for an empty caption', () => {
+        expect(getCardFooterText({
+            item: { Id: 'movie', Type: 'Movie', Name: 'Movie' },
+            options: { showTitle: false, overlayText: false, cardLayout: null, preferThumb: null },
+            footerClass: 'cardFooter', progressHtml: '', forceName: false,
+            overlayText: false, isOuterFooter: true
+        })).toBe('');
     });
 });
