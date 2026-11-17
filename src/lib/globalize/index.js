@@ -20,6 +20,7 @@ const allTranslations = {};
  */
 let currentCulture;
 let currentDateTimeCulture;
+let numberFormatter;
 let isRTL = false;
 
 export function getCurrentLocale() {
@@ -104,6 +105,7 @@ export function updateCurrentCulture() {
     currentCulture = normalizeLocaleName(culture);
 
     if (lastCulture !== currentCulture) {
+        numberFormatter = null;
         document.documentElement.setAttribute('lang', currentCulture);
         Events.trigger(document, EventType.LANGUAGE_CHANGE, [ currentCulture ]);
     }
@@ -257,7 +259,14 @@ function translateKeyFromModule(key, module) {
 export function translate(key) {
     let val = translateKey(key);
     for (let i = 1; i < arguments.length; i++) {
-        val = val.replaceAll('{' + (i - 1) + '}', arguments[i].toLocaleString(currentCulture));
+        let value = arguments[i];
+        if (typeof value === 'number' && typeof Intl !== 'undefined' && Intl.NumberFormat) {
+            numberFormatter = numberFormatter || new Intl.NumberFormat(currentCulture);
+            value = numberFormatter.format(value);
+        } else {
+            value = value.toLocaleString(currentCulture);
+        }
+        val = val.replaceAll('{' + (i - 1) + '}', value);
     }
     return val;
 }

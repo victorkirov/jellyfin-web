@@ -1,5 +1,65 @@
 import globalize from 'lib/globalize';
 
+let formatterLocale;
+const dateFormatters = new Map();
+const numberFormatters = new Map();
+
+function checkFormatterLocale() {
+    const locale = globalize.getCurrentDateTimeLocale();
+    if (locale !== formatterLocale) {
+        formatterLocale = locale;
+        dateFormatters.clear();
+        numberFormatters.clear();
+    }
+    return locale;
+}
+
+function formatNumber(value, options = {}) {
+    const locale = checkFormatterLocale();
+    if (typeof Intl === 'undefined' || !Intl.NumberFormat) {
+        return value.toLocaleString(locale, options);
+    }
+    const key = getFormatterKey(options);
+    let formatter = numberFormatters.get(key);
+    if (!formatter) {
+        formatter = new Intl.NumberFormat(locale, options);
+        numberFormatters.set(key, formatter);
+    }
+    return formatter.format(value);
+}
+
+function getFormatterKey(options) {
+    return JSON.stringify(Object.keys(options).sort((first, second) => first.localeCompare(second)).map(name => [name, options[name]]));
+}
+
+function formatDate(date, options, method) {
+    const locale = checkFormatterLocale();
+    if (typeof Intl === 'undefined' || !Intl.DateTimeFormat || isNaN(date.getTime())) {
+        return date[method](locale, options);
+    }
+    const key = method + getFormatterKey(options);
+    let formatter = dateFormatters.get(key);
+    if (!formatter) {
+        // Date locale methods supply different default fields from DateTimeFormat.
+        const normalizedOptions = { ...options };
+        const needsDate = method !== 'toLocaleTimeString';
+        const needsTime = method !== 'toLocaleDateString';
+        const hasDate = ['weekday', 'year', 'month', 'day'].some(name => options[name] !== undefined);
+        const hasTime = ['hour', 'minute', 'second'].some(name => options[name] !== undefined);
+        if (!options.dateStyle && !options.timeStyle && !(needsDate && hasDate) && !(needsTime && hasTime)) {
+            if (needsDate) {
+                normalizedOptions.year = normalizedOptions.month = normalizedOptions.day = 'numeric';
+            }
+            if (needsTime) {
+                normalizedOptions.hour = normalizedOptions.minute = normalizedOptions.second = 'numeric';
+            }
+        }
+        formatter = new Intl.DateTimeFormat(locale, normalizedOptions);
+        dateFormatters.set(key, formatter);
+    }
+    return formatter.format(date);
+}
+
 export function parseISO8601Date(s, toLocal) {
     // parenthese matches:
     // year month day    hours minutes seconds
@@ -82,7 +142,7 @@ export function getDisplayRunningTime(ticks) {
     hours = Math.floor(hours);
 
     if (hours) {
-        parts.push(hours.toLocaleString(globalize.getCurrentDateTimeLocale()));
+        parts.push(formatNumber(hours));
     }
 
     ticks -= (hours * ticksPerHour);
@@ -93,9 +153,9 @@ export function getDisplayRunningTime(ticks) {
     ticks -= (minutes * ticksPerMinute);
 
     if (minutes < 10 && hours) {
-        minutes = (0).toLocaleString(globalize.getCurrentDateTimeLocale()) + minutes.toLocaleString(globalize.getCurrentDateTimeLocale());
+        minutes = formatNumber(0) + formatNumber(minutes);
     } else {
-        minutes = minutes.toLocaleString(globalize.getCurrentDateTimeLocale());
+        minutes = formatNumber(minutes);
     }
     parts.push(minutes);
 
@@ -103,9 +163,9 @@ export function getDisplayRunningTime(ticks) {
     seconds = Math.floor(seconds);
 
     if (seconds < 10) {
-        seconds = (0).toLocaleString(globalize.getCurrentDateTimeLocale()) + seconds.toLocaleString(globalize.getCurrentDateTimeLocale());
+        seconds = formatNumber(0) + formatNumber(seconds);
     } else {
-        seconds = seconds.toLocaleString(globalize.getCurrentDateTimeLocale());
+        seconds = formatNumber(seconds);
     }
     parts.push(seconds);
 
@@ -146,7 +206,13 @@ export function toLocaleString(date, options) {
         const currentLocale = globalize.getCurrentDateTimeLocale();
 
         if (currentLocale) {
-            return date.toLocaleString(currentLocale, options);
+            if (typeof date === 'number') {
+                return formatNumber(date, options);
+            }
+            if (!(date instanceof Date)) {
+                return date.toLocaleString(currentLocale, options);
+            }
+            return formatDate(date, options, 'toLocaleString');
         }
     }
 
@@ -164,7 +230,7 @@ export function toLocaleDateString(date, options) {
         const currentLocale = globalize.getCurrentDateTimeLocale();
 
         if (currentLocale) {
-            return date.toLocaleDateString(currentLocale, options);
+            return formatDate(date, options, 'toLocaleDateString');
         }
     }
 
@@ -196,7 +262,7 @@ export function toLocaleTimeString(date, options) {
         const currentLocale = globalize.getCurrentDateTimeLocale();
 
         if (currentLocale) {
-            return date.toLocaleTimeString(currentLocale, options);
+            return formatDate(date, options, 'toLocaleTimeString');
         }
     }
 
