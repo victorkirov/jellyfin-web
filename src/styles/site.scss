@@ -143,24 +143,6 @@ form {
     width: 85%;
 }
 
-.headroom {
-    will-change: transform;
-    transition: transform 200ms linear;
-
-    &--pinned {
-        transform: translateY(0%);
-    }
-
-    &--unpinned {
-        transform: translateY(-100%);
-    }
-}
-
-.drawerContent {
-    /* make sure the bottom of the drawer is visible when music is playing */
-    padding-bottom: 4em;
-}
-
 .force-scroll {
     overflow-y: scroll;
 }

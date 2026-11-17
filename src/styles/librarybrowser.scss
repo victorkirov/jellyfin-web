@@ -68,7 +68,6 @@
 }
 
 .headerUserImage,
-.navMenuOption,
 .pageTitle {
     vertical-align: middle;
 }
@@ -81,8 +80,7 @@
     text-align: center;
 }
 
-.itemMiscInfo,
-.navMenuOptionText {
+.itemMiscInfo {
     text-overflow: ellipsis;
     overflow: hidden;
 }
@@ -139,10 +137,6 @@
 
 .headerButton {
     flex-shrink: 0;
-}
-
-.hideMainDrawer .mainDrawerButton {
-    display: none;
 }
 
 .headerLeft {
@@ -246,55 +240,6 @@
     background-color: #f2f2f2 !important;
 }
 
-.navMenuOption {
-    display: flex !important;
-    align-items: center;
-    text-decoration: none;
-    color: inherit;
-    flex-grow: 1;
-    font-weight: 400 !important;
-    margin: 0 !important;
-    border-radius: 0 !important;
-
-    [dir="ltr"] & {
-        padding: 0.9em 0 0.9em 2.4em !important;
-    }
-
-    [dir="rtl"] & {
-        padding: 0.9em 2.4em 0.9em 0 !important;
-    }
-}
-
-.navMenuOptionIcon {
-    flex-shrink: 0;
-
-    [dir="ltr"] & {
-        margin-right: 1em;
-    }
-
-    [dir="rtl"] & {
-        margin-left: 1em;
-    }
-}
-
-.navMenuOptionText {
-    line-height: 1.35em;
-    white-space: nowrap;
-}
-
-.sidebarHeader {
-    font-size: 1em;
-    margin: 1em 0 0.5em;
-
-    [dir="ltr"] & {
-        padding-left: 1.2em;
-    }
-
-    [dir="rtl"] & {
-        padding-right: 1.2em;
-    }
-}
-
 .dashboardDocument .skinBody {
     transition: left ease-in-out 0.3s, padding ease-in-out 0.3s;
     position: absolute;
@@ -321,38 +266,7 @@
     text-align: center;
 }
 
-.mainDrawer-scrollContainer {
-    padding-bottom: 10vh;
-}
-
 @media all and (min-width: 40em) {
-    .dashboardDocument .adminDrawerLogo,
-    .dashboardDocument .mainDrawerButton {
-        display: none !important;
-    }
-
-    .dashboardDocument .mainDrawer {
-        z-index: inherit !important;
-        left: 0 !important;
-        top: 0 !important;
-        transform: none !important;
-        box-shadow: none !important;
-        width: 20.205em !important;
-        font-size: 94%;
-
-        [dir="ltr"] & {
-            left: 0 !important;
-        }
-
-        [dir="rtl"] & {
-            right: 0 !important;
-        }
-    }
-
-    .dashboardDocument .mainDrawer-scrollContainer {
-        margin-top: 5em !important;
-    }
-
     .dashboardDocument .skinBody {
         [dir="ltr"] & {
             left: 20em;
@@ -403,13 +317,7 @@
     .absolutePageTabContent {
         top: 5.7em !important;
     }
-
-    .dashboardDocument .mainDrawer-scrollContainer {
-        margin-top: 4.65em !important;
-    }
 }
-
-
 
 .hidingAnimatedTab {
     visibility: hidden;

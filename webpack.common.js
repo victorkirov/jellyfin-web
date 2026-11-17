@@ -117,9 +117,7 @@ const config = {
         })
     ],
     output: {
-        filename: pathData => (
-            pathData.chunk.name === 'serviceworker' ? '[name].js' : '[name].bundle.js'
-        ),
+        filename: '[name].bundle.js',
         chunkFilename: '[name].[contenthash].chunk.js',
         assetModuleFilename: pathData => {
             if (pathData.filename === 'manifest.json') {
@@ -138,7 +136,7 @@ const config = {
         removeAvailableModules: false,
         removeEmptyChunks: false,
         splitChunks: {
-            chunks: chunk => chunk.name !== 'serviceworker',
+            chunks: 'all',
             maxInitialRequests: Infinity,
             cacheGroups: {
                 node_modules: {

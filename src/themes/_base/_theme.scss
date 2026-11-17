@@ -254,7 +254,6 @@ a[data-role="button"],
 .fieldDescription,
 .guide-programNameCaret,
 .listItem .secondary,
-.nowPlayingBarSecondaryText,
 .programSecondaryTitle,
 .secondaryText {
     color: var(--jf-palette-text-secondary, $text-secondary);
@@ -307,7 +306,6 @@ a[data-role="button"],
     color: var(--jf-palette-SnackbarContent-color, $snackbarContent-color);
 }
 
-.appfooter,
 .playlistSectionButton {
     background: var(--jf-palette-background-paper, $background-paper);
     color: var(--jf-palette-text-secondary, $text-secondary);
@@ -461,20 +459,6 @@ a[data-role="button"],
     & > svg {
         fill: var(--jf-palette-primary-contrastText, $primary-contrastText);
     }
-}
-
-.mainDrawer,
-.drawer-open {
-    background-color: var(--jf-palette-background-default, $background-default);
-}
-
-.navMenuOption:hover {
-    background: var(--jf-palette-action-hover, $action-hover);
-}
-
-.navMenuOption-selected {
-    background: var(--jf-palette-primary-main, $primary-main) !important;
-    color: var(--jf-palette-primary-contrastText, $primary-contrastText);
 }
 
 .emby-button.show-focus:focus {

@@ -160,29 +160,9 @@ function loadScrollButtons(buttonsScroller) {
     });
 }
 
-ScrollerPrototype.pause = function () {
-    const headroom = this.headroom;
-    if (headroom) {
-        headroom.pause();
-    }
-};
-
-ScrollerPrototype.resume = function () {
-    const headroom = this.headroom;
-    if (headroom) {
-        headroom.resume();
-    }
-};
-
 ScrollerPrototype.detachedCallback = function () {
     if (this.getAttribute('data-navcommands')) {
         inputManager.off(this, onInputCommand);
-    }
-
-    const headroom = this.headroom;
-    if (headroom) {
-        headroom.destroy();
-        this.headroom = null;
     }
 
     const scrollerInstance = this.scroller;

@@ -1,23 +1,13 @@
-import escapeHtml from 'escape-html';
-import Headroom from 'headroom.js';
-
-import { AppFeature } from 'constants/appFeature';
-import { getUserViewsQuery } from 'hooks/api/useUserViews';
 import globalize from 'lib/globalize';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import { EventType } from 'constants/eventType';
-import { queryClient } from 'utils/query/queryClient';
 
-import dom from '../utils/dom';
 import layoutManager from '../components/layoutManager';
 import inputManager from './inputManager';
 import viewManager from '../components/viewManager/viewManager';
 import { appRouter } from '../components/router/appRouter';
-import { appHost } from '../components/apphost';
 import { playbackManager } from '../components/playback/playbackmanager';
 import browser from './browser';
-import imageHelper from '../utils/image';
-import { getMenuLinks } from '../scripts/settings/webSettings';
 import Dashboard, { pageClassOn } from '../utils/dashboard';
 import Events from '../utils/events.ts';
 import { getParameterByName } from '../utils/url.ts';
@@ -35,7 +25,6 @@ function renderHeader() {
     html += '<div class="headerLeft">';
     html += '<button type="button" is="paper-icon-button-light" class="headerButton headerButtonLeft headerBackButton hide"><span class="material-icons ' + (browser.safari ? 'chevron_left' : 'arrow_back') + '" aria-hidden="true"></span></button>';
     html += '<button type="button" is="paper-icon-button-light" class="headerButton headerHomeButton hide barsMenuButton headerButtonLeft"><span class="material-icons home" aria-hidden="true"></span></button>';
-    html += '<button type="button" is="paper-icon-button-light" class="headerButton mainDrawerButton barsMenuButton headerButtonLeft hide"><span class="material-icons menu" aria-hidden="true"></span></button>';
     html += '<h3 class="pageTitle" aria-hidden="true"></h3>';
     html += '</div>';
     html += '<div class="headerRight">';
@@ -56,7 +45,6 @@ function renderHeader() {
 
     headerBackButton = skinHeader.querySelector('.headerBackButton');
     headerHomeButton = skinHeader.querySelector('.headerHomeButton');
-    mainDrawerButton = skinHeader.querySelector('.mainDrawerButton');
     headerUserButton = skinHeader.querySelector('.headerUserButton');
     headerAudioPlayerButton = skinHeader.querySelector('.headerAudioPlayerButton');
     headerSearchButton = skinHeader.querySelector('.headerSearchButton');
@@ -93,10 +81,6 @@ function retranslateUi() {
 
     if (headerHomeButton) {
         headerHomeButton.title = globalize.translate('Home');
-    }
-
-    if (mainDrawerButton) {
-        mainDrawerButton.title = globalize.translate('Menu');
     }
 
     if (headerAudioPlayerButton) {
@@ -196,10 +180,6 @@ function showAudioPlayer() {
 }
 
 function bindMenuEvents() {
-    if (mainDrawerButton) {
-        mainDrawerButton.addEventListener('click', toggleMainDrawer);
-    }
-
     if (headerBackButton) {
         headerBackButton.addEventListener('click', onBackClick);
     }
@@ -213,9 +193,6 @@ function bindMenuEvents() {
 
     headerAudioPlayerButton.addEventListener('click', showAudioPlayer);
 
-    if (layoutManager.mobile) {
-        initHeadRoom(skinHeader);
-    }
     Events.on(playbackManager, 'playbackstart', onPlaybackStart);
     Events.on(playbackManager, 'playbackstop', onPlaybackStop);
 }
@@ -234,272 +211,8 @@ function onPlaybackStop(e, stopInfo) {
     }
 }
 
-function getItemHref(item, context) {
-    return appRouter.getRouteUrl(item, {
-        context: context
-    });
-}
-
-function toggleMainDrawer() {
-    if (layoutManager.tv) return;
-
-    if (navDrawerInstance.isVisible) {
-        closeMainDrawer();
-    } else {
-        openMainDrawer();
-    }
-}
-
-function openMainDrawer() {
-    navDrawerInstance.open();
-}
-
-function onMainDrawerOpened() {
-    if (layoutManager.mobile) {
-        document.body.classList.add('bodyWithPopupOpen');
-    }
-}
-
-function closeMainDrawer() {
-    navDrawerInstance.close();
-}
-
-function onMainDrawerSelect() {
-    if (navDrawerInstance.isVisible) {
-        onMainDrawerOpened();
-    } else {
-        document.body.classList.remove('bodyWithPopupOpen');
-    }
-}
-
-function refreshLibraryInfoInDrawer(user) {
-    let html = '';
-    html += '<div style="height:.5em;"></div>';
-    html += `<a is="emby-linkbutton" class="navMenuOption lnkMediaFolder" href="#/home"><span class="material-icons navMenuOptionIcon home" aria-hidden="true"></span><span class="navMenuOptionText">${globalize.translate('Home')}</span></a>`;
-
-    // placeholder for custom menu links
-    html += '<div class="customMenuOptions"></div>';
-
-    // libraries are added here
-    html += '<div class="libraryMenuOptions"></div>';
-
-    if (user.localUser?.Policy.IsAdministrator) {
-        html += '<div class="adminMenuOptions">';
-        html += '<h3 class="sidebarHeader">';
-        html += globalize.translate('HeaderAdmin');
-        html += '</h3>';
-        html += `<a is="emby-linkbutton" class="navMenuOption lnkMediaFolder lnkManageServer" data-itemid="dashboard" href="#/dashboard"><span class="material-icons navMenuOptionIcon dashboard" aria-hidden="true"></span><span class="navMenuOptionText">${globalize.translate('TabDashboard')}</span></a>`;
-        html += `<a is="emby-linkbutton" class="navMenuOption lnkMediaFolder editorViewMenu" data-itemid="editor" href="#/metadata"><span class="material-icons navMenuOptionIcon mode_edit" aria-hidden="true"></span><span class="navMenuOptionText">${globalize.translate('MetadataManager')}</span></a>`;
-        html += '</div>';
-    }
-
-    if (user.localUser) {
-        html += '<div class="userMenuOptions">';
-        html += '<h3 class="sidebarHeader">';
-        html += globalize.translate('HeaderUser');
-        html += '</h3>';
-
-        if (appHost.supports(AppFeature.MultiServer)) {
-            html += `<a is="emby-linkbutton" class="navMenuOption lnkMediaFolder btnSelectServer" data-itemid="selectserver" href="#"><span class="material-icons navMenuOptionIcon storage" aria-hidden="true"></span><span class="navMenuOptionText">${globalize.translate('SelectServer')}</span></a>`;
-        }
-
-        html += `<a is="emby-linkbutton" class="navMenuOption lnkMediaFolder btnSettings" data-itemid="settings" href="#"><span class="material-icons navMenuOptionIcon settings" aria-hidden="true"></span><span class="navMenuOptionText">${globalize.translate('Settings')}</span></a>`;
-        html += `<a is="emby-linkbutton" class="navMenuOption lnkMediaFolder btnLogout" data-itemid="logout" href="#"><span class="material-icons navMenuOptionIcon exit_to_app" aria-hidden="true"></span><span class="navMenuOptionText">${globalize.translate('ButtonSignOut')}</span></a>`;
-
-        if (appHost.supports(AppFeature.ExitMenu)) {
-            html += `<a is="emby-linkbutton" class="navMenuOption lnkMediaFolder exitApp" data-itemid="exitapp" href="#"><span class="material-icons navMenuOptionIcon close" aria-hidden="true"></span><span class="navMenuOptionText">${globalize.translate('ButtonExitApp')}</span></a>`;
-        }
-
-        html += '</div>';
-    }
-
-    // add buttons to navigation drawer
-    navDrawerScrollContainer.innerHTML = html;
-
-    const btnSelectServer = navDrawerScrollContainer.querySelector('.btnSelectServer');
-    if (btnSelectServer) {
-        btnSelectServer.addEventListener('click', onSelectServerClick);
-    }
-
-    const btnSettings = navDrawerScrollContainer.querySelector('.btnSettings');
-    if (btnSettings) {
-        btnSettings.addEventListener('click', onSettingsClick);
-    }
-
-    const btnExit = navDrawerScrollContainer.querySelector('.exitApp');
-    if (btnExit) {
-        btnExit.addEventListener('click', onExitAppClick);
-    }
-
-    const btnLogout = navDrawerScrollContainer.querySelector('.btnLogout');
-    if (btnLogout) {
-        btnLogout.addEventListener('click', onLogoutClick);
-    }
-}
-
-function onSidebarLinkClick() {
-    const section = this.getElementsByClassName('sectionName')[0];
-    const text = section ? section.innerHTML : this.innerHTML;
-    LibraryMenu.setTitle(text);
-}
-
-function getUserViews(apiClient, userId) {
-    const api = ServerConnections.getApi(apiClient.serverId());
-
-    return queryClient
-        .fetchQuery(getUserViewsQuery(api, { userId }))
-        .then(function (result) {
-            const items = result.Items;
-            const list = [];
-
-            for (let i = 0, length = items.length; i < length; i++) {
-                const view = items[i];
-                list.push(view);
-
-                if (view.CollectionType == 'livetv') {
-                    view.icon = 'live_tv';
-                    const guideView = Object.assign({}, view);
-                    guideView.Name = globalize.translate('Guide');
-                    guideView.ImageTags = {};
-                    guideView.icon = 'dvr';
-                    guideView.url = '#/livetv?tab=1';
-                    list.push(guideView);
-                }
-            }
-
-            return list;
-        });
-}
-
-function showBySelector(selector, show) {
-    const elem = document.querySelector(selector);
-
-    if (elem) {
-        if (show) {
-            elem.classList.remove('hide');
-        } else {
-            elem.classList.add('hide');
-        }
-    }
-}
-
-function updateLibraryMenu(user) {
-    if (!user) {
-        showBySelector('.userMenuOptions', false);
-        return;
-    }
-
-    const userId = Dashboard.getCurrentUserId();
-    const apiClient = getCurrentApiClient();
-
-    const customMenuOptions = document.querySelector('.customMenuOptions');
-    if (customMenuOptions) {
-        getMenuLinks().then(links => {
-            links.forEach(link => {
-                const option = document.createElement('a', 'emby-linkbutton');
-                option.classList.add('navMenuOption', 'lnkMediaFolder');
-                option.rel = 'noopener noreferrer';
-                option.target = '_blank';
-                option.href = link.url;
-
-                const icon = document.createElement('span');
-                icon.className = `material-icons navMenuOptionIcon ${link.icon || 'link'}`;
-                icon.setAttribute('aria-hidden', 'true');
-                option.appendChild(icon);
-
-                const label = document.createElement('span');
-                label.className = 'navMenuOptionText';
-                label.textContent = link.name;
-                option.appendChild(label);
-
-                customMenuOptions.appendChild(option);
-            });
-        });
-    }
-
-    const libraryMenuOptions = document.querySelector('.libraryMenuOptions');
-
-    if (libraryMenuOptions) {
-        getUserViews(apiClient, userId).then(function (result) {
-            const items = result;
-            let html = `<h3 class="sidebarHeader">${globalize.translate('HeaderMedia')}</h3>`;
-            html += items.map(function (i) {
-                const icon = i.icon || imageHelper.getLibraryIcon(i.CollectionType);
-                const itemId = i.Id;
-
-                return `<a is="emby-linkbutton" data-itemid="${itemId}" class="lnkMediaFolder navMenuOption" href="${getItemHref(i, i.CollectionType)}">
-                                    <span class="material-icons navMenuOptionIcon ${icon}" aria-hidden="true"></span>
-                                    <span class="sectionName navMenuOptionText">${escapeHtml(i.Name)}</span>
-                                  </a>`;
-            }).join('');
-            libraryMenuOptions.innerHTML = html;
-            const elem = libraryMenuOptions;
-            const sidebarLinks = elem.querySelectorAll('.navMenuOption');
-
-            for (const sidebarLink of sidebarLinks) {
-                sidebarLink.removeEventListener('click', onSidebarLinkClick);
-                sidebarLink.addEventListener('click', onSidebarLinkClick);
-            }
-        });
-    }
-}
-
 function getTopParentId() {
     return getParameterByName('topParentId') || null;
-}
-
-function onMainDrawerClick(e) {
-    if (dom.parentWithTag(e.target, 'A')) {
-        setTimeout(closeMainDrawer, 30);
-    }
-}
-
-function onSelectServerClick() {
-    Dashboard.selectServer();
-}
-
-function onSettingsClick() {
-    Dashboard.navigate('mypreferencesmenu');
-}
-
-function onExitAppClick() {
-    appHost.exit();
-}
-
-function onLogoutClick() {
-    Dashboard.logout();
-}
-
-function updateLibraryNavLinks(page) {
-    if (layoutManager.tv) return;
-
-    const isLiveTvPage = page.classList.contains('liveTvPage');
-    const isChannelsPage = page.classList.contains('channelsPage');
-    const isEditorPage = page.classList.contains('metadataEditorPage');
-    const isMySyncPage = page.classList.contains('mySyncPage');
-    const id = isLiveTvPage || isChannelsPage || isEditorPage || isMySyncPage || page.classList.contains('allLibraryPage') ? '' : getTopParentId() || '';
-    const elems = document.getElementsByClassName('lnkMediaFolder');
-
-    for (let i = 0, length = elems.length; i < length; i++) {
-        const lnkMediaFolder = elems[i];
-        const itemId = lnkMediaFolder.getAttribute('data-itemid');
-
-        if (isChannelsPage && itemId === 'channels') {
-            lnkMediaFolder.classList.add('navMenuOption-selected');
-        } else if (isLiveTvPage && itemId === 'livetv') {
-            lnkMediaFolder.classList.add('navMenuOption-selected');
-        } else if (isEditorPage && itemId === 'editor') {
-            lnkMediaFolder.classList.add('navMenuOption-selected');
-        } else if (isMySyncPage && itemId === 'manageoffline' && window.location.href.toString().indexOf('mode=download') != -1) {
-            lnkMediaFolder.classList.add('navMenuOption-selected');
-        } else if (isMySyncPage && itemId === 'syncotherdevices' && window.location.href.toString().indexOf('mode=download') == -1) {
-            lnkMediaFolder.classList.add('navMenuOption-selected');
-        } else if (id && itemId == id) {
-            lnkMediaFolder.classList.add('navMenuOption-selected');
-        } else {
-            lnkMediaFolder.classList.remove('navMenuOption-selected');
-        }
-    }
 }
 
 function updateMenuForPageType(isDashboardPage, isLibraryPage) {
@@ -513,36 +226,7 @@ function updateMenuForPageType(isDashboardPage, isLibraryPage) {
     if (currentPageType !== newPageType) {
         currentPageType = newPageType;
 
-        if (isDashboardPage && !layoutManager.mobile) {
-            skinHeader.classList.add('headroomDisabled');
-        } else {
-            skinHeader.classList.remove('headroomDisabled');
-        }
-
-        const bodyClassList = document.body.classList;
-
-        if (isLibraryPage) {
-            bodyClassList.add('libraryDocument');
-            bodyClassList.remove('hideMainDrawer');
-
-            if (navDrawerInstance) {
-                navDrawerInstance.setEdgeSwipeEnabled(true);
-            }
-        } else if (isDashboardPage) {
-            bodyClassList.remove('libraryDocument');
-            bodyClassList.remove('hideMainDrawer');
-
-            if (navDrawerInstance) {
-                navDrawerInstance.setEdgeSwipeEnabled(true);
-            }
-        } else {
-            bodyClassList.remove('libraryDocument');
-            bodyClassList.add('hideMainDrawer');
-
-            if (navDrawerInstance) {
-                navDrawerInstance.setEdgeSwipeEnabled(false);
-            }
-        }
+        document.body.classList.toggle('libraryDocument', isLibraryPage);
     }
 
     if (requiresUserRefresh) {
@@ -570,65 +254,7 @@ function updateBackButton(page) {
     }
 }
 
-function initHeadRoom(elem) {
-    const headroom = new Headroom(elem);
-    headroom.init();
-}
-
-function refreshLibraryDrawer(user) {
-    if (layoutManager.tv) return;
-
-    loadNavDrawer();
-    currentDrawerType = 'library';
-
-    if (user) {
-        Promise.resolve(user);
-    } else {
-        ServerConnections.user(getCurrentApiClient()).then(function (userResult) {
-            refreshLibraryInfoInDrawer(userResult);
-            updateLibraryMenu(userResult.localUser);
-        });
-    }
-}
-
-function getNavDrawerOptions() {
-    let drawerWidth = window.screen.availWidth - 50;
-    drawerWidth = Math.max(drawerWidth, 240);
-    drawerWidth = Math.min(drawerWidth, 320);
-    return {
-        target: navDrawerElement,
-        onChange: onMainDrawerSelect,
-        width: drawerWidth
-    };
-}
-
-function loadNavDrawer() {
-    if (layoutManager.tv) return Promise.resolve();
-
-    if (navDrawerInstance) {
-        return Promise.resolve(navDrawerInstance);
-    }
-
-    navDrawerElement = document.querySelector('.mainDrawer');
-    navDrawerScrollContainer = navDrawerElement.querySelector('.scrollContainer');
-    navDrawerScrollContainer.addEventListener('click', onMainDrawerClick);
-    return new Promise(function (resolve) {
-        import('../lib/navdrawer/navdrawer').then(({ default: NavDrawer }) => {
-            navDrawerInstance = new NavDrawer(getNavDrawerOptions());
-
-            navDrawerElement.classList.remove('hide');
-
-            resolve(navDrawerInstance);
-        });
-    });
-}
-
-let navDrawerElement;
-let navDrawerScrollContainer;
-let navDrawerInstance;
-let mainDrawerButton;
 let headerHomeButton;
-let currentDrawerType;
 let documentTitle = 'Jellyfin';
 let pageTitleElement;
 let headerBackButton;
@@ -637,8 +263,6 @@ let currentUser;
 let headerSearchButton;
 let headerAudioPlayerButton;
 let currentTimeText;
-const enableLibraryNavDrawer = layoutManager.desktop;
-const enableLibraryNavDrawerHome = !layoutManager.tv;
 const skinHeader = document.querySelector('.skinHeader');
 let requiresUserRefresh = true;
 
@@ -731,22 +355,7 @@ pageClassOn('pagebeforeshow', 'page', function () {
 pageClassOn('pageshow', 'page', function (e) {
     const page = this;
     const isDashboardPage = page.classList.contains('type-interior');
-    const isHomePage = page.classList.contains('homePage');
     const isLibraryPage = !isDashboardPage && page.classList.contains('libraryPage');
-
-    if (!isDashboardPage) {
-        if (mainDrawerButton) {
-            if (enableLibraryNavDrawer || (isHomePage && enableLibraryNavDrawerHome)) {
-                mainDrawerButton.classList.remove('hide');
-            } else {
-                mainDrawerButton.classList.add('hide');
-            }
-        }
-
-        if (currentDrawerType !== 'library') {
-            refreshLibraryDrawer();
-        }
-    }
 
     updateMenuForPageType(isDashboardPage, isLibraryPage);
 
@@ -757,7 +366,6 @@ pageClassOn('pageshow', 'page', function (e) {
 
     updateTitle(page);
     updateBackButton(page);
-    updateLibraryNavLinks(page);
 });
 
 Events.on(ServerConnections, 'apiclientcreated', (e, newApiClient) => {
@@ -767,12 +375,9 @@ Events.on(ServerConnections, 'apiclientcreated', (e, newApiClient) => {
 Events.on(ServerConnections, 'localusersignedin', function (e, user) {
     const currentApiClient = ServerConnections.getApiClient(user.ServerId);
 
-    currentDrawerType = null;
     currentUser = {
         localUser: user
     };
-
-    loadNavDrawer();
 
     ServerConnections.user(currentApiClient).then(function (userResult) {
         currentUser = userResult;
@@ -786,13 +391,9 @@ Events.on(ServerConnections, 'localusersignedout', function () {
 });
 
 fetchServerName(getCurrentApiClient());
-loadNavDrawer();
 
 const LibraryMenu = {
     getTopParentId,
-    onHardwareMenuButtonClick: function () {
-        toggleMainDrawer();
-    },
     setTabs,
     setDefaultTitle,
     setTitle,

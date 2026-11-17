@@ -17,7 +17,6 @@ import { EventType } from 'constants/eventType';
 import globalize from './lib/globalize';
 import { loadCoreDictionary } from 'lib/globalize/loader';
 import getServerAddress from 'lib/jellyfin-apiclient/utils/getServerAddress';
-import browser from './scripts/browser';
 import keyboardNavigation from './scripts/keyboardNavigation';
 import { getPlugins } from './scripts/settings/webSettings';
 import { pageClassOn, serverAddress } from './utils/dashboard';
@@ -93,11 +92,6 @@ build: ${__JF_BUILD_VERSION__}`);
     // Load the font styles
     loadFonts();
 
-    // Load iOS specific styles
-    if (browser.iOS) {
-        import('./styles/ios.scss');
-    }
-
     // Load frontend plugins
     await loadPlugins();
 
@@ -150,33 +144,8 @@ async function loadPlugins() {
 }
 
 function loadPlatformFeatures() {
-    if (!browser.tv && !browser.xboxOne && !browser.ps4) {
-        import('./components/nowPlayingBar/nowPlayingBar');
-    }
-
-    if (!appHost.supports(AppFeature.PhysicalVolumeControl) || browser.touch) {
+    if (!appHost.supports(AppFeature.PhysicalVolumeControl)) {
         import('./components/playback/volumeosd');
-    }
-
-    if (!browser.tv && !browser.xboxOne) {
-        import('./components/playback/playbackorientation');
-        registerServiceWorker();
-
-        if (window.Notification) {
-            import('./components/notifications/notifications');
-        }
-    }
-}
-
-function registerServiceWorker() {
-    if (navigator.serviceWorker && window.appMode !== 'cordova' && window.appMode !== 'android') {
-        navigator.serviceWorker.register('serviceworker.js').then(() =>
-            console.log('serviceWorker registered')
-        ).catch(error =>
-            console.log('error registering serviceWorker: ' + error)
-        );
-    } else {
-        console.warn('serviceWorker unsupported');
     }
 }
 

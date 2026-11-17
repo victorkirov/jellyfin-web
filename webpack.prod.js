@@ -3,9 +3,5 @@ const { merge } = require('webpack-merge');
 const common = require('./webpack.common');
 
 module.exports = merge(common, {
-    mode: 'production',
-    entry: {
-        ...common.entry,
-        'serviceworker': { import: './serviceworker.js', runtime: false }
-    }
+    mode: 'production'
 });
