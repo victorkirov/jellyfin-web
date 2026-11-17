@@ -132,17 +132,7 @@ build: ${__JF_BUILD_VERSION__}`);
 }
 
 function loadFonts() {
-    if (browser.tv && !browser.android) {
-        console.debug('using system fonts with explicit sizes');
-        import('./styles/fonts.sized.scss');
-    } else if (__USE_SYSTEM_FONTS__) {
-        console.debug('using system fonts');
-        import('./styles/fonts.scss');
-    } else {
-        console.debug('using default fonts');
-        import('./styles/fonts.scss');
-        import('./styles/fonts.noto.scss');
-    }
+    import('./styles/fonts.sized.scss');
 }
 
 async function loadPlugins() {

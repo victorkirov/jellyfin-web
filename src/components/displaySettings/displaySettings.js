@@ -13,7 +13,6 @@ import focusManager from '../focusManager';
 import datetime from '../../scripts/datetime';
 import globalize from '../../lib/globalize';
 import loading from '../loading/loading';
-import skinManager from '../../scripts/themeManager';
 import Events from '../../utils/events.ts';
 import toast from '../toast/toast';
 
@@ -23,20 +22,6 @@ import '../../elements/emby-select/emby-select';
 import '../../elements/emby-checkbox/emby-checkbox';
 import '../../elements/emby-button/emby-button';
 import '../../elements/emby-textarea/emby-textarea';
-
-function fillThemes(select, selectedTheme) {
-    skinManager.getThemes().then(themes => {
-        select.innerHTML = themes.map(t => {
-            return `<option value="${t.id}">${escapeHtml(t.name)}</option>`;
-        }).join('');
-
-        // get default theme
-        const defaultTheme = themes.find(theme => theme.default);
-
-        // set the current theme
-        select.value = selectedTheme || defaultTheme.id;
-    });
-}
 
 function loadScreensavers(context, userSettings) {
     const selectScreensaver = context.querySelector('.selectScreensaver');
@@ -86,7 +71,6 @@ function loadForm(context, user, userSettings) {
         context.querySelector('.learnHowToContributeContainer').classList.add('hide');
     }
 
-    context.querySelector('.selectDashboardThemeContainer').classList.toggle('hide', !user.Policy.IsAdministrator);
     context.querySelector('.txtSlideshowIntervalContainer').classList.remove('hide');
 
     if (appHost.supports(AppFeature.Screensaver)) {
@@ -104,9 +88,6 @@ function loadForm(context, user, userSettings) {
     } else {
         context.querySelector('.fldDateTimeLocale').classList.add('hide');
     }
-
-    fillThemes(context.querySelector('#selectTheme'), userSettings.theme());
-    fillThemes(context.querySelector('#selectDashboardTheme'), userSettings.dashboardTheme());
 
     loadScreensavers(context, userSettings);
 
@@ -151,8 +132,6 @@ function saveUser(context, user, userSettingsInstance, apiClient) {
 
     userSettingsInstance.enableThemeSongs(context.querySelector('#chkThemeSong').checked);
     userSettingsInstance.enableThemeVideos(context.querySelector('#chkThemeVideo').checked);
-    userSettingsInstance.theme(context.querySelector('#selectTheme').value);
-    userSettingsInstance.dashboardTheme(context.querySelector('#selectDashboardTheme').value);
     userSettingsInstance.screensaver(context.querySelector('.selectScreensaver').value);
     userSettingsInstance.backdropScreensaverInterval(context.querySelector('#txtBackdropScreensaverInterval').value);
     userSettingsInstance.slideshowInterval(context.querySelector('#txtSlideshowInterval').value);
@@ -171,10 +150,6 @@ function saveUser(context, user, userSettingsInstance, apiClient) {
 
     userSettingsInstance.disableCustomCss(context.querySelector('#chkDisableCustomCss').checked);
     userSettingsInstance.customCss(context.querySelector('#txtLocalCustomCss').value);
-
-    if (user.Id === apiClient.getCurrentUserId()) {
-        skinManager.setTheme(userSettingsInstance.theme());
-    }
 
     return apiClient.updateUserConfiguration(user.Id, user.Configuration);
 }

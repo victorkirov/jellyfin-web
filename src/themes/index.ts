@@ -1,21 +1,9 @@
 import { createTheme, type Theme } from '@mui/material/styles';
 
 import { DEFAULT_THEME_OPTIONS } from './_base/theme';
-import appletv from './appletv';
-import blueradiance from './blueradiance';
 import dark from './dark';
-import light from './light';
-import purplehaze from './purplehaze';
-import wmc from './wmc';
 
-const COLOR_SCHEMES = {
-    appletv,
-    blueradiance,
-    dark,
-    light,
-    purplehaze,
-    wmc
-};
+const COLOR_SCHEMES = { dark };
 
 type ColorSchemeId = keyof typeof COLOR_SCHEMES;
 
