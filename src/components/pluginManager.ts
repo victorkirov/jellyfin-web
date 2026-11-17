@@ -1,4 +1,5 @@
 import Events from '../utils/events';
+import { getBuiltinMetadata, canPlayCandidate } from '../lib/plugins/builtinMetadata';
 import type { RegistryPlugin, PluginSpec, PluginConstructor, PlaybackCandidate } from '../types/plugin';
 import globalize from '../lib/globalize';
 import loading from './loading/loading';
@@ -29,10 +30,9 @@ export class PluginManager {
     }
 
     private async registerPlugin(plugin: RegistryPlugin) {
-        this.register(plugin);
-
-        // Skins load translations when selected.
+        // Keep the deferred descriptor available until preparation succeeds.
         if (plugin.type !== 'skin') await this.loadStrings(plugin);
+        this.register(plugin);
         return plugin;
     }
 
@@ -44,7 +44,7 @@ export class PluginManager {
             })[0];
 
             if (existing) {
-                return pluginSpec;
+                return existing;
             }
 
             plugin.installUrl = pluginSpec;
@@ -57,30 +57,13 @@ export class PluginManager {
     }
 
     registerDeferredPlugin(pluginSpec: PluginSpec) {
-        const definitions: Record<string, [string, string, string?]> = {
-            htmlAudioPlayer: ['htmlaudioplayer', 'Html Audio Player', 'Audio'],
-            htmlVideoPlayer: ['htmlvideoplayer', 'Html Video Player', 'Video'],
-            photoPlayer: ['photoplayer', 'Photo Player', 'Photo'],
-            youtubePlayer: ['youtubeplayer', 'Youtube Player', 'Audio,Video'],
-            backdropScreensaver: ['backdropscreensaver', 'BackdropScreensaver'],
-            logoScreensaver: ['logoscreensaver', 'LogoScreensaver']
-        };
-        const definition = typeof pluginSpec === 'string' && pluginSpec.endsWith('/plugin') ?
-            definitions[pluginSpec.slice(0, -7)] : undefined;
-        if (!definition || typeof pluginSpec !== 'string' || pluginSpec in window) return this.loadPlugin(pluginSpec);
-        const [id, name, mediaTypes] = definition;
-        let pending: Promise<RegistryPlugin | string> | undefined;
-        let implementation: RegistryPlugin | string | undefined;
+        const metadata = typeof pluginSpec === 'string' ? getBuiltinMetadata(pluginSpec) : undefined;
+        if (!metadata || typeof pluginSpec !== 'string' || pluginSpec in window) return this.loadPlugin(pluginSpec);
+        let pending: Promise<RegistryPlugin> | undefined;
+        let implementation: RegistryPlugin | undefined;
         let activation = 0;
         const descriptor: RegistryPlugin & Required<Pick<RegistryPlugin, 'load' | 'show' | 'hide'>> = {
-            id,
-            name,
-            type: mediaTypes ? 'mediaplayer' : 'screensaver',
-            priority: 1,
-            supportsAnonymous: id === 'logoscreensaver',
-            canPlayMediaType: (type: string | null | undefined) => !!mediaTypes?.toLowerCase().split(',').includes((type || '').toLowerCase()),
-            canPlayItem: item => id !== 'youtubeplayer' && !!item.Id,
-            canPlayUrl: url => id === 'youtubeplayer' && url.toLowerCase().includes('youtube.com'),
+            ...metadata,
             load: () => {
                 if (!pending) {
                     pending = this.loadPlugin(pluginSpec).then(plugin => {
@@ -96,12 +79,12 @@ export class PluginManager {
             show: () => {
                 const currentActivation = ++activation;
                 return descriptor.load().then(plugin => {
-                    if (currentActivation === activation) return (plugin as RegistryPlugin).show?.();
+                    if (currentActivation === activation) return plugin.show?.();
                 });
             },
             hide: () => {
                 activation++;
-                return implementation ? (implementation as RegistryPlugin).hide?.() : Promise.resolve();
+                return implementation ? implementation.hide?.() : Promise.resolve();
             }
         };
         this.pluginsList.push(descriptor);
@@ -110,18 +93,16 @@ export class PluginManager {
 
     canPlayDeferred(item: PlaybackCandidate) {
         return this.plugins.some(plugin => plugin.load && plugin.type === 'mediaplayer'
-            && plugin.canPlayMediaType?.(item.MediaType)
-            && (item.Id ? plugin.canPlayItem?.(item) : item.Url && plugin.canPlayUrl?.(item.Url)));
+            && canPlayCandidate(plugin, item));
     }
 
     async prepareForPlayback(items: PlaybackCandidate[]) {
         const plugins = this.plugins.filter(plugin => plugin.load && plugin.type === 'mediaplayer'
-            && items.some(item => plugin.canPlayMediaType?.(item.MediaType)
-                && (item.Id ? plugin.canPlayItem?.(item) : item.Url && plugin.canPlayUrl?.(item.Url))));
+            && items.some(item => canPlayCandidate(plugin, item)));
         await Promise.all(plugins.map(plugin => plugin.load?.()));
     }
 
-    async loadPlugin(pluginSpec: PluginSpec): Promise<RegistryPlugin | string> {
+    async loadPlugin(pluginSpec: PluginSpec): Promise<RegistryPlugin> {
         let plugin: RegistryPlugin;
 
         if (typeof pluginSpec === 'string') {
@@ -157,6 +138,9 @@ export class PluginManager {
                 console.debug(`Loading plugin (via dynamic import): ${pluginSpec}`);
                 const pluginResult = await import(/* webpackChunkName: "[request]" */ `../plugins/${pluginSpec}`);
                 plugin = new pluginResult.default;
+                const metadata = getBuiltinMetadata(pluginSpec);
+                // NativeShell definitions keep their own eligibility and priority.
+                if (metadata) Object.assign(plugin, metadata, { name: plugin.name });
             }
         } else {
             console.debug('Loading plugin (via promise/async function)');

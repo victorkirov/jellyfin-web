@@ -11,9 +11,12 @@ vi.mock('../components/toast/toast', () => ({ default: {} }));
 vi.mock('../components/confirm/confirm', () => ({ default: {} }));
 vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: {} }));
 vi.mock('./dashboard', () => ({}));
+vi.mock('../scripts/screensavermanager', () => ({ default: {} }));
+vi.mock('../scripts/settings/userSettings', () => ({}));
 
 import { PluginManager } from './pluginManager';
 import Events from '../utils/events';
+import globalize from '../lib/globalize';
 import type { RegistryPlugin } from '../types/plugin';
 
 const stubPlugin = { id: 'test', name: 'test', type: 'test' };
@@ -61,7 +64,7 @@ describe('deferred plugins', () => {
         const descriptor = await manager.registerDeferredPlugin('logoScreensaver/plugin');
         if (typeof descriptor === 'string') throw new Error('Expected a deferred descriptor');
         const plugin = { ...stubPlugin, show: vi.fn(), hide: vi.fn().mockResolvedValue(undefined) };
-        let finish!: (value: RegistryPlugin | string | PromiseLike<RegistryPlugin | string>) => void;
+        let finish!: (value: RegistryPlugin | PromiseLike<RegistryPlugin>) => void;
         vi.spyOn(manager, 'loadPlugin').mockImplementation(() => new Promise(resolve => {
             finish = resolve;
         }));
@@ -110,5 +113,58 @@ describe('deferred plugins', () => {
             delete window['htmlVideoPlayer/plugin' as keyof Window];
         }
         expect(load.mock.calls).toEqual([['playAccessValidation/plugin'], ['htmlVideoPlayer/plugin']]);
+    });
+    it('preserves screensaver priority when deferred and loaded', async () => {
+        const descriptor = await manager.registerDeferredPlugin('logoScreensaver/plugin');
+        expect(descriptor.priority).toBeUndefined();
+    });
+
+    it('returns the installed instance when an already loaded plugin is requested', async () => {
+        class NativePlayer {
+            id = 'native';
+            name = 'Native';
+            type = 'mediaplayer';
+            priority = -5;
+            canPlayMediaType = () => false;
+        }
+        window['native/plugin' as keyof Window] = (() => NativePlayer) as never;
+        try {
+            const first = await manager.loadPlugin('native/plugin');
+            expect(await manager.loadPlugin('native/plugin')).toBe(first);
+            expect(first.priority).toBe(-5);
+            expect(first.canPlayMediaType?.('Video')).toBe(false);
+            expect(manager.plugins).toEqual([first]);
+        } finally {
+            delete window['native/plugin' as keyof Window];
+        }
+    });
+
+    it('retries translation failures through deferred playback preparation', async () => {
+        await manager.registerDeferredPlugin('htmlVideoPlayer/plugin');
+        class NativePlayer {
+            id = 'htmlvideoplayer';
+            name = 'Native';
+            type = 'mediaplayer';
+        }
+        window['htmlVideoPlayer/plugin' as keyof Window] = (() => NativePlayer) as never;
+        vi.mocked(globalize.loadStrings).mockRejectedValueOnce(new Error('translations unavailable'));
+        try {
+            await expect(manager.prepareForPlayback([{ Id: 'video', MediaType: 'Video' }])).rejects.toThrow('translations unavailable');
+            expect(manager.canPlayDeferred({ Id: 'video', MediaType: 'Video' })).toBe(true);
+            await manager.prepareForPlayback([{ Id: 'video', MediaType: 'Video' }]);
+            expect(manager.canPlayDeferred({ Id: 'video', MediaType: 'Video' })).toBe(false);
+        } finally {
+            delete window['htmlVideoPlayer/plugin' as keyof Window];
+        }
+    });
+    it('loads a built-in with the same canonical capabilities as its descriptor', async () => {
+        const descriptor = await manager.registerDeferredPlugin('photoPlayer/plugin');
+        const plugin = await descriptor.load!();
+        expect(plugin.id).toBe(descriptor.id);
+        expect(plugin.priority).toBe(descriptor.priority);
+        expect(plugin.canPlayMediaType?.('Photo')).toBe(true);
+        expect(plugin.canPlayItem?.({ Id: 'photo' })).toBe(true);
+        expect(plugin.canPlayUrl?.('https://youtube.com/watch?v=test')).toBe(false);
+        expect(manager.plugins).toEqual([plugin]);
     });
 });
