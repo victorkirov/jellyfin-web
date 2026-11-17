@@ -5,7 +5,7 @@ import { useCallback, useEffect, type FC } from 'react';
 import { EventType } from 'constants/eventType';
 import { useApi } from 'hooks/useApi';
 import Events from 'utils/events';
-import { userLibraryQueryKeys } from 'utils/query/queryKeys';
+import { userLibraryQueryKeys, userLiveTvQueryKeys } from 'utils/query/queryKeys';
 
 /** Component that handles mapping events to query client actions. */
 const QueryClientEventHandler: FC = () => {
@@ -39,8 +39,21 @@ const QueryClientEventHandler: FC = () => {
     }, [invalidateItemQueries]);
 
     useEffect(() => (
-        api?.subscribe([OutboundWebSocketMessageType.UserDataChanged], invalidateItemQueries)
-    ), [api, invalidateItemQueries]);
+        api?.subscribe([
+            OutboundWebSocketMessageType.UserDataChanged,
+            OutboundWebSocketMessageType.LibraryChanged,
+            OutboundWebSocketMessageType.TimerCreated,
+            OutboundWebSocketMessageType.TimerCancelled,
+            OutboundWebSocketMessageType.SeriesTimerCreated,
+            OutboundWebSocketMessageType.SeriesTimerCancelled
+        ], message => {
+            const keys = message.MessageType === OutboundWebSocketMessageType.UserDataChanged
+                || message.MessageType === OutboundWebSocketMessageType.LibraryChanged ?
+                userLibraryQueryKeys(api, user?.Id) :
+                userLiveTvQueryKeys(api, user?.Id);
+            void Promise.all(keys.map(queryKey => queryClient.invalidateQueries({ queryKey })));
+        })
+    ), [api, queryClient, user?.Id]);
 
     return null;
 };

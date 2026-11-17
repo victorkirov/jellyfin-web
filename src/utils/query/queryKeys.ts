@@ -9,5 +9,8 @@ export const userQueryKey = (api: Api | undefined, userId: string | undefined, .
     serverQueryKey(api, 'User', userId, ...parts);
 
 export const userLibraryQueryKeys = (api: Api | undefined, userId: string | undefined) =>
-    ['Items', 'NextUp', 'ResumeItems', 'LatestMedia']
+    ['Items', 'NextUp', 'ResumeItems', 'LatestMedia', 'Recordings', 'RecommendedPrograms']
         .map(family => userQueryKey(api, userId, family));
+
+export const userLiveTvQueryKeys = (api: Api | undefined, userId: string | undefined) =>
+    ['Recordings', 'RecommendedPrograms'].map(family => userQueryKey(api, userId, family));

@@ -14,15 +14,18 @@ vi.mock('hooks/useApi', () => ({ useApi: vi.fn() }));
 afterEach(() => vi.unstubAllGlobals());
 
 describe('library query refresh events', () => {
-    it.each(['refresh', 'watched'])('invalidates only the active user library families for %s', async event => {
+    it.each(['refresh', 'UserDataChanged', 'LibraryChanged', 'TimerCreated', 'TimerCancelled', 'SeriesTimerCreated', 'SeriesTimerCancelled'])('invalidates only the active user library families for %s', async event => {
         vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
         const api = new Api('https://first', { name: 'test', version: '1' }, { name: 'test', id: 'test' });
         const otherApi = new Api('https://second', { name: 'test', version: '1' }, { name: 'test', id: 'test' });
         const subscribe = vi.spyOn(api, 'subscribe').mockReturnValue(vi.fn());
         vi.mocked(useApi).mockReturnValue({ api, user: { Id: 'a' } });
         const client = new QueryClient();
-        const intended = ['Items', 'NextUp', 'ResumeItems', 'LatestMedia'].map(family => userQueryKey(api, 'a', family, 'params'));
+        const allFamilies = ['Items', 'NextUp', 'ResumeItems', 'LatestMedia', 'Recordings', 'RecommendedPrograms'];
+        const families = event.includes('Timer') ? ['Recordings', 'RecommendedPrograms'] : allFamilies;
+        const intended = families.map(family => userQueryKey(api, 'a', family, 'params'));
         const unrelated = [
+            ...allFamilies.filter(family => !families.includes(family)).map(family => userQueryKey(api, 'a', family, 'params')),
             userQueryKey(api, 'b', 'NextUp'), userQueryKey(otherApi, 'a', 'Items'),
             userQueryKey(api, 'a', 'DisplayPreferences'), serverQueryKey(api, 'BrandingOptions')
         ];
@@ -37,7 +40,8 @@ describe('library query refresh events', () => {
                     Events.trigger(document, EventType.REFRESH_NEEDED);
                 } else {
                     const onMessage = subscribe.mock.calls[0][1];
-                    onMessage({ MessageType: 'UserDataChanged', Data: {} } as never);
+                    expect(subscribe.mock.calls[0][0]).toContain(event);
+                    onMessage({ MessageType: event, Data: {} } as never);
                 }
             });
             intended.forEach(key => {
