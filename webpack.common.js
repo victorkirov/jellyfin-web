@@ -9,10 +9,7 @@ const { ContextExclusionPlugin, DefinePlugin } = require('webpack');
 const packageJson = require('./package.json');
 
 const Assets = [
-    'native-promise-only/npo.js',
     '@jellyfin/libass-wasm/dist/js/default.woff2',
-    '@jellyfin/libass-wasm/dist/js/subtitles-octopus-worker.js',
-    '@jellyfin/libass-wasm/dist/js/subtitles-octopus-worker.wasm',
     '@jellyfin/libass-wasm/dist/js/subtitles-octopus-worker-legacy.js'
 ];
 

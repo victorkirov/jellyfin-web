@@ -1355,7 +1355,7 @@ export class HtmlVideoPlayer {
                 video: videoElement,
                 subUrl: getTextTrackUrl(track, item),
                 fonts: availableFonts,
-                workerUrl: `${appRouter.baseUrl()}/libraries/subtitles-octopus-worker.js`,
+                workerUrl: `${appRouter.baseUrl()}/libraries/subtitles-octopus-worker-legacy.js`,
                 legacyWorkerUrl: `${appRouter.baseUrl()}/libraries/subtitles-octopus-worker-legacy.js`,
                 onError() {
                     // HACK: Clear JavascriptSubtitlesOctopus: it gets disposed when an error occurs
