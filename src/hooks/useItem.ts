@@ -1,9 +1,8 @@
 import type { Api } from '@jellyfin/sdk/lib/api';
 import { getLibraryApi } from '@jellyfin/sdk/lib/utils/api/library-api';
-import { queryOptions, useQuery } from '@tanstack/react-query';
+import { queryOptions } from '@tanstack/react-query';
 import type { AxiosRequestConfig } from 'axios';
 
-import { useApi } from './useApi';
 import type { ItemDto } from 'types/base/models/item-dto';
 
 const fetchItem = async (
@@ -26,11 +25,3 @@ export const getItemQuery = (
     queryFn: ({ signal }) => fetchItem(api!, itemId!, userId!, { signal }),
     enabled: !!api && !!userId && !!itemId
 });
-
-export const useItem = (
-    itemId?: string
-) => {
-    const apiContext = useApi();
-    const { api, user } = apiContext;
-    return useQuery(getItemQuery(api, itemId, user?.Id));
-};

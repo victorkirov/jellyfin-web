@@ -1,7 +1,5 @@
 /** App feature flags */
 export enum AppFeature {
-    /** The app supports changing the URL hash when the cast menu opens */
-    CastMenuHashChange = 'castmenuhashchange',
     /** The app supports Chromecast */
     Chromecast = 'chromecast',
     /** The app supports showing client settings via a menu entry */
@@ -32,12 +30,6 @@ export enum AppFeature {
     HtmlVideoAutoplay = 'htmlvideoautoplay',
     /** The app supports switching servers */
     MultiServer = 'multiserver',
-    /** The app supports playback of BluRay folders */
-    NativeBluRayPlayback = 'nativeblurayplayback',
-    /** The app supports playback of DVD folders */
-    NativeDvdPlayback = 'nativedvdplayback',
-    /** The app supports playback of ISO files */
-    NativeIsoPlayback = 'nativeisoplayback',
     /** The app supports physical volume buttons */
     PhysicalVolumeControl = 'physicalvolumecontrol',
     /** The app supports playing remote audio */

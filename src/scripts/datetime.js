@@ -269,22 +269,6 @@ export function toLocaleTimeString(date, options) {
     return date.toLocaleTimeString();
 }
 
-export function getDisplayDateTime(date) {
-    if (!date) {
-        throw new Error('date cannot be null');
-    }
-
-    if (typeof date === 'string') {
-        try {
-            date = parseISO8601Date(date, true);
-        } catch {
-            return date;
-        }
-    }
-
-    return toLocaleString(date);
-}
-
 export function getDisplayTime(date) {
     if (!date) {
         throw new Error('date cannot be null');

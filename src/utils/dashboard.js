@@ -118,12 +118,6 @@ export function getPluginUrl(name) {
     return 'configurationpage?name=' + encodeURIComponent(name);
 }
 
-export function getConfigurationResourceUrl(name) {
-    return ApiClient.getUrl('web/ConfigurationPage', {
-        name: name
-    });
-}
-
 /**
  * Navigate to a url.
  * @param {string} url - The url to navigate to.
@@ -142,16 +136,6 @@ export function navigate(url, preserveQueryString) {
     }
 
     return appRouter.show(url);
-}
-
-export function processPluginConfigurationUpdateResult() {
-    loading.hide();
-    toast(globalize.translate('SettingsSaved'));
-}
-
-export function processServerConfigurationUpdateResult() {
-    loading.hide();
-    toast(globalize.translate('SettingsSaved'));
 }
 
 export function processErrorResponse(response) {
@@ -199,14 +183,6 @@ export function selectServer() {
     }
 }
 
-export function hideLoadingMsg() {
-    loading.hide();
-}
-
-export function showLoadingMsg() {
-    loading.show();
-}
-
 export function confirm(message, title, callback) {
     baseConfirm(message, title).then(function() {
         callback(true);
@@ -225,34 +201,19 @@ export const pageClassOn = function(eventName, className, fn) {
     });
 };
 
-export const pageIdOn = function(eventName, id, fn) {
-    document.addEventListener(eventName, function (event) {
-        const target = event.target;
-
-        if (target.id === id) {
-            fn.call(target, event);
-        }
-    });
-};
-
 const Dashboard = {
     alert,
     capabilities,
     confirm,
     getPluginUrl,
-    getConfigurationResourceUrl,
     getCurrentUser,
     getCurrentUserId,
-    hideLoadingMsg,
     logout,
     navigate,
     onServerChanged,
     processErrorResponse,
-    processPluginConfigurationUpdateResult,
-    processServerConfigurationUpdateResult,
     selectServer,
     serverAddress,
-    showLoadingMsg,
     datetime,
     dialogHelper,
     setBackdropTransparency

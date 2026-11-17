@@ -482,7 +482,5 @@ class AppRouter {
 
 export const appRouter = new AppRouter();
 
-export const isLyricsPage = () => history.location.pathname.toLowerCase() === '/lyrics';
-
 window.Emby = window.Emby || {};
 window.Emby.Page = appRouter;

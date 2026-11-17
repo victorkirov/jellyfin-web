@@ -1,12 +1,10 @@
 import type { AxiosRequestConfig } from 'axios';
 import type { Api } from '@jellyfin/sdk';
-import type { UserApiGetUsersRequest, UserDto } from '@jellyfin/sdk/lib/generated-client';
+import type { UserApiGetUsersRequest } from '@jellyfin/sdk/lib/generated-client';
 import { getUserApi } from '@jellyfin/sdk/lib/utils/api/user-api';
 import { useQuery } from '@tanstack/react-query';
 
 import { useApi } from './useApi';
-
-export type UsersRecords = Record<string, UserDto>;
 
 interface UseUsersOptions {
     /** Force the query to refresh instead of using the cache. */
@@ -39,25 +37,4 @@ export const useUsers = (
         enabled: !!api,
         staleTime: options?.forceRefresh ? 0 : undefined
     });
-};
-
-export const useUsersDetails = () => {
-    const { data: users, ...rest } = useUsers();
-    const usersById: UsersRecords = {};
-    const names: string[] = [];
-
-    if (users) {
-        users.forEach(user => {
-            const userId = user.Id;
-            if (userId) usersById[userId] = user;
-            if (user.Name) names.push(user.Name);
-        });
-    }
-
-    return {
-        users,
-        usersById,
-        names,
-        ...rest
-    };
 };

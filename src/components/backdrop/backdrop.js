@@ -259,19 +259,6 @@ function clearRotation() {
     currentRotationIndex = -1;
 }
 
-export function setBackdrop(url, imageOptions) {
-    if (url && typeof url !== 'string') {
-        url = getImageUrls([url], imageOptions)[0];
-    }
-
-    if (url) {
-        clearRotation();
-        setBackdropImage(url);
-    } else {
-        clearBackdrop();
-    }
-}
-
 /**
  * @enum TransparencyLevel
  */

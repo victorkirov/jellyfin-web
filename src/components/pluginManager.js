@@ -11,9 +11,6 @@ import confirm from '../components/confirm/confirm';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import * as dashboard from '../utils/dashboard';
 
-// TODO: replace with each plugin version
-const cacheParam = new Date().getTime();
-
 class PluginManager {
     pluginsList = [];
 
@@ -127,23 +124,6 @@ class PluginManager {
         return this.ofType(type)
             // Return the plugin with the "highest" (lowest numeric value) priority
             .sort((p1, p2) => (p1.priority || 0) - (p2.priority || 0))[0];
-    }
-
-    mapPath(plugin, path, addCacheParam) {
-        if (typeof plugin === 'string') {
-            plugin = this.pluginsList.filter((p) => {
-                return (p.id || p.packageName) === plugin;
-            })[0];
-        }
-
-        let url = plugin.baseUrl + '/' + path;
-
-        if (addCacheParam) {
-            url += url.includes('?') ? '&' : '?';
-            url += 'v=' + cacheParam;
-        }
-
-        return url;
     }
 }
 
