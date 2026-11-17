@@ -1,3 +1,5 @@
+import 'jquery';
+
 import Box from '@mui/material/Box';
 import { type Theme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
