@@ -1,3 +1,4 @@
+export { enableHlsJsPlayer, enableHlsJsPlayerForCodecs } from 'lib/playback/hlsSupport';
 import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/media-source-info';
 
 import type { MediaInstance, MediaPlayOptions, WindowsMediaAdapter } from 'lib/playback/types/htmlMedia';
@@ -25,6 +26,7 @@ export function getCrossOriginValue(mediaSource: MediaSourceInfo) {
 }
 
 export function onErrorInternal(instance: MediaInstance, type: string) {
+    destroyHlsPlayer(instance);
     if (instance.destroyCustomTrack) {
         instance.destroyCustomTrack(instance._mediaElement);
     }
@@ -141,6 +143,21 @@ export function destroyCastPlayer(instance: MediaInstance) {
     }
 }
 
+export function destroyHlsPlayer(instance: MediaInstance) {
+    const request = instance._hlsRequest;
+    instance._hlsRequest = null;
+    request?.cancel();
+    const player = instance._hlsPlayer;
+    instance._hlsPlayer = null;
+    if (player) {
+        try {
+            player.destroy();
+        } catch (error) {
+            console.error(error);
+        }
+    }
+}
+
 export function destroyFlvPlayer(instance: MediaInstance) {
     const player = instance._flvPlayer;
     if (player) {
@@ -161,6 +178,7 @@ export function onEndedInternal(instance: MediaInstance, elem: HTMLMediaElement,
 
     resetSrc(elem);
 
+    destroyHlsPlayer(instance);
     destroyFlvPlayer(instance);
     destroyCastPlayer(instance);
 

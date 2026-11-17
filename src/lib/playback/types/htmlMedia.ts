@@ -10,6 +10,9 @@ export type MediaPlayOptions = {
 type UnloadablePlayer = { unload: () => void };
 
 export type MediaInstance = {
+    _hlsPlayer?: import('hls.js').default | null;
+    _hlsRequest?: { cancel: () => void } | null;
+    _hlsRecovery?: { decoding?: number; swap?: number };
     _mediaElement?: HTMLMediaElement | null;
     destroyCustomTrack?: (element?: HTMLMediaElement | null) => void;
     _castPlayer?: UnloadablePlayer | null;

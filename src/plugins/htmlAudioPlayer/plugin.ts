@@ -17,6 +17,9 @@ export class HtmlAudioPlayer {
     type!: string;
     id!: string;
     priority!: number;
+    _hlsPlayer?: import('hls.js').default | null;
+    _hlsRequest?: import('lib/playback/types/htmlMedia').MediaInstance['_hlsRequest'];
+    _hlsRecovery?: import('lib/playback/types/htmlMedia').MediaInstance['_hlsRecovery'];
     _started?: boolean;
     _timeUpdated?: boolean;
     _isFadingOut?: boolean;

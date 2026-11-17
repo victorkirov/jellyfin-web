@@ -1,4 +1,3 @@
-import { getDeviceProfile } from './apphost/deviceProfile';
 import type { BrowserDetection } from 'types/legacyPlayer';
 import appSettings from '../scripts/settings/appSettings';
 import detectedBrowser from '../scripts/browser';
@@ -272,7 +271,8 @@ export const appHost = {
         return supportedFeatures.indexOf(command.toLowerCase()) !== -1;
     },
     preferVisualCards: browser.android || browser.chrome,
-    getDeviceProfile,
+    getDeviceProfile: (item?: import('types/legacyPlayer').PlayerOptions['item'] | null, options?: { isRetry?: boolean }) =>
+        import('./apphost/deviceProfile').then(profile => profile.getDeviceProfile(item, options)),
     init: function () {
         if (window.NativeShell) {
             return window.NativeShell.AppHost.init();

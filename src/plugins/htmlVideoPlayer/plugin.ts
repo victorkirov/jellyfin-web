@@ -1,3 +1,5 @@
+import { destroyHlsPlayer, handleHlsJsMediaError, startHlsPlayback } from 'components/playback/hlsPlayer';
+import { enableHlsJsPlayerForCodecs } from 'lib/playback/hlsSupport';
 import { VideoSubtitles } from 'components/playback/VideoSubtitles';
 import { getMediaStreamAudioTracks, zoomIn, getSubtitleTimeOffset } from 'components/playback/videoTrackHelpers';
 import type { BrowserDetection, PlayerOptions, PlayerProfile, PlayerStream } from 'types/legacyPlayer';
@@ -55,6 +57,10 @@ export class HtmlVideoPlayer extends VideoSubtitles {
     private videoStarted: boolean | undefined;
     private videoTimeUpdated: boolean | undefined;
     private videoCurrentTime: number | null | undefined;
+
+    _hlsPlayer?: import('hls.js').default | null;
+    _hlsRequest?: import('lib/playback/types/htmlMedia').MediaInstance['_hlsRequest'];
+    _hlsRecovery?: import('lib/playback/types/htmlMedia').MediaInstance['_hlsRecovery'];
 
     _flvPlayer: import('lib/playback/types/htmlMedia').MediaInstance['_flvPlayer'] | undefined;
 
@@ -201,6 +207,7 @@ export class HtmlVideoPlayer extends VideoSubtitles {
             val += `#t=${seconds}`;
         }
 
+        destroyHlsPlayer(this);
         destroyFlvPlayer(this);
         destroyCastPlayer(this);
 
@@ -217,7 +224,17 @@ export class HtmlVideoPlayer extends VideoSubtitles {
             elem.crossOrigin = crossOrigin;
         }
 
-        if (options.playMethod !== 'Transcode' && options.mediaSource.Container?.toUpperCase() === 'FLV') {
+        if (enableHlsJsPlayerForCodecs(options.mediaSource, 'Video') && isHls(options.mediaSource)) {
+            const highBitrate = (browser.chrome || browser.edgeChromium || browser.firefox)
+                && playbackManager.getMaxStreamingBitrate(this as unknown as import('types/plugin').PlaybackPlayer) >= 25000000;
+            const maxBufferLength = highBitrate ? 6 : 30;
+            return startHlsPlayback(this, elem, val, this.onError, {
+                startPosition: (options.playerStartPositionTicks || 0) / TICKS_PER_SECOND,
+                maxBufferLength,
+                maxMaxBufferLength: maxBufferLength,
+                videoPreference: { preferHDR: true }
+            }, () => { this.videoCurrentSrc = val; });
+        } else if (options.playMethod !== 'Transcode' && options.mediaSource.Container?.toUpperCase() === 'FLV') {
             return this.setSrcWithFlvJs(elem, options, val);
         } else {
             elem.autoplay = true;
@@ -335,6 +352,7 @@ export class HtmlVideoPlayer extends VideoSubtitles {
     destroy() {
         this.setSubtitleOffset.cancel();
 
+        destroyHlsPlayer(this);
         destroyFlvPlayer(this);
 
         setBackdropTransparency(TRANSPARENCY_LEVEL.None);
@@ -521,6 +539,10 @@ export class HtmlVideoPlayer extends VideoSubtitles {
                 break;
             case 3:
                 // MEDIA_ERR_DECODE
+                if (this._hlsPlayer) {
+                    handleHlsJsMediaError(this);
+                    return;
+                }
                 type = MediaError.MEDIA_DECODE_ERROR;
                 break;
             case 4:
@@ -1054,7 +1076,7 @@ export class HtmlVideoPlayer extends VideoSubtitles {
         categories.push(mediaCategory);
 
         const mediaInfos = [];
-        mediaInfos.push('Video');
+        mediaInfos.push(this._hlsPlayer ? 'HLS' : 'Video');
         if (playOptions.url) {
             //  create an anchor element (note: no need to append this element to the document)
             let link: HTMLAnchorElement | null = document.createElement('a');

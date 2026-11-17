@@ -20,7 +20,7 @@ vi.mock('../../components/playback/playbackmanager', () => ({ playbackManager: {
 vi.mock('../../components/router/appRouter', () => ({ appRouter: {} }));
 vi.mock('../../components/htmlMediaHelper', () => ({
     getSavedVolume: () => 1,
-    destroyFlvPlayer: vi.fn(), destroyCastPlayer: vi.fn(), getCrossOriginValue: () => null,
+    destroyHlsPlayer: vi.fn(), destroyFlvPlayer: vi.fn(), destroyCastPlayer: vi.fn(), getCrossOriginValue: () => null,
     applySrc: (element: HTMLVideoElement, url: string) => {
         element.setAttribute('src', url);
         return Promise.resolve();

@@ -1,23 +1,34 @@
-import type { PlayerOptions, PlayerProfile } from 'types/legacyPlayer';
+import { enableHlsJsPlayer } from 'lib/playback/hlsSupport';
+import detectedBrowser from 'scripts/browser';
+import type { BrowserDetection, PlayerOptions, PlayerProfile } from 'types/legacyPlayer';
 import appSettings from 'scripts/settings/appSettings';
 import profileBuilder from 'scripts/browserDeviceProfile';
 import { appHost } from '../apphost';
 
-function getBaseProfileOptions() {
+const browser = detectedBrowser as BrowserDetection;
+
+function getBaseProfileOptions(item?: PlayerOptions['item'] | null) {
+    const disableHlsVideoAudioCodecs: string[] = [];
+    if (item && enableHlsJsPlayer(item.RunTimeTicks, item.MediaType)) {
+        if (browser.edge) disableHlsVideoAudioCodecs.push('mp3');
+        if (!browser.edgeChromium) disableHlsVideoAudioCodecs.push('ac3', 'eac3');
+        if (!(browser.chrome || browser.edgeChromium || browser.firefox)) disableHlsVideoAudioCodecs.push('opus');
+    }
     return {
-        enableMkvProgressive: false
+        enableMkvProgressive: false,
+        disableHlsVideoAudioCodecs
     };
 }
 
 export function getDeviceProfile(item?: PlayerOptions['item'] | null, options?: { isRetry?: boolean }): Promise<PlayerProfile>;
-export function getDeviceProfile() {
+export function getDeviceProfile(item?: PlayerOptions['item'] | null) {
     return new Promise<PlayerProfile>(function (resolve) {
         let profile: PlayerProfile;
 
         if (window.NativeShell) {
             profile = window.NativeShell.AppHost.getDeviceProfile(profileBuilder, __PACKAGE_JSON_VERSION__);
         } else {
-            const builderOpts = getBaseProfileOptions();
+            const builderOpts = getBaseProfileOptions(item);
             // The JS builder populates these arrays after its initial object declaration.
             profile = profileBuilder(builderOpts) as unknown as PlayerProfile;
         }

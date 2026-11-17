@@ -1,3 +1,5 @@
+import { destroyHlsPlayer, handleHlsJsMediaError, startHlsPlayback, isHlsAudioSource } from './hlsPlayer';
+import { enableHlsJsPlayer } from 'lib/playback/hlsSupport';
 import type { BrowserDetection, PlayerOptions } from 'types/legacyPlayer';
 import { AppFeature } from 'constants/appFeature';
 import { PluginType } from 'constants/pluginType';
@@ -53,6 +55,7 @@ function supportsFade() {
 }
 
 export function initializeAudioPlayer(self: HtmlAudioPlayer) {
+    let sourceRequest = 0;
     self.name = 'Html Audio Player';
     self.type = PluginType.MediaPlayer;
     self.id = 'htmlaudioplayer';
@@ -70,7 +73,8 @@ export function initializeAudioPlayer(self: HtmlAudioPlayer) {
         return setCurrentSrc(elem, options);
     };
 
-    function setCurrentSrc(elem: HTMLAudioElement, options: PlayerOptions) {
+    async function setCurrentSrc(elem: HTMLAudioElement, options: PlayerOptions) {
+        const request = ++sourceRequest;
         unBindEvents(elem);
         bindEvents(elem);
 
@@ -122,6 +126,7 @@ export function initializeAudioPlayer(self: HtmlAudioPlayer) {
             val += '#t=' + seconds;
         }
 
+        destroyHlsPlayer(self);
         self._currentPlayOptions = options;
 
         const crossOrigin = htmlMediaHelper.getCrossOriginValue(options.mediaSource);
@@ -132,6 +137,18 @@ export function initializeAudioPlayer(self: HtmlAudioPlayer) {
         // This avoids the AudioContext being suspended when Safari is put into background
         if ('audioSession' in navigator) {
             navigator.audioSession.type = 'playback';
+        }
+
+        const hlsEnabled = enableHlsJsPlayer(options.mediaSource.RunTimeTicks, 'Audio');
+        const hlsSource = hlsEnabled && await isHlsAudioSource(val);
+        if (request !== sourceRequest) {
+            const error = new Error('Audio source cancelled');
+            error.name = 'AbortError';
+            throw error;
+        }
+        if (hlsSource) {
+            self._currentSrc = val;
+            return startHlsPlayback(self, elem, val, onError);
         }
 
         return getIncludeCorsCredentials().then((includeCorsCredentials) => {
@@ -172,6 +189,8 @@ export function initializeAudioPlayer(self: HtmlAudioPlayer) {
     }
 
     self.stop = function (destroyPlayer) {
+        sourceRequest++;
+        if (!self._hlsPlayer) destroyHlsPlayer(self);
         cancelFadeTimeout();
 
         const elem = self._mediaElement;
@@ -206,6 +225,8 @@ export function initializeAudioPlayer(self: HtmlAudioPlayer) {
     };
 
     self.destroy = function () {
+        sourceRequest++;
+        destroyHlsPlayer(self);
         unBindEvents(self._mediaElement);
         htmlMediaHelper.resetSrc(self._mediaElement);
     };
@@ -320,6 +341,10 @@ export function initializeAudioPlayer(self: HtmlAudioPlayer) {
                 break;
             case 3:
                 // MEDIA_ERR_DECODE
+                if (self._hlsPlayer) {
+                    handleHlsJsMediaError(self);
+                    return;
+                }
                 type = MediaError.MEDIA_DECODE_ERROR;
                 break;
             case 4:

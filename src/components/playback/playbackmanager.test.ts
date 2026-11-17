@@ -1,12 +1,17 @@
+import { startHlsPlayback } from './hlsPlayer';
+import { onEndedInternal } from '../htmlMediaHelper';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PlaybackManager } from './playbackmanager';
 import { createPlaybackControls } from './playbackControls';
 import Events from '../../utils/events';
 import { pluginManager } from '../pluginManager';
 import { MediaError } from 'types/mediaError';
-import type { PlaybackItem } from 'lib/playback/types';
+import type { PlaybackItem, PlaybackStreamInfo } from 'lib/playback/types';
 
 const mocks = vi.hoisted(() => ({
+    hlsAutoStart: true,
+    hlsPlayers: [] as { destroy: ReturnType<typeof vi.fn>; loadSource: ReturnType<typeof vi.fn>; listeners: Map<string, () => void> }[],
     players: [] as object[],
     interceptors: [] as object[],
     alert: vi.fn(),
@@ -27,6 +32,17 @@ const mocks = vi.hoisted(() => ({
         stopActiveEncodings: vi.fn(), closeLiveStream: vi.fn()
     }
 }));
+vi.mock('scripts/settings/webSettings', () => ({ getIncludeCorsCredentials: () => Promise.resolve(false) }));
+vi.mock('hls.js/dist/hls.js', () => ({ default: class {
+    static readonly DefaultConfig = {};
+    static readonly Events = { ['MANIFEST_PARSED']: 'manifest', ERROR: 'error' };
+    listeners = new Map<string, () => void>();
+    destroy = vi.fn();
+    loadSource = vi.fn();
+    constructor() { mocks.hlsPlayers.push(this); }
+    on(event: string, listener: () => void) { this.listeners.set(event, listener); }
+    attachMedia() { if (mocks.hlsAutoStart) this.listeners.get('manifest')!(); }
+} }));
 vi.mock('@jellyfin/sdk/lib/utils/api/media-info-api', () => ({ getMediaInfoApi: () => ({ getPostedPlaybackInfo: mocks.getPostedPlaybackInfo, closeLiveStream: mocks.apiClient.closeLiveStream }) }));
 vi.mock('../pluginManager', () => ({ pluginManager: { prepareForPlayback: vi.fn().mockResolvedValue(undefined), canPlayDeferred: () => false, ofType: (type: string) => type === 'mediaplayer' ? mocks.players : mocks.interceptors } }));
 vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: { getApi: () => ({}), getApiClient: () => mocks.apiClient, currentApiClient: () => mocks.apiClient } }));
@@ -76,6 +92,8 @@ function setup() {
 beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(pluginManager.prepareForPlayback).mockResolvedValue(undefined);
+    mocks.hlsPlayers.length = 0;
+    mocks.hlsAutoStart = true;
     mocks.players.length = 0;
     mocks.interceptors.length = 0;
     mocks.localItem.mockReturnValue(false);
@@ -914,5 +932,61 @@ describe('playback facade composition', () => {
         for (const name of ['play', 'getPlayerState', 'getPlaybackInfo', 'getTargets', 'setActivePlayer', 'nextTrack', 'queue', 'setCurrentPlaylistItem', 'setBrightness', 'stop'] as const) {
             expect(manager[name]).toBeTypeOf('function');
         }
+    });
+});
+
+function setupHlsSession() {
+    const context = setup();
+    const { player } = context;
+    const element = document.createElement('video');
+    vi.spyOn(element, 'play').mockResolvedValue(undefined);
+    const instance = Object.assign(player, { _mediaElement: element, _currentSrc: null as string | null });
+    player.play.mockImplementation(async (stream: PlaybackStreamInfo) => {
+        instance._currentSrc = stream.url || 'master.m3u8';
+        await startHlsPlayback(instance, element, instance._currentSrc, vi.fn());
+    });
+    player.stop.mockImplementation(() => {
+        onEndedInternal(instance, element, vi.fn());
+        return Promise.resolve();
+    });
+    mocks.getPostedPlaybackInfo.mockResolvedValue({ data: { MediaSources: [{
+        ...source(true), TranscodingSubProtocol: 'hls', TranscodingContainer: 'mp4', TranscodingUrl: 'master.m3u8?PlaySessionId=session'
+    }] } });
+    return { ...context, element };
+}
+
+describe('HLS sessions through playback manager stop and stream changes', () => {
+    it('destroys the HLS session through manager Stop and releases playback state', async () => {
+        const { manager, player, play } = setupHlsSession();
+        await play();
+        expect(mocks.hlsPlayers).toHaveLength(1);
+        await manager.stop(player);
+        expect(mocks.hlsPlayers[0].destroy).toHaveBeenCalledOnce();
+        expect(manager.getCurrentPlayer()).toBeFalsy();
+        expect(player.streamInfo).toBeNull();
+    });
+    it('replaces the HLS session when changing server audio streams', async () => {
+        const { manager, player, play } = setupHlsSession();
+        await play();
+        manager.setAudioStreamIndex(4, player);
+        await vi.waitFor(() => expect(mocks.hlsPlayers).toHaveLength(2));
+        await vi.waitFor(() => expect(player.isChangingStream).toBe(false));
+        expect(mocks.hlsPlayers[0].destroy).toHaveBeenCalledOnce();
+        await manager.stop(player);
+        expect(mocks.hlsPlayers[1].destroy).toHaveBeenCalledOnce();
+    });
+    it('cancels a changed stream awaiting its manifest and ignores its late callback', async () => {
+        const { manager, player, play, element } = setupHlsSession();
+        await play();
+        mocks.hlsAutoStart = false;
+        manager.setAudioStreamIndex(4, player);
+        await vi.waitFor(() => expect(mocks.hlsPlayers).toHaveLength(2));
+        await manager.stop(player);
+        const playCount = vi.mocked(element.play).mock.calls.length;
+        mocks.hlsPlayers[1].listeners.get('manifest')!();
+        await vi.waitFor(() => expect(player.isChangingStream).toBe(false));
+        expect(element.play).toHaveBeenCalledTimes(playCount);
+        expect(mocks.hlsPlayers[1].destroy).toHaveBeenCalledOnce();
+        expect(manager.getCurrentPlayer()).toBeFalsy();
     });
 });
