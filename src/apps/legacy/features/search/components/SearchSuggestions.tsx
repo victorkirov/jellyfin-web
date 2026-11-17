@@ -7,6 +7,7 @@ import globalize from 'lib/globalize';
 import LinkButton from 'components/buttons/LinkButton';
 
 import 'components/buttons/emby-button';
+import './SearchSuggestions.scss';
 
 type SearchSuggestionsProps = {
     parentId?: string | null;
@@ -20,7 +21,6 @@ const SearchSuggestions: FunctionComponent<SearchSuggestionsProps> = ({ parentId
     return (
         <div
             className='verticalSection searchSuggestions'
-            style={{ textAlign: 'center' }}
         >
             <div>
                 <h2 className='sectionTitle padded-left padded-right'>
@@ -29,11 +29,10 @@ const SearchSuggestions: FunctionComponent<SearchSuggestionsProps> = ({ parentId
             </div>
 
             <div className='searchSuggestionsList padded-left padded-right'>
-                {suggestions?.map(item => (
+                {suggestions?.slice(0, 8).map(item => (
                     <div key={item.Id}>
                         <LinkButton
-                            className='button-link'
-                            style={{ display: 'inline-block', padding: '0.5em 1em' }}
+                            className='searchSuggestion'
                             href={appRouter.getRouteUrl(item)}
                         >
                             {item.Name}

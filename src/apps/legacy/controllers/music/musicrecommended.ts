@@ -1,3 +1,4 @@
+import { bindLibraryRail } from '../libraryRail';
 import * as mainTabsManager from 'components/maintabsmanager';
 import createTabControllerCache from '../tabControllerCache';
 import layoutManager from 'lib/layoutManager';
@@ -24,6 +25,7 @@ export default class RecommendedPage {
     _unsubscribeUserData?: (() => void) | null;
 
     constructor(view: HTMLElement, params: RecommendedParams) {
+        bindLibraryRail(view);
         const reload = () => {
             loading.show();
             const tabContent = view.querySelector<HTMLElement>(".pageTabContent[data-index='" + suggestionsTabIndex + "']")!;

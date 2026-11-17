@@ -1,0 +1,22 @@
+.searchSuggestions {
+    text-align: left;
+}
+
+.searchSuggestionsList .searchSuggestion {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    min-height: 2.6em;
+    width: 100%;
+    padding: 0.4em 0.75em;
+    margin: 0;
+    border-radius: 0.2em;
+    text-align: left;
+    color: #f5f5f5;
+}
+
+.searchSuggestionsList .searchSuggestion:focus {
+    background: #00a4dc;
+    color: #111;
+    transform: none;
+}

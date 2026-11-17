@@ -68,46 +68,6 @@ const UserSettingsPage: FC = () => {
                             {user.Name}
                         </h2>
 
-                        {isQuickConnectEnabled && (
-                            <LinkButton
-                                href={`#/quickconnect?userId=${userId}`}
-                                className='lnkQuickConnectPreferences listItem-border'
-                                style={{
-                                    display: 'block',
-                                    margin: 0,
-                                    padding: 0
-                                }}
-                            >
-                                <div className='listItem'>
-                                    <span className='material-icons listItemIcon listItemIcon-transparent phonelink_lock' aria-hidden='true' />
-                                    <div className='listItemBody'>
-                                        <div className='listItemBodyText'>
-                                            {globalize.translate('QuickConnect')}
-                                        </div>
-                                    </div>
-                                </div>
-                            </LinkButton>
-                        )}
-
-                        <LinkButton
-                            href={`#/mypreferencesdisplay?userId=${userId}`}
-                            className='lnkDisplayPreferences listItem-border'
-                            style={{
-                                display: 'block',
-                                margin: 0,
-                                padding: 0
-                            }}
-                        >
-                            <div className='listItem'>
-                                <span className='material-icons listItemIcon listItemIcon-transparent tv' aria-hidden='true' />
-                                <div className='listItemBody'>
-                                    <div className='listItemBodyText'>
-                                        {globalize.translate('Display')}
-                                    </div>
-                                </div>
-                            </div>
-                        </LinkButton>
-
                         <LinkButton
                             href={`#/mypreferencesplayback?userId=${userId}`}
                             className='lnkPlaybackPreferences listItem-border'
@@ -141,6 +101,25 @@ const UserSettingsPage: FC = () => {
                                 <div className='listItemBody'>
                                     <div className='listItemBodyText'>
                                         {globalize.translate('Subtitles')}
+                                    </div>
+                                </div>
+                            </div>
+                        </LinkButton>
+
+                        <LinkButton
+                            href={`#/mypreferencesdisplay?userId=${userId}`}
+                            className='lnkDisplayPreferences listItem-border'
+                            style={{
+                                display: 'block',
+                                margin: 0,
+                                padding: 0
+                            }}
+                        >
+                            <div className='listItem'>
+                                <span className='material-icons listItemIcon listItemIcon-transparent tv' aria-hidden='true' />
+                                <div className='listItemBody'>
+                                    <div className='listItemBodyText'>
+                                        {globalize.translate('Display')}
                                     </div>
                                 </div>
                             </div>
@@ -216,6 +195,27 @@ const UserSettingsPage: FC = () => {
                                         <div className='listItemBody'>
                                             <div className='listItemBodyText'>
                                                 {globalize.translate('SelectServer')}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </LinkButton>
+                            )}
+
+                            {isQuickConnectEnabled && (
+                                <LinkButton
+                                    href={`#/quickconnect?userId=${userId}`}
+                                    className='lnkQuickConnectPreferences listItem-border'
+                                    style={{
+                                        display: 'block',
+                                        margin: 0,
+                                        padding: 0
+                                    }}
+                                >
+                                    <div className='listItem'>
+                                        <span className='material-icons listItemIcon listItemIcon-transparent phonelink_lock' aria-hidden='true' />
+                                        <div className='listItemBody'>
+                                            <div className='listItemBodyText'>
+                                                {globalize.translate('QuickConnect')}
                                             </div>
                                         </div>
                                     </div>

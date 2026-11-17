@@ -1,0 +1,61 @@
+.layout-tv .libraryRail {
+    position: fixed;
+    left: 0.67em;
+    top: 9.4em;
+    width: 3.63em;
+    z-index: 1;
+
+    button {
+        display: block;
+        box-sizing: border-box;
+        width: 3.63rem;
+        height: 3.63rem;
+        margin: 0;
+        padding: 0;
+        border-radius: 0.2em;
+    }
+
+    .alphaPicker-jump { margin: 0; }
+
+    .alphaPickerTrigger {
+        font-size: 1.2em;
+        font-weight: 700;
+    }
+
+    .paging { text-align: center; }
+
+    button:focus {
+        background: #00a4dc;
+        color: #111;
+        transform: none;
+    }
+}
+
+.layout-tv .libraryRail ~ .itemsContainer {
+    padding-left: 5em;
+}
+
+// Keep the count above the rail without adding a ninth button-height row.
+.layout-tv .libraryRail .listPaging > span {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    width: 7em;
+    text-align: left;
+    font-size: 0.75em;
+    margin-bottom: 0.5em;
+}
+
+// Shared scroller CSS can load after details; keep vertical-grid artwork geometry stable.
+.layout-tv .libraryRail ~ .itemsContainer > .card > .cardBox {
+    margin-left: 0.4em;
+    margin-right: 0.4em;
+}
+
+.layout-tv .libraryRail button[aria-disabled="true"] {
+    opacity: 0.35;
+}
+
+.layout-tv .libraryRail button[aria-disabled="true"]:focus {
+    opacity: 1;
+}

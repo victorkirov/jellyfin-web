@@ -27,3 +27,22 @@
     text-overflow: ellipsis;
     overflow: hidden;
 }
+
+.layout-tv .homeLibraryButton {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    height: 2.6em;
+    padding: 0 0.75em;
+    background: #262626;
+    color: #f5f5f5;
+    border-radius: 0.2em;
+    box-shadow: none;
+}
+
+.layout-tv .homeLibraryButton:focus {
+    background: #00a4dc;
+    color: #111;
+    transform: none;
+}

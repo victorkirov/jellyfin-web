@@ -1,4 +1,5 @@
 import { getShowItemsHtml, getShowSortOptions } from './showItems';
+import { focusLibraryContent } from '../libraryRail';
 import type { LibraryPageData } from '../libraryControllerTypes';
 import { bindLibraryPaging, getLibraryLayout, libraryLayouts, supportedLibraryLayout } from '../libraryPaging';
 import loading from 'components/loading/loading';
@@ -94,6 +95,10 @@ export default class LibraryTab {
                 itemsContainer.innerHTML = html;
                 imageLoader.lazyChildren(itemsContainer);
                 userSettings.saveQuerySettings(getSavedQueryKey(), query);
+                if (tabContent.querySelector('.libraryRail')) {
+                    focusLibraryContent(tabContent);
+                    return;
+                }
                 void import('components/autoFocuser').then(({ default: autoFocuser }) => {
                     if (request === requestId && active) autoFocuser.autoFocus(page);
                 });
@@ -133,7 +138,7 @@ export default class LibraryTab {
         const initPage = (tabElement: HTMLElement) => {
             const alphaPickerElement = tabElement.querySelector<HTMLElement>('.alphaPicker')!;
             alphaPickerElement.addEventListener('alphavaluechanged', function (e) {
-                const newValue = (e as CustomEvent<{ value: string }>).detail.value;
+                const newValue = (e as CustomEvent<{ value: string | null }>).detail.value;
                 const query = getQuery();
                 if (newValue === '#') {
                     query.NameLessThan = 'A';

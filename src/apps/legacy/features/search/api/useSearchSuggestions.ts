@@ -23,7 +23,7 @@ const fetchGetItems = async (
                 BaseItemKind.Series,
                 BaseItemKind.MusicArtist
             ],
-            limit: 20,
+            limit: 8,
             recursive: true,
             imageTypeLimit: 0,
             enableImages: false,

@@ -1,3 +1,4 @@
+import { focusLibraryContent } from '../libraryRail';
 import { getMovieItemsHtml, getMovieSortOptions } from './movieItems';
 import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client';
 import type { LibraryQuery } from '../libraryControllerTypes';
@@ -83,6 +84,10 @@ export default class LibraryTab {
             tabContent.querySelector('.btnPlayAll')?.classList.toggle('hide', result.TotalRecordCount < 1);
             tabContent.querySelector('.btnShuffle')?.classList.toggle('hide', result.TotalRecordCount < 1);
 
+            if (tabContent.querySelector('.libraryRail')) {
+                focusLibraryContent(tabContent);
+                return;
+            }
             const request = requestId;
             void import('components/autoFocuser').then(({ default: autoFocuser }) => {
                 if (request === requestId && active && itemsContainer) autoFocuser.autoFocus(tabContent);
@@ -97,7 +102,7 @@ export default class LibraryTab {
 
             if (alphaPickerElement) {
                 alphaPickerElement.addEventListener('alphavaluechanged', function (e) {
-                    const newValue = (e as CustomEvent<{ value: string }>).detail.value;
+                    const newValue = (e as CustomEvent<{ value: string | null }>).detail.value;
                     if (newValue === '#') {
                         query.NameLessThan = 'A';
                         delete query.NameStartsWith;
@@ -149,7 +154,7 @@ export default class LibraryTab {
                 itemsContainer!.refreshItems().catch(console.error);
             });
 
-            tabElement.querySelector<HTMLElement>('.btnPlayAll')!.addEventListener('click', playAll);
+            tabElement.querySelector<HTMLElement>('.btnPlayAll')?.addEventListener('click', playAll);
             tabElement.querySelector('.btnShuffle')?.addEventListener('click', shuffle);
         };
 

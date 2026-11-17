@@ -128,8 +128,8 @@ describe.each([
     { name: 'music', Factory: Music, count: 7, type: 'Audio', limit: 27, fields: ['PrimaryImageAspectRatio'], images: ['Primary', 'Backdrop', 'Banner', 'Thumb'] }
 ])('$name recommended controller', ({ name, Factory, count, type, limit, fields, images }) => {
     it('handles Search commands and unregisters the same listener on hide', () => {
-        vi.mocked(inputManager.on).mockImplementationOnce((scope, listener) => scope.addEventListener('command', listener));
-        vi.mocked(inputManager.off).mockImplementationOnce((scope, listener) => scope.removeEventListener('command', listener));
+        vi.mocked(inputManager.on).mockImplementation((scope, listener) => scope.addEventListener('command', listener));
+        vi.mocked(inputManager.off).mockImplementation((scope, listener) => scope.removeEventListener('command', listener));
         const view = makeView(Factory);
         try {
             const search = new CustomEvent('command', { detail: { command: 'search' }, cancelable: true });

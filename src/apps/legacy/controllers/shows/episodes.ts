@@ -1,3 +1,4 @@
+import { AlphaPicker } from 'components/alphaPicker/alphaPicker';
 import { createLibraryRefresh } from '../libraryRefresh';
 import { bindLibraryPaging } from '../libraryPaging';
 import { getEpisodesHtml } from '../libraryItemRendering';
@@ -77,6 +78,7 @@ export default class LibraryTab {
         const refreshState = createLibraryRefresh({
             view, focus: tabContent, getQuery,
             load: query => {
+                this.alphaPicker?.updateControls(query);
                 setFilterStatus(tabContent, query);
                 return window.ApiClient.getItems(window.ApiClient.getCurrentUserId(), query);
             },
@@ -97,6 +99,23 @@ export default class LibraryTab {
         this.destroy = refreshState.destroy;
         this.isRefreshInterrupted = refreshState.isInterrupted;
         const reloadItems = () => refreshState.refreshSafely();
+        const alphaElement = tabContent.querySelector<HTMLElement>('.alphaPicker');
+        if (alphaElement) {
+            this.alphaPicker = new AlphaPicker({ element: alphaElement, valueChangeEvent: 'click' });
+            alphaElement.addEventListener('alphavaluechanged', event => {
+                const value = (event as CustomEvent<{ value: string | null }>).detail.value;
+                const query = getQuery();
+                if (value === '#') {
+                    query.NameLessThan = 'A';
+                    delete query.NameStartsWith;
+                } else {
+                    query.NameStartsWith = value || undefined;
+                    delete query.NameLessThan;
+                }
+                query.StartIndex = 0;
+                reloadItems();
+            });
+        }
 
         const data: Record<string, LibraryPageData> = {};
 

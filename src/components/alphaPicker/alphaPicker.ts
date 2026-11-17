@@ -36,7 +36,7 @@ export class AlphaPicker {
         const element = options.element;
         if (options.mode !== 'keyboard') {
             element.classList.add('alphaPicker-jump');
-            element.innerHTML = '<button is="emby-button" class="raised alphaPickerTrigger" aria-haspopup="dialog" aria-expanded="false">' + globalize.translate('JumpToLetter') + '</button>';
+            element.innerHTML = '<button is="emby-button" class="raised alphaPickerTrigger" aria-label="' + globalize.translate('JumpToLetter') + '" aria-haspopup="dialog" aria-expanded="false">' + 'A–Z</button>';
             const trigger = element.querySelector<HTMLButtonElement>('button')!;
             const openDialog = () => {
                 if (this.dialog) return;
@@ -47,8 +47,8 @@ export class AlphaPicker {
                 trigger.setAttribute('aria-expanded', 'true');
                 dialog.classList.add('alphaPickerDialog');
                 dialog.setAttribute('role', 'dialog');
-                dialog.setAttribute('aria-label', globalize.translate('JumpToLetter'));
-                dialog.innerHTML = '<h2>' + globalize.translate('JumpToLetter') + '</h2><div class="alphaPickerLetters">'
+                dialog.setAttribute('aria-label', globalize.translate('TitlesStartingWith'));
+                dialog.innerHTML = '<h2>' + globalize.translate('TitlesStartingWith') + '</h2><div class="alphaPickerLetters">'
                     + '<button class="alphaPickerButton alphaPickerButton-tv" data-value="">' + globalize.translate('All') + '</button>'
                     + mapLetters(libraryLetters).join('') + '</div>';
                 const selectedValue = libraryLetters.indexOf(this._currentValue || '') === -1 ? '' : this._currentValue;
@@ -62,7 +62,11 @@ export class AlphaPicker {
                     if (!button) return;
                     const value = button.getAttribute('data-value');
                     dialogHelper.close(dialog);
-                    this.value(value && value !== this._currentValue ? value : null, true);
+                    if ((value || null) === (this._currentValue || null)) {
+                        element.dispatchEvent(new CustomEvent('alphavalueconfirmed', { bubbles: true }));
+                    } else {
+                        this.value(value || null, true);
+                    }
                 });
                 dialog.addEventListener('close', () => {
                     this.dialog = null;
@@ -96,7 +100,7 @@ export class AlphaPicker {
 
         const trigger = element.querySelector('.alphaPickerTrigger');
         if (trigger) {
-            trigger.textContent = globalize.translate('JumpToLetter') + (this._currentValue ? ': ' + this._currentValue : '');
+            trigger.textContent = this._currentValue || 'A–Z';
         }
 
         if (applyValue) {
@@ -139,11 +143,11 @@ export class AlphaPicker {
         element.removeEventListener(name, fn);
     }
 
-    updateControls(query: { NameLessThan?: string; NameStartsWith?: string; SortBy?: string }) {
+    updateControls(query: { NameLessThan?: string; NameStartsWith?: string | null; SortBy?: string }) {
         if (query.NameLessThan) {
             this.value('#');
         } else {
-            this.value(query.NameStartsWith);
+            this.value(query.NameStartsWith || null);
         }
 
         this.visible((query.SortBy || '').indexOf('SortName') !== -1);

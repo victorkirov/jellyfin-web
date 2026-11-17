@@ -1,3 +1,4 @@
+import { bindLibraryRail } from '../libraryRail';
 import * as mainTabsManager from 'components/maintabsmanager';
 import createTabControllerCache from '../tabControllerCache';
 import ServerConnections from 'lib/jellyfin-apiclient/ServerConnections';
@@ -26,6 +27,7 @@ export default class RecommendedPage {
     _unsubscribeUserData?: (() => void) | null;
 
     constructor(view: HTMLElement, params: RecommendedParams) {
+        bindLibraryRail(view);
         const onBeforeTabChange = (e: CustomEvent<{ selectedTabIndex: string }>) => {
             void tabs.preload(parseInt(e.detail.selectedTabIndex, 10));
         };

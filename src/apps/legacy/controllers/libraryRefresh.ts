@@ -1,3 +1,4 @@
+import { focusLibraryContent } from './libraryRail';
 import type { BaseItemDtoQueryResult } from '@jellyfin/sdk/lib/generated-client';
 import loading from 'components/loading/loading';
 import type { LibraryQuery, LibraryResult } from './libraryControllerTypes';
@@ -31,6 +32,10 @@ export function createLibraryRefresh({ view, focus, getQuery, load, render, onEr
             // The legacy paging endpoints include these fields for library requests.
             render(response as LibraryResult, query);
             interrupted = false;
+            if (focus.querySelector('.libraryRail')) {
+                focusLibraryContent(focus);
+                return;
+            }
             return import('components/autoFocuser').then(({ default: autoFocuser }) => {
                 if (active && request === requestId) autoFocuser.autoFocus(focus);
             });

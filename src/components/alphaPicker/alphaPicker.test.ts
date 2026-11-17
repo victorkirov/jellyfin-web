@@ -34,7 +34,7 @@ describe('Library jump dialog', () => {
         const element = document.createElement('div');
         element.className = 'alphaPicker';
         const picker = new AlphaPicker({ element, valueChangeEvent: 'click' });
-        expect(element.querySelector('.alphaPickerTrigger')?.textContent).toBe('JumpToLetter');
+        expect(element.querySelector('.alphaPickerTrigger')?.textContent).toBe('A–Z');
         expect(element.querySelector('[data-value]')).toBeNull();
         picker.destroy();
     });
@@ -60,16 +60,19 @@ describe('Library jump dialog', () => {
         picker.destroy();
     });
 
-    it('clears a repeated letter and isolates two library pickers', async () => {
+    it('keeps a repeated letter and isolates two library pickers', async () => {
         const first = createPicker();
         first.button.click();
+        const changed = vi.fn();
+        first.element.addEventListener('alphavaluechanged', changed);
         await new Promise(resolve => setTimeout(resolve, 0));
         const second = createPicker();
         second.button.click();
         await new Promise(resolve => setTimeout(resolve, 0));
         first.element.querySelector<HTMLButtonElement>('button')!.click();
         document.querySelector<HTMLButtonElement>('.alphaPickerDialog [data-value="A"]')!.click();
-        expect(first.picker.value()).toBeNull();
+        expect(first.picker.value()).toBe('A');
+        expect(changed).not.toHaveBeenCalled();
         expect(second.picker.value()).toBe('A');
         first.picker.destroy();
         second.picker.destroy();
@@ -92,7 +95,7 @@ describe('Library jump dialog', () => {
         expect(element.style.display).toBe('none');
         picker.updateControls({ SortBy: 'SortName', NameLessThan: 'A' });
         expect(element.style.display).toBe('');
-        expect(element.querySelector('button')?.textContent).toBe('JumpToLetter: #');
+        expect(element.querySelector('button')?.textContent).toBe('#');
         picker.destroy();
     });
 

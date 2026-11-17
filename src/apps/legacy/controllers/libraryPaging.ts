@@ -1,3 +1,5 @@
+import { rememberLibraryPaging, forgetLibraryPaging, focusLibraryContent } from './libraryRail';
+import globalize from 'lib/globalize';
 import type { LibraryQuery } from './libraryControllerTypes';
 import libraryBrowser from 'scripts/libraryBrowser';
 import * as userSettings from 'scripts/settings/userSettings';
@@ -43,6 +45,16 @@ export function bindLibraryPaging({ view, query, totalRecordCount, isLoading, ge
     });
     for (const element of view.querySelectorAll('.paging')) {
         element.innerHTML = pagingHtml;
+        for (const button of element.querySelectorAll('.btnPreviousPage,.btnNextPage')) {
+            const label = globalize.translate(button.classList.contains('btnNextPage') ? 'Next' : 'Previous');
+            button.setAttribute('aria-label', label);
+            button.setAttribute('title', label);
+            // Keep rail paging focusable at either end so repeated presses never eject focus.
+            if (element.closest('.libraryRail') && button.hasAttribute('disabled')) {
+                button.removeAttribute('disabled');
+                button.setAttribute('aria-disabled', 'true');
+            }
+        }
     }
     function changePage(direction: number, control: Element) {
         if (isLoading() || (!query.Limit || query.Limit <= 0)) return;
@@ -50,15 +62,20 @@ export function bindLibraryPaging({ view, query, totalRecordCount, isLoading, ge
         const startIndex = Math.max(0, previousStartIndex + direction * query.Limit);
         if (startIndex === query.StartIndex || (totalRecordCount != null && startIndex >= totalRecordCount)) return;
         query.StartIndex = startIndex;
+        if (view.querySelector('.libraryRail')) rememberLibraryPaging(view, control);
         const refreshResult = refresh();
         const requestId = getRequestId();
         Promise.resolve(refreshResult).then(() => {
-            if (focus) focus();
+            if (getRequestId() !== requestId) return;
+            if (view.querySelector('.libraryRail')) focusLibraryContent(view);
+            else if (focus) focus();
         }).catch(error => {
             if (getRequestId() === requestId && query.StartIndex === startIndex && view.contains(control)) {
                 query.StartIndex = previousStartIndex;
             }
             console.error(error);
+        }).finally(() => {
+            if (getRequestId() === requestId) forgetLibraryPaging(view);
         });
     }
     for (const element of view.querySelectorAll('.btnNextPage')) {
