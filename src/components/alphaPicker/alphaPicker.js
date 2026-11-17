@@ -3,6 +3,8 @@
  * @module components/alphaPicker/alphaPicker
  */
 
+import dialogHelper from '../dialogHelper/dialogHelper';
+import '../../elements/emby-button/emby-button';
 import focusManager from '../focusManager';
 import layoutManager from '../layoutManager';
 import dom from '../../utils/dom';
@@ -10,6 +12,8 @@ import globalize from '../../lib/globalize';
 import './style.scss';
 import '../../elements/emby-button/paper-icon-button-light';
 import 'material-design-icons-iconfont';
+
+const libraryLetters = ['#', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')];
 
 const selectedButtonClass = 'alphaPickerButton-selected';
 
@@ -24,27 +28,23 @@ function focus() {
     }
 }
 
-function getAlphaPickerButtonClassName(vertical) {
+function getAlphaPickerButtonClassName() {
     let alphaPickerButtonClassName = 'alphaPickerButton';
 
     if (layoutManager.tv) {
         alphaPickerButtonClassName += ' alphaPickerButton-tv';
     }
 
-    if (vertical) {
-        alphaPickerButtonClassName += ' alphaPickerButton-vertical';
-    }
-
     return alphaPickerButtonClassName;
 }
 
-function getLetterButton(l, vertical) {
-    return `<button data-value="${l}" class="${getAlphaPickerButtonClassName(vertical)}">${l}</button>`;
+function getLetterButton(l) {
+    return `<button data-value="${l}" class="${getAlphaPickerButtonClassName()}">${l}</button>`;
 }
 
-function mapLetters(letters, vertical) {
+function mapLetters(letters) {
     return letters.map(l => {
-        return getLetterButton(l, vertical);
+        return getLetterButton(l);
     });
 }
 
@@ -55,33 +55,25 @@ function render(element, options) {
         element.classList.add('alphaPicker-tv');
     }
 
-    const vertical = element.classList.contains('alphaPicker-vertical');
-
-    if (!vertical) {
-        element.classList.add('focuscontainer-x');
-    }
+    element.classList.add('focuscontainer-x');
 
     let html = '';
     let letters;
 
-    const alphaPickerButtonClassName = getAlphaPickerButtonClassName(vertical);
+    const alphaPickerButtonClassName = getAlphaPickerButtonClassName();
 
-    let rowClassName = 'alphaPickerRow';
-
-    if (vertical) {
-        rowClassName += ' alphaPickerRow-vertical';
-    }
+    const rowClassName = 'alphaPickerRow';
 
     html += `<div class="${rowClassName}">`;
     if (options.mode === 'keyboard') {
         html += `<button data-value=" " is="paper-icon-button-light" class="${alphaPickerButtonClassName}" aria-label="${globalize.translate('ButtonSpace')}"><span class="material-icons alphaPickerButtonIcon space_bar" aria-hidden="true"></span></button>`;
     } else {
         letters = ['#'];
-        html += mapLetters(letters, vertical).join('');
+        html += mapLetters(letters).join('');
     }
 
     letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
-    html += mapLetters(letters, vertical).join('');
+    html += mapLetters(letters).join('');
 
     if (options.mode === 'keyboard') {
         html += `<button data-value="backspace" is="paper-icon-button-light" class="${alphaPickerButtonClassName}" aria-label="${globalize.translate('ButtonBackspace')}"><span class="material-icons alphaPickerButtonIcon backspace" aria-hidden="true"></span></button>`;
@@ -90,7 +82,7 @@ function render(element, options) {
         letters = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
         html += `<div class="${rowClassName}">`;
         html += '<br/>';
-        html += mapLetters(letters, vertical).join('');
+        html += mapLetters(letters).join('');
         html += '</div>';
     } else {
         html += '</div>';
@@ -109,6 +101,55 @@ export class AlphaPicker {
         this.options = options;
 
         const element = options.element;
+        if (options.mode !== 'keyboard') {
+            element.classList.add('alphaPicker-jump');
+            element.innerHTML = '<button is="emby-button" class="raised alphaPickerTrigger" aria-haspopup="dialog" aria-expanded="false">' + globalize.translate('JumpToLetter') + '</button>';
+            const trigger = element.querySelector('button');
+            const openDialog = () => {
+                if (this.dialog) return;
+                // The helper restores the focused trigger on Back and selection.
+                focusManager.focus(trigger);
+                const dialog = dialogHelper.createDialog({ scrollY: false });
+                this.dialog = dialog;
+                trigger.setAttribute('aria-expanded', 'true');
+                dialog.classList.add('alphaPickerDialog');
+                dialog.setAttribute('role', 'dialog');
+                dialog.setAttribute('aria-label', globalize.translate('JumpToLetter'));
+                dialog.innerHTML = '<h2>' + globalize.translate('JumpToLetter') + '</h2><div class="alphaPickerLetters">'
+                    + '<button class="alphaPickerButton alphaPickerButton-tv" data-value="">' + globalize.translate('All') + '</button>'
+                    + mapLetters(libraryLetters).join('') + '</div>';
+                const selectedValue = libraryLetters.indexOf(this._currentValue) === -1 ? '' : this._currentValue;
+                const selected = dialog.querySelector('[data-value="' + selectedValue + '"]');
+                if (selected) {
+                    selected.classList.add(selectedButtonClass);
+                    selected.setAttribute('autofocus', 'autofocus');
+                }
+                dialog.addEventListener('click', event => {
+                    const button = dom.parentWithClass(event.target, 'alphaPickerButton');
+                    if (!button) return;
+                    const value = button.getAttribute('data-value');
+                    dialogHelper.close(dialog);
+                    this.value(value && value !== this._currentValue ? value : null, true);
+                });
+                dialog.addEventListener('close', () => {
+                    this.dialog = null;
+                    trigger.setAttribute('aria-expanded', 'false');
+                });
+                dialogHelper.open(dialog);
+            };
+            this.enabled = enabled => {
+                if (enabled) {
+                    trigger.addEventListener('click', openDialog);
+                } else {
+                    trigger.removeEventListener('click', openDialog);
+                    if (this.dialog) dialogHelper.close(this.dialog);
+                }
+            };
+            this.enabled(true);
+            this.visible(true);
+            return;
+        }
+
         const itemsContainer = options.itemsContainer;
         const itemClass = options.itemClass;
 
@@ -259,6 +300,11 @@ export class AlphaPicker {
             }
         }
 
+        const trigger = element.querySelector('.alphaPickerTrigger');
+        if (trigger) {
+            trigger.textContent = globalize.translate('JumpToLetter') + (this._currentValue ? ': ' + this._currentValue : '');
+        }
+
         if (applyValue) {
             element.dispatchEvent(new CustomEvent('alphavaluechanged', {
                 cancelable: false,
@@ -294,9 +340,13 @@ export class AlphaPicker {
     visible(visible) {
         const element = this.options.element;
         element.style.visibility = visible ? 'visible' : 'hidden';
+        if (this.options.mode !== 'keyboard') {
+            element.style.display = visible ? '' : 'none';
+        }
     }
 
     values() {
+        if (this.options.mode !== 'keyboard') return libraryLetters.slice();
         const element = this.options.element;
         const elems = element.querySelectorAll('.alphaPickerButton');
         const values = [];

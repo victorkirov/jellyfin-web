@@ -226,10 +226,8 @@ function updateAlphaPickerState(instance) {
 
             if (values.sortBy.indexOf(ItemSortBy.SortName) !== -1) {
                 alphaPicker.classList.remove('hide');
-                instance.itemsContainer.parentNode.classList.add('padded-right-withalphapicker');
             } else {
                 alphaPicker.classList.add('hide');
-                instance.itemsContainer.parentNode.classList.remove('padded-right-withalphapicker');
             }
         }
     }
@@ -620,10 +618,7 @@ class ItemsView {
             self.scroller = view.querySelector('.scrollFrameY');
             const alphaPickerElement = self.alphaPickerElement;
 
-            alphaPickerElement.classList.add('alphaPicker-fixed-right');
-            alphaPickerElement.classList.add('focuscontainer-right');
-            self.itemsContainer.parentNode.classList.add('padded-right-withalphapicker');
-
+            view.querySelector('.itemsViewSettingsContainer').appendChild(alphaPickerElement);
             self.alphaPicker = new AlphaPicker({
                 element: alphaPickerElement,
                 valueChangeEvent: 'click'

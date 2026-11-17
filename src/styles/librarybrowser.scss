@@ -898,16 +898,6 @@ div:not(.sectionTitleContainer-cards) > .sectionTitle-cards {
     margin-bottom: -1.5em;
 }
 
-@media all and (min-height: 31.25em) {
-    [dir="ltr"] .padded-right-withalphapicker {
-        @include conditional-max(padding-right, 7.5%, env(safe-area-inset-right));
-    }
-
-    [dir="rtl"] .padded-right-withalphapicker {
-        @include conditional-max(padding-left, 7.5%, env(safe-area-inset-left));
-    }
-}
-
 .searchfields-icon {
     color: #aaa;
 }

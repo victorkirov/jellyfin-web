@@ -189,7 +189,6 @@ export default function (view, params, tabContent, options) {
 
     const initPage = (tabElement) => {
         const alphaPickerElement = tabElement.querySelector('.alphaPicker');
-        const itemsContainer = tabElement.querySelector('.itemsContainer');
 
         alphaPickerElement.addEventListener('alphavaluechanged', function (e) {
             const newValue = e.detail.value;
@@ -208,10 +207,6 @@ export default function (view, params, tabContent, options) {
             element: alphaPickerElement,
             valueChangeEvent: 'click'
         });
-
-        tabElement.querySelector('.alphaPicker').classList.add('alphabetPicker-right');
-        alphaPickerElement.classList.add('alphaPicker-fixed-right');
-        itemsContainer.classList.add('padded-right-withalphapicker');
 
         tabElement.querySelector('.btnFilter').addEventListener('click', () => {
             this.showFilterMenu();

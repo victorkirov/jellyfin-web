@@ -204,10 +204,6 @@ export default function (view, params, tabContent, options) {
                 element: alphaPickerElement,
                 valueChangeEvent: 'click'
             });
-
-            tabElement.querySelector('.alphaPicker').classList.add('alphabetPicker-right');
-            alphaPickerElement.classList.add('alphaPicker-fixed-right');
-            itemsContainer.classList.add('padded-right-withalphapicker');
         }
 
         const btnFilter = tabElement.querySelector('.btnFilter');

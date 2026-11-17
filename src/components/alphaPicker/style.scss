@@ -1,5 +1,3 @@
-@use '../../styles/mixins' as *;
-
 .alphaPicker {
     text-align: center;
     display: flex;
@@ -7,25 +5,11 @@
     align-self: center;
 }
 
-.alphaPicker-vertical {
-    line-height: 1;
-}
-
-.alphaPicker-fixed {
-    position: fixed;
-
-    @include conditional-max(bottom, 5.5em, env(safe-area-inset-bottom));
-}
-
 .alphaPickerRow {
     display: flex;
     align-items: center;
     justify-content: center;
     flex-direction: row;
-}
-
-.alphaPickerRow-vertical {
-    flex-direction: column;
 }
 
 .alphaPickerButton {
@@ -45,94 +29,40 @@
     flex-grow: 1;
 }
 
-@media all and (max-height: 50em) {
-    .alphaPicker-fixed {
-        @include conditional-max(bottom, 5em, env(safe-area-inset-bottom));
-    }
-
-    .alphaPickerButton-vertical {
-        padding-top: 1px !important;
-        padding-bottom: 1px !important;
-    }
-}
-
-@media all and (max-height: 49em) {
-    .alphaPicker-vertical {
-        font-size: 94%;
-    }
-}
-
-@media all and (max-height: 44em) {
-    .alphaPicker-vertical {
-        font-size: 90%;
-    }
-
-    .alphaPickerButton-vertical {
-        padding-top: 0 !important;
-        padding-bottom: 0 !important;
-    }
-}
-
-@media all and (max-height: 37em) {
-    .alphaPicker-vertical {
-        font-size: 82%;
-    }
-}
-
-@media all and (max-height: 32em) {
-    .alphaPicker-vertical {
-        font-size: 74%;
-    }
-}
-
-.alphaPicker-vertical.alphaPicker-tv {
-    font-size: 86%;
-}
-
-.alphaPickerButton-tv.alphaPickerButton-vertical {
-    padding: 0;
-}
-
-.alphaPickerButton-vertical {
-    /* Assign a fixed width to ensure they have the same dimensions and avoid throwing off directional navigation */
-    width: 1.5em;
-    display: flex;
-    justify-content: center;
-    text-align: center;
-}
-
 .alphaPickerButtonIcon {
     font-size: 100% !important;
 }
 
-.alphaPicker-fixed.alphaPicker-tv {
-    @include conditional-max(bottom, 1%, env(safe-area-inset-bottom));
+// Library controls stay in the toolbar flow, below the persistent header.
+.alphaPicker-jump {
+    display: block;
+    text-align: center;
+    margin: 0.5em 0;
 }
 
-.alphaPicker-fixed-right {
-    [dir="ltr"] & {
-        @include conditional-max(right, 0.4em, env(safe-area-inset-right));
-    }
-
-    [dir="rtl"] & {
-        @include conditional-max(left, 0.4em, env(safe-area-inset-left));
-    }
+.alphaPickerDialog {
+    width: 24em;
+    max-width: 90%;
+    max-height: 90%;
+    overflow-y: auto;
+    padding: 1em;
+    box-sizing: border-box;
 }
 
-@media all and (min-width: 62.5em) {
-    .alphaPicker-fixed-right {
-        [dir="ltr"] & {
-            @include conditional-max(right, 1em, env(safe-area-inset-right));
-        }
-
-        [dir="rtl"] & {
-            @include conditional-max(left, 1em, env(safe-area-inset-left));
-        }
-    }
+.alphaPickerDialog h2 {
+    margin: 0 0 0.5em;
+    font-size: 1.2em;
 }
 
-@media all and (max-height: 31.25em) {
-    .alphaPicker-fixed {
-        display: none !important;
-    }
+.alphaPickerLetters {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.alphaPickerLetters .alphaPickerButton {
+    flex: 0 0 14.28%;
+    min-height: 2.5em;
+    padding: 0.25em;
+    box-sizing: border-box;
 }

@@ -261,10 +261,6 @@ export default function (view, params, tabContent) {
                 element: alphaPickerElement,
                 valueChangeEvent: 'click'
             });
-
-            tabElement.querySelector('.alphaPicker').classList.add('alphabetPicker-right');
-            alphaPickerElement.classList.add('alphaPicker-fixed-right');
-            tabElement.querySelector('.itemsContainer').classList.add('padded-right-withalphapicker');
         }
     };
 
