@@ -190,19 +190,6 @@ function showMenuForSelectedItems(e) {
             icon: 'select_all'
         });
 
-        if (user.Policy.IsAdministrator || user.Policy.EnableCollectionManagement) {
-            menuItems.push({
-                name: globalize.translate('AddToCollection'),
-                id: 'addtocollection',
-                icon: 'add'
-            });
-        }
-        menuItems.push({
-            name: globalize.translate('AddToPlaylist'),
-            id: 'playlist',
-            icon: 'playlist_add'
-        });
-
         // TODO: Be more dynamic based on what is selected
         if (user.Policy.EnableContentDeletion) {
             menuItems.push({
@@ -234,7 +221,6 @@ function showMenuForSelectedItems(e) {
                 positionTo: e.target,
                 callback: function (id) {
                     const items = selectedItems.slice(0);
-                    const serverId = apiClient.serverInfo().Id;
 
                     switch (id) {
                         case 'selectall':
@@ -249,32 +235,6 @@ function showMenuForSelectedItems(e) {
                                     }
                                 }
                             }
-                            break;
-                        case 'addtocollection':
-                            import('../collectionEditor/collectionEditor').then(({ default: CollectionEditor }) => {
-                                const collectionEditor = new CollectionEditor();
-                                collectionEditor.show({
-                                    items: items,
-                                    serverId: serverId
-                                });
-                            });
-                            hideSelections();
-                            dispatchNeedsRefresh();
-                            break;
-                        case 'playlist':
-                            import('../playlisteditor/playlisteditor').then(({ default: PlaylistEditor }) => {
-                                const playlistEditor = new PlaylistEditor();
-                                playlistEditor.show({
-                                    items: items,
-                                    serverId: serverId
-                                }).catch(() => {
-                                    // Dialog closed
-                                });
-                            }).catch(err => {
-                                console.error('[AddToPlaylist] failed to load playlist editor', err);
-                            });
-                            hideSelections();
-                            dispatchNeedsRefresh();
                             break;
                         case 'delete':
                             deleteItems(apiClient, items).then(dispatchNeedsRefresh);

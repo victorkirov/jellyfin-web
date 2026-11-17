@@ -1,8 +1,6 @@
 /**
  * "Shortcut" action handlers for BaseItems.
  */
-import { getPlaylistApi } from '@jellyfin/sdk/lib/utils/api/playlist-api';
-
 import { EventType } from 'constants/eventType';
 import { ItemAction } from 'constants/itemAction';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
@@ -114,55 +112,17 @@ function notifyRefreshNeeded(childElement, itemsContainer) {
 
 function showContextMenu(card, options = {}) {
     getItem(card).then(item => {
-        const playlistId = card.getAttribute('data-playlistid');
-        const collectionId = card.getAttribute('data-collectionid');
-
-        if (playlistId) {
-            const elem = dom.parentWithAttribute(card, 'data-playlistitemid');
-            item.PlaylistItemId = elem ? elem.getAttribute('data-playlistitemid') : null;
-
-            const itemsContainer = dom.parentWithAttribute(card, 'is', 'emby-itemscontainer');
-            if (itemsContainer) {
-                let index = 0;
-                for (const listItem of itemsContainer.querySelectorAll('.listItem')) {
-                    const playlistItemId = listItem.getAttribute('data-playlistitemid');
-                    if (playlistItemId == item.PlaylistItemId) {
-                        item.PlaylistIndex = index;
-                    }
-                    index++;
-                }
-                item.PlaylistItemCount = index;
-            }
-        }
-
-        const api = ServerConnections.getApi(item.ServerId);
         const apiClient = ServerConnections.getApiClient(item.ServerId);
 
         Promise.all([
             // Import the item menu component
             import('./itemContextMenu'),
             // Fetch the current user
-            apiClient?.getCurrentUser(),
-            // Fetch playlist perms if item is a child of a playlist
-            api && playlistId ?
-                getPlaylistApi(api)
-                    .getPlaylistUser({
-                        playlistId,
-                        userId: apiClient?.getCurrentUserId()
-                    })
-                    .then(({ data }) => data)
-                    .catch(err => {
-                        // If a user doesn't have access, then the request will 404 and throw
-                        console.info('[Shortcuts] Failed to fetch playlist permissions', err);
-                        return { CanEdit: false };
-                    }) :
-                // Not a playlist item
-                Promise.resolve({ CanEdit: false })
+            apiClient?.getCurrentUser()
         ])
             .then(([
                 itemContextMenu,
-                user,
-                playlistPerms
+                user
             ]) => {
                 return itemContextMenu.show({
                     item,
@@ -170,9 +130,6 @@ function showContextMenu(card, options = {}) {
                     queue: true,
                     playAllFromHere: item.Type === 'Season' || !item.IsFolder,
                     queueAllFromHere: !item.IsFolder,
-                    playlistId,
-                    canEditPlaylist: !!playlistPerms.CanEdit,
-                    collectionId,
                     user,
                     ...options
                 });
@@ -330,9 +287,6 @@ function executeAction(card, target, action) {
         case ItemAction.PlayTrailer:
             getItem(target).then(playTrailer);
             break;
-        case ItemAction.AddToPlaylist:
-            getItem(target).then(addToPlaylist);
-            break;
         case ItemAction.Custom: {
             const customAction = target.getAttribute('data-customaction');
 
@@ -345,20 +299,6 @@ function executeAction(card, target, action) {
             }));
         }
     }
-}
-
-function addToPlaylist(item) {
-    import('./playlisteditor/playlisteditor').then(({ default: PlaylistEditor }) => {
-        const playlistEditor = new PlaylistEditor();
-        playlistEditor.show({
-            items: [item.Id],
-            serverId: item.ServerId
-        }).catch(() => {
-            // Dialog closed
-        });
-    }).catch(err => {
-        console.error('[addToPlaylist] failed to load playlist editor', err);
-    });
 }
 
 function playTrailer(item) {

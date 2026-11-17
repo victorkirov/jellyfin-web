@@ -1,5 +1,3 @@
-import { getPlaylistApi } from '@jellyfin/sdk/lib/utils/api/playlist-api';
-
 import listView from 'components/listview/listview';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import { PLAYLIST_FIELDS } from 'utils/query/playlistFields';
@@ -16,7 +14,7 @@ export function getFetchPlaylistItemsFn(apiClient, itemId) {
     };
 }
 
-function getItemsHtmlFn(playlistId, isEditable = false) {
+function getItemsHtmlFn(playlistId) {
     return function (items) {
         return listView.getListViewHtml({
             items,
@@ -24,7 +22,6 @@ function getItemsHtmlFn(playlistId, isEditable = false) {
             playFromHere: true,
             action: 'playallfromhere',
             smallIcon: true,
-            dragHandle: isEditable,
             playlistId,
             showParentTitle: true
         });
@@ -32,33 +29,18 @@ function getItemsHtmlFn(playlistId, isEditable = false) {
 }
 
 async function init(page, item) {
-    const api = ServerConnections.getApi(item.ServerId);
     const apiClient = ServerConnections.getApiClient(item.ServerId);
 
-    if (!api || !apiClient) {
-        console.error('[PlaylistViewer] No Api or ApiClient instance is available', { api, apiClient });
+    if (!apiClient) {
+        console.error('[PlaylistViewer] No ApiClient instance is available', { apiClient });
         return;
     }
-
-    let isEditable = false;
-    const { data } = await getPlaylistApi(api)
-        .getPlaylistUser({
-            playlistId: item.Id,
-            userId: apiClient.getCurrentUserId()
-        })
-        .catch(err => {
-            // If a user doesn't have access, then the request will 404 and throw
-            console.info('[PlaylistViewer] Failed to fetch playlist permissions', err);
-            return { data: {} };
-        });
-    isEditable = !!data.CanEdit;
 
     const elem = page.querySelector('#childrenContent .itemsContainer');
     elem.classList.add('vertical-list');
     elem.classList.remove('vertical-wrap');
-    elem.enableDragReordering(isEditable);
     elem.fetchData = getFetchPlaylistItemsFn(apiClient, item.Id);
-    elem.getItemsHtml = getItemsHtmlFn(item.Id, isEditable);
+    elem.getItemsHtml = getItemsHtmlFn(item.Id);
 }
 
 function refresh(page) {

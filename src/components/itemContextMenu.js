@@ -11,7 +11,7 @@ import globalize from '../lib/globalize';
 import actionsheet from './actionSheet/actionSheet';
 import { appHost } from './apphost';
 import { appRouter } from './router/appRouter';
-import itemHelper, { canEditPlaylist } from './itemHelper';
+import itemHelper from './itemHelper';
 import { playbackManager } from './playback/playbackmanager';
 import toast from './toast/toast';
 import * as userSettings from '../scripts/settings/userSettings';
@@ -139,22 +139,6 @@ export async function getCommands(options) {
                 icon: 'library_add_check'
             });
         }
-
-        if (itemHelper.supportsAddingToCollection(item) && (user.Policy.IsAdministrator || user.Policy.EnableCollectionManagement)) {
-            commands.push({
-                name: globalize.translate('AddToCollection'),
-                id: 'addtocollection',
-                icon: 'playlist_add'
-            });
-        }
-
-        if (itemHelper.supportsAddingToPlaylist(item) && options.playlist !== false) {
-            commands.push({
-                name: globalize.translate('AddToPlaylist'),
-                id: 'addtoplaylist',
-                icon: 'playlist_add'
-            });
-        }
     }
 
     if ((item.Type === 'Timer') && user.Policy.EnableLiveTvManagement && options.cancelTimer !== false) {
@@ -221,17 +205,6 @@ export async function getCommands(options) {
         });
     }
 
-    if (item.Type === BaseItemKind.Playlist) {
-        const _canEditPlaylist = await canEditPlaylist(user, item);
-        if (_canEditPlaylist) {
-            commands.push({
-                name: globalize.translate('Edit'),
-                id: 'editplaylist',
-                icon: 'edit'
-            });
-        }
-    }
-
     if (item.MediaSources && options.moremediainfo !== false) {
         commands.push({
             name: globalize.translate('MoreMediaInfo'),
@@ -254,39 +227,6 @@ export async function getCommands(options) {
                 icon: 'fiber_manual_record'
             });
         }
-    }
-
-    // Only show playlist edit actions if the user can modify the playlist
-    if (item.PlaylistItemId && options.playlistId && options.canEditPlaylist) {
-        commands.push({
-            name: globalize.translate('RemoveFromPlaylist'),
-            id: 'removefromplaylist',
-            icon: 'playlist_remove'
-        });
-
-        if (item.PlaylistIndex > 0) {
-            commands.push({
-                name: globalize.translate('MoveToTop'),
-                id: 'movetotop',
-                icon: 'vertical_align_top'
-            });
-        }
-
-        if (item.PlaylistIndex < (item.PlaylistItemCount - 1)) {
-            commands.push({
-                name: globalize.translate('MoveToBottom'),
-                id: 'movetobottom',
-                icon: 'vertical_align_bottom'
-            });
-        }
-    }
-
-    if (options.collectionId) {
-        commands.push({
-            name: globalize.translate('RemoveFromCollection'),
-            id: 'removefromcollection',
-            icon: 'playlist_remove'
-        });
     }
 
     if (!browser.tv && options.share === true && itemHelper.canShare(item, user)) {
@@ -343,26 +283,7 @@ function executeCommand(item, id, options) {
     const api = ServerConnections.getApi(serverId);
 
     return new Promise(function (resolve, reject) {
-        // eslint-disable-next-line sonarjs/max-switch-cases
         switch (id) {
-            case 'addtocollection':
-                import('./collectionEditor/collectionEditor').then(({ default: CollectionEditor }) => {
-                    const collectionEditor = new CollectionEditor();
-                    collectionEditor.show({
-                        items: [itemId],
-                        serverId: serverId
-                    }).then(getResolveFunction(resolve, id, true), getResolveFunction(resolve, id));
-                });
-                break;
-            case 'addtoplaylist':
-                import('./playlisteditor/playlisteditor').then(({ default: PlaylistEditor }) => {
-                    const playlistEditor = new PlaylistEditor();
-                    playlistEditor.show({
-                        items: [itemId],
-                        serverId: serverId
-                    }).then(getResolveFunction(resolve, id, true), getResolveFunction(resolve, id));
-                });
-                break;
             case 'download':
                 import('../scripts/fileDownloader').then((fileDownloader) => {
                     const url = getLibraryApi(api).getDownloadUrl({ itemId });
@@ -441,15 +362,6 @@ function executeCommand(item, id, options) {
                 getResolveFunction(resolve, id)();
                 break;
             }
-            case 'editplaylist':
-                import('./playlisteditor/playlisteditor').then(({ default: PlaylistEditor }) => {
-                    const playlistEditor = new PlaylistEditor();
-                    playlistEditor.show({
-                        id: itemId,
-                        serverId
-                    }).then(getResolveFunction(resolve, id, true), getResolveFunction(resolve, id));
-                });
-                break;
             case 'moremediainfo':
                 import('./itemMediaInfo/itemMediaInfo').then((itemMediaInfo) => {
                     itemMediaInfo.show(itemId, serverId).then(getResolveFunction(resolve, id), getResolveFunction(resolve, id));
@@ -532,43 +444,6 @@ function executeCommand(item, id, options) {
                 break;
             case 'queueallfromhere':
                 getResolveFunction(resolve, id)();
-                break;
-            case 'removefromplaylist':
-                apiClient.ajax({
-                    url: apiClient.getUrl('Playlists/' + options.playlistId + '/Items', {
-                        EntryIds: [item.PlaylistItemId].join(',')
-                    }),
-                    type: 'DELETE'
-                }).then(function () {
-                    getResolveFunction(resolve, id, true)();
-                });
-                break;
-            case 'movetotop':
-                apiClient.ajax({
-                    url: apiClient.getUrl('Playlists/' + options.playlistId + '/Items/' + item.PlaylistItemId + '/Move/0'),
-                    type: 'POST'
-                }).then(function () {
-                    getResolveFunction(resolve, id, true)();
-                });
-                break;
-            case 'movetobottom':
-                apiClient.ajax({
-                    url: apiClient.getUrl('Playlists/' + options.playlistId + '/Items/' + item.PlaylistItemId + '/Move/' + (item.PlaylistItemCount - 1)),
-                    type: 'POST'
-                }).then(function () {
-                    getResolveFunction(resolve, id, true)();
-                });
-                break;
-            case 'removefromcollection':
-                apiClient.ajax({
-                    type: 'DELETE',
-                    url: apiClient.getUrl('Collections/' + options.collectionId + '/Items', {
-
-                        Ids: [item.Id].join(',')
-                    })
-                }).then(function () {
-                    getResolveFunction(resolve, id, true)();
-                });
                 break;
             case 'canceltimer':
                 deleteTimer(apiClient, item, resolve, id);

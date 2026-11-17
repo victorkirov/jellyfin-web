@@ -1,12 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { lazyChildren, focus, autoFocus, registerElement, sortable, apiAjax, subscribe, onUserDataChanged, onTimerCreated, onTimerCancelled, onSeriesTimerCancelled, eventOn } = vi.hoisted(() => ({
+const { lazyChildren, focus, autoFocus, registerElement, sortable, subscribe, onUserDataChanged, onTimerCreated, onTimerCancelled, onSeriesTimerCancelled, eventOn } = vi.hoisted(() => ({
     lazyChildren: vi.fn(),
     focus: vi.fn(),
     autoFocus: vi.fn(),
     registerElement: vi.fn(),
     sortable: vi.fn(),
-    apiAjax: vi.fn(),
     subscribe: vi.fn<(types: string[], handler: (message: object) => void) => () => void>().mockReturnValue(vi.fn()),
     onUserDataChanged: vi.fn(),
     onTimerCreated: vi.fn(),
@@ -24,11 +23,9 @@ vi.mock('../../components/images/imageLoader', () => ({ default: { lazyChildren 
 vi.mock('../../components/layoutManager', () => ({ default: { tv: true } }));
 vi.mock('../../scripts/browser', () => ({ default: {} }));
 vi.mock('../../utils/dom', () => ({ default: {} }));
-vi.mock('../../components/loading/loading', () => ({ default: { show: vi.fn(), hide: vi.fn() } }));
 vi.mock('../../components/focusManager', () => ({ default: { focus, autoFocus } }));
 vi.mock('lib/jellyfin-apiclient', () => ({
     ServerConnections: {
-        getApiClient: () => ({ ajax: apiAjax, getUrl: (path: string) => path }),
         currentApiClient: () => ({ subscribe })
     }
 }));
@@ -89,20 +86,24 @@ describe('item container refreshes', () => {
         expect(lazyChildren).toHaveBeenCalledTimes(2);
     });
 
-    it('restores the server order after a rejected playlist move', async () => {
+    it('forwards queue reorder events without refetching', async () => {
         const { container, prototype } = createContainer();
-        container.getItemsHtml.mockReturnValue('<button data-playlistid="playlist" data-playlistitemid="one">One</button><button>Two</button>');
+        container.getItemsHtml.mockReturnValue('<button data-playlistitemid="one">One</button><button>Two</button>');
         await prototype.refreshItems.call(container);
         prototype.enableDragReordering.call(container, true);
+        const onReorder = vi.fn();
+        container.addEventListener('itemdrop', onReorder);
         const firstItem = container.firstElementChild!;
         container.appendChild(firstItem);
-        expect(container.textContent).toBe('TwoOne');
-        apiAjax.mockRejectedValueOnce(new Error('Move rejected'));
         sortable.mock.calls[0][1].onEnd({ item: firstItem, oldIndex: 0, newIndex: 1 });
-        await vi.dynamicImportSettled();
-        expect(container.textContent).toBe('OneTwo');
-        expect(container.fetchData).toHaveBeenCalledTimes(2);
-        expect(lazyChildren).toHaveBeenCalledTimes(2);
+        expect(onReorder).toHaveBeenCalledOnce();
+        expect(onReorder.mock.calls[0][0].detail).toEqual({
+            oldIndex: 0,
+            newIndex: 1,
+            playlistItemId: 'one'
+        });
+        expect(container.textContent).toBe('TwoOne');
+        expect(container.fetchData).toHaveBeenCalledTimes(1);
     });
 
     it('clears items when the result becomes empty', async () => {

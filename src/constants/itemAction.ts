@@ -1,7 +1,5 @@
 /** Actions that can be performed on a BaseItem. */
 export enum ItemAction {
-    /** Add the Item to a playlist. */
-    AddToPlaylist = 'addtoplaylist',
     /** Trigger a custom action via an Event. */
     Custom = 'custom',
     /** Open an editor for the Item. */

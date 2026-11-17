@@ -102,7 +102,6 @@ export interface CardOptions {
     highlight?: boolean;
     smallIcon?: boolean;
     artist?: boolean;
-    addToListButton?: boolean;
     enableUserDataButtons?: boolean;
     enableRatingButton?: boolean;
     image?: boolean;

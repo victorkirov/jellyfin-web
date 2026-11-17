@@ -1704,7 +1704,7 @@ function renderCollectionItems(page, parentItem, types, items) {
     page.querySelector('.collectionItems').innerHTML = '';
 
     if (!items.length) {
-        renderCollectionItemType(page, parentItem, {
+        renderCollectionItemType(page, {
             name: globalize.translate('Items')
         }, items);
     } else {
@@ -1715,7 +1715,7 @@ function renderCollectionItems(page, parentItem, types, items) {
             [typeItems, otherTypeItems] = filterItemsByCollectionItemType(otherTypeItems, type);
 
             if (typeItems.length) {
-                renderCollectionItemType(page, parentItem, type, typeItems);
+                renderCollectionItemType(page, type, typeItems);
             }
         }
 
@@ -1723,7 +1723,7 @@ function renderCollectionItems(page, parentItem, types, items) {
             const otherType = {
                 name: globalize.translate('HeaderOtherItems')
             };
-            renderCollectionItemType(page, parentItem, otherType, otherTypeItems);
+            renderCollectionItemType(page, otherType, otherTypeItems);
         }
     }
 
@@ -1748,7 +1748,7 @@ function renderCollectionItems(page, parentItem, types, items) {
     autoFocus(page);
 }
 
-function renderCollectionItemType(page, parentItem, type, items) {
+function renderCollectionItemType(page, type, items) {
     let html = '';
     html += '<div class="verticalSection">';
     html += '<div class="sectionTitleContainer sectionTitleContainer-cards padded-left">';
@@ -1766,10 +1766,7 @@ function renderCollectionItemType(page, parentItem, type, items) {
         centerText: true,
         lazy: true,
         showDetailsMenu: true,
-        overlayMoreButton: true,
-        showAddToCollection: false,
-        showRemoveFromCollection: true,
-        collectionId: parentItem.Id
+        overlayMoreButton: true
     });
     html += '</div>';
     html += '</div>';

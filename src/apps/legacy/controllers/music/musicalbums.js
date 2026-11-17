@@ -127,8 +127,7 @@ export default function (view, params, tabContent) {
                 html = listView.getListViewHtml({
                     items: result.Items,
                     context: 'music',
-                    sortBy: query.SortBy,
-                    addToListButton: true
+                    sortBy: query.SortBy
                 });
             } else if (viewStyle == 'PosterCard') {
                 html = cardBuilder.getCardsHtml({

@@ -241,17 +241,6 @@ export default function (view, params, tabContent) {
             onViewStyleChange();
             reloadItems(tabElement);
         });
-        tabElement.querySelector('.btnNewCollection').addEventListener('click', () => {
-            import('components/collectionEditor/collectionEditor').then(({ default: CollectionEditor }) => {
-                const serverId = ApiClient.serverInfo().Id;
-                const collectionEditor = new CollectionEditor();
-                collectionEditor.show({
-                    items: [],
-                    serverId: serverId
-                });
-            });
-        });
-
         const alphaPickerElement = tabElement.querySelector('.alphaPicker');
 
         if (alphaPickerElement) {

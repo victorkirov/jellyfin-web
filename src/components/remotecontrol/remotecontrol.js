@@ -654,35 +654,6 @@ export default function () {
         }
     }
 
-    function getSaveablePlaylistItems() {
-        return getPlaylistItems(currentPlayer).then(function (items) {
-            return items.filter(function (i) {
-                return i.Id && i.ServerId;
-            });
-        });
-    }
-
-    function savePlaylist() {
-        import('../playlisteditor/playlisteditor').then(({ default: PlaylistEditor }) => {
-            getSaveablePlaylistItems().then(function (items) {
-                const serverId = items.length ? items[0].ServerId : ApiClient.serverId();
-                const playlistEditor = new PlaylistEditor();
-                playlistEditor.show({
-                    items: items.map(function (i) {
-                        return i.Id;
-                    }),
-                    serverId: serverId,
-                    enableAddToPlayQueue: false,
-                    defaultValue: 'new'
-                }).catch(() => {
-                    // Dialog closed
-                });
-            });
-        }).catch(err => {
-            console.error('[savePlaylist] failed to load playlist editor', err);
-        });
-    }
-
     function bindEvents(context) {
         const btnCommand = context.querySelectorAll('.btnCommand');
         const positionSlider = context.querySelector('.nowPlayingPositionSlider');
@@ -810,18 +781,15 @@ export default function () {
             const playlistItemId = e.detail.playlistItemId;
             playbackManager.movePlaylistItem(playlistItemId, newIndex, currentPlayer);
         });
-        context.querySelector('.btnSavePlaylist').addEventListener('click', savePlaylist);
         context.querySelector('.btnTogglePlaylist').addEventListener('click', function () {
             if (context.querySelector('.playlist').classList.contains('hide')) {
                 context.querySelector('.playlist').classList.remove('hide');
-                context.querySelector('.btnSavePlaylist').classList.remove('hide');
                 context.querySelector('.volumecontrol').classList.add('hide');
                 if (layoutManager.mobile) {
                     context.querySelector('.playlistSectionButton').classList.remove('playlistSectionButtonTransparent');
                 }
             } else {
                 context.querySelector('.playlist').classList.add('hide');
-                context.querySelector('.btnSavePlaylist').classList.add('hide');
                 if (showMuteButton || showVolumeSlider) {
                     context.querySelector('.volumecontrol').classList.remove('hide');
                 }
@@ -882,7 +850,6 @@ export default function () {
             optionsSection.classList.remove('align-items-center', 'justify-content-center');
             optionsSection.classList.add('align-items-right', 'justify-content-flex-end');
             context.querySelector('.playlist').classList.remove('hide');
-            context.querySelector('.btnSavePlaylist').classList.remove('hide');
             context.classList.add('padded-bottom');
         } else {
             optionsSection.querySelector('.btnTogglePlaylist').insertAdjacentHTML('afterend', volumecontrolHtml);

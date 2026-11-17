@@ -1,10 +1,8 @@
 import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collection-type';
-import { getPlaylistApi } from '@jellyfin/sdk/lib/utils/api/playlist-api';
 
 import { appHost } from './apphost';
 import { AppFeature } from 'constants/appFeature';
 import globalize from 'lib/globalize';
-import { ServerConnections } from 'lib/jellyfin-apiclient';
 
 export function getDisplayName(item, options = {}) {
     if (!item) {
@@ -50,67 +48,8 @@ export function getDisplayName(item, options = {}) {
     return name;
 }
 
-export function supportsAddingToCollection(item) {
-    const invalidTypes = ['Genre', 'MusicGenre', 'Studio', 'UserView', 'CollectionFolder', 'Audio', 'Program', 'Timer', 'SeriesTimer'];
-
-    if (item.Type === 'Recording' && item.Status !== 'Completed') {
-        return false;
-    }
-
-    return !item.CollectionType && invalidTypes.indexOf(item.Type) === -1 && item.MediaType !== 'Photo' && !isLocalItem(item);
-}
-
-export function supportsAddingToPlaylist(item) {
-    if (item.Type === 'Program') {
-        return false;
-    }
-    if (item.Type === 'TvChannel') {
-        return false;
-    }
-    if (item.Type === 'Timer') {
-        return false;
-    }
-    if (item.Type === 'SeriesTimer') {
-        return false;
-    }
-    if (item.MediaType === 'Photo') {
-        return false;
-    }
-
-    if (item.Type === 'Recording' && item.Status !== 'Completed') {
-        return false;
-    }
-
-    if (isLocalItem(item)) {
-        return false;
-    }
-    if (item.CollectionType === CollectionType.Livetv) {
-        return false;
-    }
-
-    return item.MediaType || item.IsFolder || item.Type === 'Genre' || item.Type === 'MusicGenre' || item.Type === 'MusicArtist';
-}
-
 export function isLocalItem(item) {
     return item?.Id && typeof item.Id === 'string' && item.Id.indexOf('local') === 0;
-}
-
-export async function canEditPlaylist(user, item) {
-    const api = ServerConnections.getApi(item.ServerId);
-
-    try {
-        const { data: permissions } = await getPlaylistApi(api)
-            .getPlaylistUser({
-                userId: user.Id,
-                playlistId: item.Id
-            });
-
-        return !!permissions.CanEdit;
-    } catch (err) {
-        console.error('Failed to get playlist permissions', err);
-    }
-
-    return false;
 }
 
 export function canShare (item, user) {
@@ -233,8 +172,6 @@ export function sortTracks (trackA, trackB) {
 
 export default {
     getDisplayName: getDisplayName,
-    supportsAddingToCollection: supportsAddingToCollection,
-    supportsAddingToPlaylist: supportsAddingToPlaylist,
     isLocalItem: isLocalItem,
     canShare: canShare,
     enableDateAddedDisplay: enableDateAddedDisplay,

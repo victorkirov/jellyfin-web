@@ -247,7 +247,6 @@ export function getListViewHtml(options) {
         const playlistItemId = item.PlaylistItemId ? (` data-playlistitemid="${item.PlaylistItemId}"`) : '';
 
         const positionTicksData = item.UserData?.PlaybackPositionTicks ? (` data-positionticks="${item.UserData.PlaybackPositionTicks}"`) : '';
-        const collectionIdData = options.collectionId ? (` data-collectionid="${options.collectionId}"`) : '';
         const playlistIdData = options.playlistId ? (` data-playlistid="${options.playlistId}"`) : '';
         const mediaTypeData = item.MediaType ? (` data-mediatype="${item.MediaType}"`) : '';
         const collectionTypeData = item.CollectionType ? (` data-collectiontype="${item.CollectionType}"`) : '';
@@ -257,7 +256,7 @@ export function getListViewHtml(options) {
             cssClass += ' listItem-withContentWrapper';
         }
 
-        html += `<${outerTagName} class="${cssClass}"${playlistItemId} data-action="${action}" data-isfolder="${item.IsFolder}" data-id="${item.Id}" data-serverid="${item.ServerId}" data-type="${item.Type}"${mediaTypeData}${collectionTypeData}${channelIdData}${positionTicksData}${collectionIdData}${playlistIdData}>`;
+        html += `<${outerTagName} class="${cssClass}"${playlistItemId} data-action="${action}" data-isfolder="${item.IsFolder}" data-id="${item.Id}" data-serverid="${item.ServerId}" data-type="${item.Type}"${mediaTypeData}${collectionTypeData}${channelIdData}${positionTicksData}${playlistIdData}>`;
 
         if (enableContentWrapper) {
             html += '<div class="listItem-content">';
@@ -454,10 +453,6 @@ export function getListViewHtml(options) {
         html += '<div class="listViewUserDataButtons">';
 
         if (!clickEntireItem) {
-            if (options.addToListButton) {
-                html += `<button is="paper-icon-button-light" class="listItemButton itemAction" data-action="${ItemAction.AddToPlaylist}" title="${globalize.translate('AddToPlaylist')}"><span class="material-icons playlist_add" aria-hidden="true"></span></button>`;
-            }
-
             if (options.infoButton) {
                 html += `<button is="paper-icon-button-light" class="listItemButton itemAction" data-action="${ItemAction.Link}" title="${globalize.translate('ButtonInfo')}"><span class="material-icons info_outline" aria-hidden="true"></span></button>`;
             }

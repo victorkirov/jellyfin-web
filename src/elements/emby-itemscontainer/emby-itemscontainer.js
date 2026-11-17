@@ -8,7 +8,6 @@ import imageLoader from '../../components/images/imageLoader';
 import layoutManager from '../../components/layoutManager';
 import browser from '../../scripts/browser';
 import dom from '../../utils/dom';
-import loading from '../../components/loading/loading';
 import focusManager from '../../components/focusManager';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import { OutboundWebSocketMessageType } from '@jellyfin/sdk/lib/websocket';
@@ -78,42 +77,21 @@ ItemsContainerPrototype.enableMultiSelect = function (enabled) {
     });
 };
 
-function onDrop(evt, itemsContainer) {
+function onDrop(evt) {
     const el = evt.item;
 
     const newIndex = evt.newIndex;
     const itemId = el.getAttribute('data-playlistitemid');
-    const playlistId = el.getAttribute('data-playlistid');
-
-    if (!playlistId) {
-        const oldIndex = evt.oldIndex;
-        el.dispatchEvent(new CustomEvent('itemdrop', {
-            detail: {
-                oldIndex: oldIndex,
-                newIndex: newIndex,
-                playlistItemId: itemId
-            },
-            bubbles: true,
-            cancelable: false
-        }));
-        return;
-    }
-
-    const serverId = el.getAttribute('data-serverid');
-    const apiClient = ServerConnections.getApiClient(serverId);
-
-    loading.show();
-
-    apiClient.ajax({
-        url: apiClient.getUrl('Playlists/' + playlistId + '/Items/' + itemId + '/Move/' + newIndex),
-        type: 'POST'
-    }).then(function () {
-        loading.hide();
-    }, function () {
-        loading.hide();
-        itemsContainer.itemsHtml = null;
-        itemsContainer.refreshItems();
-    });
+    const oldIndex = evt.oldIndex;
+    el.dispatchEvent(new CustomEvent('itemdrop', {
+        detail: {
+            oldIndex: oldIndex,
+            newIndex: newIndex,
+            playlistItemId: itemId
+        },
+        bubbles: true,
+        cancelable: false
+    }));
 }
 
 ItemsContainerPrototype.enableDragReordering = function (enabled) {
@@ -137,7 +115,7 @@ ItemsContainerPrototype.enableDragReordering = function (enabled) {
 
         // dragging ended
         onEnd: function (evt) {
-            return onDrop(evt, self);
+            return onDrop(evt);
         }
     });
 };

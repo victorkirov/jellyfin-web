@@ -412,22 +412,6 @@ function showSortMenu() {
     });
 }
 
-function onNewItemClick() {
-    const instance = this;
-
-    import('components/playlisteditor/playlisteditor').then(({ default: PlaylistEditor }) => {
-        const playlistEditor = new PlaylistEditor();
-        playlistEditor.show({
-            items: [],
-            serverId: instance.params.serverId
-        }).catch(() => {
-            // Dialog closed
-        });
-    }).catch(err => {
-        console.error('[onNewItemClick] failed to load playlist editor', err);
-    });
-}
-
 function hideOrShowAll(elems, hide) {
     for (const elem of elems) {
         if (hide) {
@@ -655,12 +639,6 @@ class ItemsView {
 
         function setTitle(item) {
             LibraryMenu.setTitle(getTitle(item) || '');
-
-            if (item && item.CollectionType === CollectionType.Playlists) {
-                hideOrShowAll(view.querySelectorAll('.btnNewItem'), false);
-            } else {
-                hideOrShowAll(view.querySelectorAll('.btnNewItem'), true);
-            }
         }
 
         function getTitle(item) {
@@ -852,7 +830,6 @@ class ItemsView {
 
         this.btnSortText = view.querySelector('.btnSortText');
         this.btnSortIcon = view.querySelector('.btnSortIcon');
-        bindAll(view.querySelectorAll('.btnNewItem'), 'click', onNewItemClick.bind(this));
         this.alphaPickerElement = view.querySelector('.alphaPicker');
         self.itemsContainer.fetchData = fetchData;
         self.itemsContainer.getItemsHtml = getItemsHtml;

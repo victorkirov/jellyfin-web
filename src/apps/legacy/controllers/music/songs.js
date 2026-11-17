@@ -94,8 +94,7 @@ export default function (view, params, tabContent) {
                 items: result.Items,
                 action: 'playallfromhere',
                 smallIcon: true,
-                artist: true,
-                addToListButton: true
+                artist: true
             });
             let elems = tabContent.querySelectorAll('.paging');
 
