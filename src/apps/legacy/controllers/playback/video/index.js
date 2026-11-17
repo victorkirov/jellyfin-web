@@ -2051,18 +2051,18 @@ export default function (view) {
 
     const SyncPlay = pluginManager.firstOfType(PluginType.SyncPlay)?.instance;
     if (SyncPlay) {
-        Events.on(SyncPlay.Manager, 'enabled', (_event, enabled) => {
+        const onSyncPlayEnabled = (_event, enabled) => {
             if (!enabled) {
                 const syncPlayIcon = view.querySelector('#syncPlayIcon');
                 syncPlayIcon.style.visibility = 'hidden';
             }
-        });
+        };
 
-        Events.on(SyncPlay.Manager, 'notify-osd', (_event, action) => {
+        const onSyncPlayNotifyOsd = (_event, action) => {
             showIcon(action);
-        });
+        };
 
-        Events.on(SyncPlay.Manager, 'group-state-update', (_event, state, reason) => {
+        const onSyncPlayGroupStateUpdate = (_event, state, reason) => {
             if (state === 'Playing' && reason === 'Unpause') {
                 showIcon('schedule-play');
             } else if (state === 'Playing' && reason === 'Ready') {
@@ -2080,6 +2080,15 @@ export default function (view) {
             } else if (state === 'Waiting' && reason === 'Unpause') {
                 showIcon('wait-unpause');
             }
+        };
+
+        Events.on(SyncPlay.Manager, 'enabled', onSyncPlayEnabled);
+        Events.on(SyncPlay.Manager, 'notify-osd', onSyncPlayNotifyOsd);
+        Events.on(SyncPlay.Manager, 'group-state-update', onSyncPlayGroupStateUpdate);
+        view.addEventListener('viewdestroy', function () {
+            Events.off(SyncPlay.Manager, 'enabled', onSyncPlayEnabled);
+            Events.off(SyncPlay.Manager, 'notify-osd', onSyncPlayNotifyOsd);
+            Events.off(SyncPlay.Manager, 'group-state-update', onSyncPlayGroupStateUpdate);
         });
     }
 }
