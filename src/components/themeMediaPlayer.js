@@ -117,6 +117,11 @@ async function loadThemeMedia(serverId, itemId) {
 }
 
 document.addEventListener('viewshow', e => {
+    if (!userSettings.enableThemeSongs() && !userSettings.enableThemeVideos()) {
+        stopIfPlaying();
+        return;
+    }
+
     const { serverId, id } = e.detail?.params || {};
     if (serverId && id) {
         void loadThemeMedia(serverId, id);
