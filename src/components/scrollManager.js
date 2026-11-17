@@ -5,6 +5,7 @@
 
 import dom from '../utils/dom';
 import appSettings from 'scripts/settings/appSettings';
+import Events from '../utils/events.ts';
 import layoutManager from './layoutManager';
 
 /**
@@ -226,6 +227,15 @@ const scrollerHints = {
     }
 };
 
+function getStyles(element, stylesCache) {
+    let styles = stylesCache.get(element);
+    if (!styles) {
+        styles = window.getComputedStyle(element);
+        stylesCache.set(element, styles);
+    }
+    return styles;
+}
+
 /**
      * Returns parent element that can be scrolled. If no such, returns document scroller.
      *
@@ -233,7 +243,7 @@ const scrollerHints = {
      * @param {boolean} vertical - Search for vertical scrollable parent.
      * @param {HTMLElement|DocumentScroller} Parent element that can be scrolled or document scroller.
      */
-function getScrollableParent(element, vertical) {
+function getScrollableParent(element, vertical, stylesCache) {
     if (element) {
         const scrollerHint = vertical ? scrollerHints.y : scrollerHints.x;
 
@@ -247,7 +257,7 @@ function getScrollableParent(element, vertical) {
                 return parent;
             }
 
-            const styles = window.getComputedStyle(parent);
+            const styles = getStyles(parent, stylesCache);
 
             // Stop on fixed parent
             if (styles.position === 'fixed') {
@@ -307,14 +317,12 @@ function getScrollerData(scroller, vertical) {
      * Returns position of child of scroller for specified orientation.
      *
      * @param {HTMLElement} scroller - Scroller.
-     * @param {HTMLElement} element - Child of scroller.
+     * @param {Rect} elementRect - Child bounding rectangle.
+     * @param {Rect} scrollerRect - Scroller bounding rectangle.
      * @param {boolean} vertical - Vertical scroll.
      * @return {number} Child position.
      */
-function getScrollerChildPos(scroller, element, vertical) {
-    const elementRect = element.getBoundingClientRect();
-    const scrollerRect = scroller.getBoundingClientRect();
-
+function getScrollerChildPos(scroller, elementRect, scrollerRect, vertical) {
     if (!vertical) {
         return scroller.scrollLeft + elementRect.left - scrollerRect.left;
     } else {
@@ -471,11 +479,22 @@ function doScroll(xScroller, scrollX, yScroller, scrollY, smooth) {
     }
 }
 
+let smoothScroll;
+
+Events.on(appSettings, 'change', function (e, name) {
+    if (name === 'enableSmoothScroll') {
+        smoothScroll = undefined;
+    }
+});
+
 /**
      * Returns true if smooth scroll must be used.
      */
 function useSmoothScroll() {
-    return appSettings.enableSmoothScroll();
+    if (smoothScroll === undefined) {
+        smoothScroll = appSettings.enableSmoothScroll();
+    }
+    return smoothScroll;
 }
 
 /**
@@ -516,21 +535,10 @@ export function scrollTo(scrollX, scrollY, smooth) {
 export function scrollToElement(element, smooth) {
     smooth = !!smooth;
 
-    let scrollCenterX = true;
-    let scrollCenterY = true;
-
-    const offsetParent = element.offsetParent;
-
-    // In Firefox offsetParent.offsetParent is BODY
-    const isFixed = offsetParent && (!offsetParent.offsetParent || window.getComputedStyle(offsetParent).position === 'fixed');
-
-    // Scroll fixed elements to nearest edge (or do not scroll at all)
-    if (isFixed) {
-        scrollCenterX = scrollCenterY = false;
-    }
-
-    let xScroller = getScrollableParent(element, false);
-    let yScroller = getScrollableParent(element, true);
+    // Overflow eligibility can change between focus events as content loads.
+    const stylesCache = new WeakMap();
+    let xScroller = getScrollableParent(element, false, stylesCache);
+    let yScroller = getScrollableParent(element, true, stylesCache);
 
     const xScrollerData = getScrollerData(xScroller, false);
     const yScrollerData = getScrollerData(yScroller, true);
@@ -545,20 +553,37 @@ export function scrollToElement(element, smooth) {
         return;
     }
 
+    let scrollCenterX = true;
+    let scrollCenterY = true;
+    const offsetParent = element.offsetParent;
+
+    // In Firefox offsetParent.offsetParent is BODY
+    const isFixed = offsetParent && (!offsetParent.offsetParent || getStyles(offsetParent, stylesCache).position === 'fixed');
+
+    // Scroll fixed elements to nearest edge (or do not scroll at all)
+    if (isFixed) {
+        scrollCenterX = scrollCenterY = false;
+    }
+
     const elementRect = element.getBoundingClientRect();
+    const xScrollerRect = xScrollerData.custom ? null : xScroller.getBoundingClientRect();
+    let yScrollerRect;
+    if (!yScrollerData.custom) {
+        yScrollerRect = xScrollerRect && xScroller === yScroller ? xScrollerRect : yScroller.getBoundingClientRect();
+    }
 
     let scrollX = 0;
     let scrollY = 0;
 
     if (!xScrollerData.custom) {
-        const xPos = getScrollerChildPos(xScroller, element, false);
+        const xPos = getScrollerChildPos(xScroller, elementRect, xScrollerRect, false);
         scrollX = calcScroll(xScrollerData, xPos, elementRect.width, scrollCenterX);
     } else {
         xScroller = null;
     }
 
     if (!yScrollerData.custom) {
-        const yPos = getScrollerChildPos(yScroller, element, true);
+        const yPos = getScrollerChildPos(yScroller, elementRect, yScrollerRect, true);
         scrollY = calcScroll(yScrollerData, yPos, elementRect.height, scrollCenterY);
 
         // HACK: Scroll to top for top menu because it is hidden
