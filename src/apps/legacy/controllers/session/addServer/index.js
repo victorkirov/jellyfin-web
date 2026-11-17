@@ -16,11 +16,7 @@ function handleConnectionResult(page, result) {
             break;
         }
         case ConnectionState.ServerSignIn:
-            if (result.SystemInfo.StartupWizardCompleted) {
-                Dashboard.navigate('login?serverid=' + result.Servers[0].Id, false, 'none');
-            } else {
-                Dashboard.navigate('/wizard/start');
-            }
+            Dashboard.navigate('login?serverid=' + result.Servers[0].Id, false, 'none');
             break;
         case ConnectionState.ServerSelection:
             Dashboard.navigate('selectserver', false, 'none');

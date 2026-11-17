@@ -8,10 +8,13 @@ import { AppFeature } from 'constants/appFeature';
 import LinkButton from 'elements/emby-button/LinkButton';
 import globalize from 'lib/globalize';
 import { ConnectionState, ServerConnections } from 'lib/jellyfin-apiclient';
+import { selectServer } from 'utils/dashboard';
 
 interface ConnectionErrorPageProps {
-    state: ConnectionState
+    state: ConnectionState | 'SetupRequired'
 }
+
+const retryConnection = () => window.location.reload();
 
 const ConnectionErrorPage: FC<ConnectionErrorPageProps> = ({
     state
@@ -37,6 +40,11 @@ const ConnectionErrorPage: FC<ConnectionErrorPageProps> = ({
 
     useEffect(() => {
         switch (state) {
+            case 'SetupRequired':
+                setTitle(globalize.translate('HeaderServerSetupRequired'));
+                setHtmlMessage(undefined);
+                setMessage(globalize.translate('MessageServerSetupRequired'));
+                return;
             case ConnectionState.ServerMismatch:
                 setTitle(globalize.translate('HeaderServerMismatch'));
                 setHtmlMessage(undefined);
@@ -83,9 +91,15 @@ const ConnectionErrorPage: FC<ConnectionErrorPageProps> = ({
                 {appHost.supports(AppFeature.MultiServer) && (
                     <LinkButton
                         className='raised'
-                        href='/selectserver'
+                        onClick={selectServer}
                     >
                         {globalize.translate('ButtonChangeServer')}
+                    </LinkButton>
+                )}
+
+                {(state === 'SetupRequired' || state === ConnectionState.Unavailable) && (
+                    <LinkButton className='raised' onClick={retryConnection}>
+                        {globalize.translate('Retry')}
                     </LinkButton>
                 )}
 

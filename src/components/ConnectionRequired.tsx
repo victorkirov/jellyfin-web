@@ -23,8 +23,7 @@ type AccessLevelValue = `${AccessLevel}`;
 enum BounceRoutes {
     Home = '/home',
     Login = '/login',
-    SelectServer = '/selectserver',
-    StartWizard = '/wizard/start'
+    SelectServer = '/selectserver'
 }
 
 type ConnectionRequiredProps = {
@@ -61,7 +60,7 @@ const ConnectionRequired: FunctionComponent<ConnectionRequiredProps> = ({
     const navigate = useNavigate();
     const location = useLocation();
 
-    const [ errorState, setErrorState ] = useState<ConnectionState>();
+    const [ errorState, setErrorState ] = useState<ConnectionState | 'SetupRequired'>();
     const [ isLoading, setIsLoading ] = useState(true);
 
     const navigateIfNotThere = useCallback((route: BounceRoutes) => {
@@ -126,13 +125,12 @@ const ConnectionRequired: FunctionComponent<ConnectionRequiredProps> = ({
                     // Update the current ApiClient
                     // TODO: Is there a better place to handle this?
                     ServerConnections.setLocalApiClient(firstConnection.ApiClient);
-                    // Bounce to the wizard
-                    console.info('[ConnectionRequired] startup wizard is not complete, redirecting there');
-                    navigate(BounceRoutes.StartWizard);
+                    setErrorState('SetupRequired');
                     return;
                 }
             } catch (ex) {
                 console.error('[ConnectionRequired] checking wizard status failed', ex);
+                setErrorState(ConnectionState.Unavailable);
                 return;
             }
         }
@@ -142,7 +140,7 @@ const ConnectionRequired: FunctionComponent<ConnectionRequiredProps> = ({
             .catch(err => {
                 console.error('[ConnectionRequired] failed to bounce', err);
             });
-    }, [bounce, navigate]);
+    }, [bounce]);
 
     const validateUserAccess = useCallback(async () => {
         const client = ServerConnections.currentApiClient();
@@ -183,9 +181,14 @@ const ConnectionRequired: FunctionComponent<ConnectionRequiredProps> = ({
     }, [bounce, level]);
 
     useEffect(() => {
+        setErrorState(undefined);
+
         // Check connection status on initial page load
         const apiClient = ServerConnections.currentApiClient();
-        const connection = Promise.resolve(ServerConnections.firstConnection ? null : ServerConnections.connect());
+        const shouldConnect = !ServerConnections.firstConnection
+            || (location.pathname === BounceRoutes.Login && !apiClient?.isLoggedIn());
+        if (shouldConnect) setIsLoading(true);
+        const connection = Promise.resolve(shouldConnect ? ServerConnections.connect() : null);
         connection.then(firstConnection => {
             console.debug('[ConnectionRequired] connection state', firstConnection?.State);
             ServerConnections.firstConnection = true;
@@ -212,8 +215,9 @@ const ConnectionRequired: FunctionComponent<ConnectionRequiredProps> = ({
             }
         }).catch(err => {
             console.error('[ConnectionRequired] failed to connect', err);
+            setErrorState(ConnectionState.Unavailable);
         });
-    }, [handleIncompleteWizard, handleWizard, level, validateUserAccess]);
+    }, [handleIncompleteWizard, handleWizard, level, location.pathname, validateUserAccess]);
 
     if (errorState) {
         return <ConnectionErrorPage state={errorState} />;
