@@ -45,7 +45,7 @@ vi.mock('./skipsegment.ts', () => ({ bindSkipSegment: vi.fn() }));
 
 const item = { Id: 'item', ServerId: 'server', Type: 'Movie', MediaType: 'Video' };
 const source = (transcode = false) => ({
-    Id: 'item', MediaStreams: [], SupportsDirectStream: !transcode, SupportsTranscoding: false,
+    Id: 'item', MediaStreams: [], SupportsDirectStream: !transcode, SupportsTranscoding: transcode,
     TranscodingUrl: 'video?AllowVideoStreamCopy=false&AllowAudioStreamCopy=false&PlaySessionId=session',
     Container: 'mp4', RunTimeTicks: 600_000_000
 });
@@ -53,7 +53,8 @@ const source = (transcode = false) => ({
 function setup() {
     const player = {
         name: 'fake', id: 'fake', isLocalPlayer: true,
-        getVolume: () => 100, setVolume: vi.fn(), canPlayMediaType: () => true,
+        streamInfo: undefined as object | undefined, isChangingStream: false, supports: () => false,
+        getVolume: () => 100, setVolume: vi.fn(), canPlayMediaType: () => true, canPlayUrl: () => true,
         getDeviceProfile: vi.fn().mockResolvedValue({}), play: vi.fn().mockResolvedValue(undefined),
         destroy: vi.fn(), stop: vi.fn().mockImplementation(() => {
             Events.trigger(player, 'stopped');
@@ -124,5 +125,258 @@ describe('playback HTTP failures and bitrate bypass', () => {
             playbackInfoDto: expect.objectContaining({ MaxStreamingBitrate: 20_000_000 })
         }));
         await manager.stop(player);
+    });
+});
+
+describe('playback start and failure lifecycle', () => {
+    it('does not start or advance the queue when initial play rejects', async () => {
+        const { play, manager, player } = setup();
+        player.play.mockRejectedValue(new DOMException('unsupported', 'NotSupportedError'));
+        const started = vi.fn();
+        Events.on(manager, 'playbackstart', started);
+        const result = await play();
+        await vi.advanceTimersByTimeAsync(100);
+        expect(result).toBe(false);
+        expect(started).not.toHaveBeenCalled();
+        expect(mocks.apiClient.reportPlaybackStart).not.toHaveBeenCalled();
+        expect(mocks.apiClient.reportPlaybackStopped).toHaveBeenCalledTimes(1);
+        expect(manager.getCurrentPlaylistIndex(player)).toBe(-1);
+        expect(player.destroy).toHaveBeenCalledTimes(1);
+        expect(mocks.loading.hide).toHaveBeenCalled();
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('keeps a rejected fallback on the failed-start path', async () => {
+        const { play, manager, player } = setup();
+        mocks.getPostedPlaybackInfo.mockResolvedValueOnce({ data: { MediaSources: [{ ...source(), SupportsTranscoding: true }] } })
+            .mockResolvedValueOnce({ data: { MediaSources: [{ ...source(true), SupportsTranscoding: true }] } });
+        player.play.mockRejectedValue(new DOMException('unsupported', 'NotSupportedError'));
+        const result = await play();
+        await vi.advanceTimersByTimeAsync(100);
+        expect(result).toBe(false);
+        expect(player.play).toHaveBeenCalledTimes(2);
+        expect(mocks.apiClient.reportPlaybackStart).not.toHaveBeenCalled();
+        expect(mocks.apiClient.reportPlaybackStopped).toHaveBeenCalledTimes(1);
+        expect(manager.getCurrentPlaylistIndex(player)).toBe(-1);
+        expect(mocks.loading.hide).toHaveBeenCalled();
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('reports one genuine start when fallback succeeds', async () => {
+        const { play, manager, player } = setup();
+        mocks.getPostedPlaybackInfo.mockResolvedValueOnce({ data: { MediaSources: [{ ...source(), SupportsTranscoding: true }] } })
+            .mockResolvedValueOnce({ data: { MediaSources: [source(true)] } });
+        player.play.mockRejectedValueOnce(new DOMException('unsupported', 'NotSupportedError'));
+        const result = await play();
+        await vi.advanceTimersByTimeAsync(100);
+        expect(result).toBe(true);
+        expect(player.play).toHaveBeenCalledTimes(2);
+        expect(mocks.apiClient.reportPlaybackStart).toHaveBeenCalledTimes(1);
+        expect(mocks.apiClient.reportPlaybackStopped).not.toHaveBeenCalled();
+        expect(manager.getCurrentPlaylistIndex(player)).toBe(0);
+        expect(mocks.loading.hide).toHaveBeenCalled();
+        await manager.stop(player);
+        expect(mocks.apiClient.reportPlaybackStopped).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(['resolve', 'reject'])('ignores a pending play that later %ss after cancellation', async outcome => {
+        const { play, manager, player } = setup();
+        let resolve!: () => void;
+        let reject!: (error: Error) => void;
+        player.play.mockImplementation(() => new Promise<void>((done, fail) => {
+            resolve = done;
+            reject = fail;
+        }));
+        const playing = play();
+        await vi.waitFor(() => expect(player.play).toHaveBeenCalledOnce());
+        await manager.stop(player);
+        if (outcome === 'resolve') resolve();
+        else reject(new Error('cancelled'));
+        expect(await playing).toBe(false);
+        await vi.advanceTimersByTimeAsync(100);
+        expect(mocks.apiClient.reportPlaybackStart).not.toHaveBeenCalled();
+        expect(mocks.apiClient.reportPlaybackStopped).toHaveBeenCalledTimes(1);
+        expect(manager.getCurrentPlaylistIndex(player)).toBe(-1);
+        expect(mocks.loading.hide).toHaveBeenCalled();
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('reports one stop after a genuine start and never advances on error', async () => {
+        const { play, manager, player } = setup();
+        expect(await play()).toBe(true);
+        expect(manager.getCurrentPlaylistIndex(player)).toBe(0);
+        Events.trigger(player, 'error', [{ type: MediaError.PLAYER_ERROR }]);
+        expect(mocks.apiClient.reportPlaybackStart).toHaveBeenCalledTimes(1);
+        expect(mocks.apiClient.reportPlaybackStopped).toHaveBeenCalledTimes(1);
+        expect(manager.getCurrentPlaylistIndex(player)).toBe(-1);
+        expect(mocks.loading.hide).toHaveBeenCalled();
+        expect(vi.getTimerCount()).toBe(0);
+    });
+    it('handles a rejected fallback request without starting playback', async () => {
+        const { play, manager, player } = setup();
+        mocks.getPostedPlaybackInfo.mockResolvedValueOnce({ data: { MediaSources: [{ ...source(), SupportsTranscoding: true }] } })
+            .mockRejectedValueOnce(new Error('offline'));
+        player.play.mockRejectedValue(new DOMException('unsupported', 'NotSupportedError'));
+        expect(await play()).toBe(false);
+        expect(mocks.apiClient.reportPlaybackStart).not.toHaveBeenCalled();
+        expect(mocks.apiClient.reportPlaybackStopped).toHaveBeenCalledTimes(1);
+        expect(manager.getCurrentPlaylistIndex(player)).toBe(-1);
+        expect(mocks.loading.hide).toHaveBeenCalled();
+    });
+
+    it('keeps encoding cleanup when the initial transcode fails and fallback succeeds', async () => {
+        const { play, manager, player } = setup();
+        mocks.getPostedPlaybackInfo.mockResolvedValueOnce({ data: { MediaSources: [{
+            ...source(true), TranscodingUrl: 'video?playSessionId=session'
+        }] } }).mockResolvedValueOnce({ data: { MediaSources: [source(true)] } });
+        player.play.mockRejectedValueOnce(new DOMException('unsupported', 'NotSupportedError'));
+        expect(await play()).toBe(true);
+        expect(mocks.apiClient.stopActiveEncodings).toHaveBeenCalledTimes(2);
+        expect(mocks.apiClient.reportPlaybackStart).toHaveBeenCalledTimes(1);
+        await manager.stop(player);
+    });
+
+    it('cancels before fallback replaces the source', async () => {
+        const { play, manager, player } = setup();
+        let resolve!: () => void;
+        mocks.getPostedPlaybackInfo.mockResolvedValueOnce({ data: { MediaSources: [{
+            ...source(true), TranscodingUrl: 'video?playSessionId=session'
+        }] } }).mockResolvedValueOnce({ data: { MediaSources: [source(true)] } });
+        mocks.apiClient.stopActiveEncodings.mockReturnValueOnce(new Promise<void>(done => {
+            resolve = done;
+        }));
+        player.play.mockRejectedValueOnce(new DOMException('unsupported', 'NotSupportedError'));
+        const playing = play();
+        await vi.waitFor(() => expect(mocks.apiClient.stopActiveEncodings).toHaveBeenCalledOnce());
+        await manager.stop(player);
+        resolve();
+        expect(await playing).toBe(false);
+        expect(player.play).toHaveBeenCalledTimes(1);
+        expect(mocks.apiClient.reportPlaybackStart).not.toHaveBeenCalled();
+        expect(mocks.apiClient.reportPlaybackStopped).toHaveBeenCalledTimes(1);
+        expect(manager.getCurrentPlaylistIndex(player)).toBe(-1);
+        expect(mocks.loading.hide).toHaveBeenCalled();
+    });
+
+    it('cancels a pending URL item without reporting a successful start', async () => {
+        const { manager, player } = setup();
+        let resolve!: () => void;
+        player.play.mockImplementation(() => new Promise<void>(done => {
+            resolve = done;
+        }));
+        const started = vi.fn();
+        Events.on(manager, 'playbackstart', started);
+        const playing = manager.play({ items: [{ Url: 'https://example/video.mp4', MediaType: 'Video' }] });
+        await vi.waitFor(() => expect(player.play).toHaveBeenCalledOnce());
+        await manager.stop(player);
+        resolve();
+        expect(await playing).toBe(false);
+        expect(started).not.toHaveBeenCalled();
+        expect(mocks.apiClient.reportPlaybackStart).not.toHaveBeenCalled();
+        expect(mocks.apiClient.reportPlaybackStopped).not.toHaveBeenCalled();
+        expect(manager.getCurrentPlaylistIndex(player)).toBe(-1);
+        expect(mocks.loading.hide).toHaveBeenCalled();
+    });
+    it('retries an already started stream without reporting a second start', async () => {
+        const { play, manager, player } = setup();
+        mocks.getPostedPlaybackInfo.mockResolvedValueOnce({ data: { MediaSources: [{ ...source(), SupportsTranscoding: true }] } })
+            .mockResolvedValueOnce({ data: { MediaSources: [source(true)] } });
+        expect(await play()).toBe(true);
+        Events.trigger(player, 'error', [{ type: MediaError.PLAYER_ERROR }]);
+        await vi.waitFor(() => expect(player.play).toHaveBeenCalledTimes(2));
+        expect(mocks.apiClient.reportPlaybackStart).toHaveBeenCalledTimes(1);
+        expect(mocks.apiClient.reportPlaybackProgress).toHaveBeenCalledTimes(1);
+        expect(mocks.apiClient.reportPlaybackStopped).not.toHaveBeenCalled();
+        expect(manager.getCurrentPlaylistIndex(player)).toBe(0);
+        await manager.stop(player);
+        expect(mocks.apiClient.reportPlaybackStopped).toHaveBeenCalledTimes(1);
+        expect(vi.getTimerCount()).toBe(0);
+    });
+});
+
+describe('fallback track selection and optional stream changes', () => {
+    it('uses this item audio selection and subtitles off in the fallback request', async () => {
+        const { manager, player } = setup();
+        Object.assign(player, { audioStreamIndex: 9, subtitleStreamIndex: 7, secondarySubtitleStreamIndex: 8 });
+        const selectedSource = {
+            ...source(), SupportsTranscoding: true,
+            DefaultAudioStreamIndex: 4, DefaultSubtitleStreamIndex: -1, DefaultSecondarySubtitleStreamIndex: -1
+        };
+        mocks.getPostedPlaybackInfo.mockResolvedValueOnce({ data: { MediaSources: [selectedSource] } })
+            .mockResolvedValueOnce({ data: { MediaSources: [{ ...selectedSource, ...source(true) }] } });
+        player.play.mockRejectedValueOnce(new DOMException('unsupported', 'NotSupportedError'));
+        expect(await manager.play({ items: [{ ...item }], audioStreamIndex: 4, subtitleStreamIndex: -1 })).toBe(true);
+        expect(mocks.getPostedPlaybackInfo).toHaveBeenNthCalledWith(2, expect.objectContaining({
+            playbackInfoDto: expect.objectContaining({ EnableDirectPlay: false, AudioStreamIndex: 4, SubtitleStreamIndex: -1 })
+        }));
+        expect(manager.getAudioStreamIndex(player)).toBe(4);
+        expect(manager.getSubtitleStreamIndex(player)).toBe(-1);
+        expect(manager.getSecondarySubtitleStreamIndex(player)).toBe(-1);
+        await manager.stop(player);
+    });
+
+    it('keeps playing when an audio-change request rejects', async () => {
+        const { play, manager, player } = setup();
+        Object.assign(player, { canSetAudioStreamIndex: () => false });
+        await play();
+        const streamInfo = player.streamInfo;
+        mocks.getPostedPlaybackInfo.mockRejectedValueOnce(new Error('offline'));
+        manager.setAudioStreamIndex(4, player);
+        await vi.waitFor(() => expect(mocks.getPostedPlaybackInfo).toHaveBeenCalledTimes(2));
+        await vi.advanceTimersByTimeAsync(0);
+        expect(player.streamInfo).toBe(streamInfo);
+        expect(player.isChangingStream).toBe(false);
+        expect(manager.getCurrentPlayer()).toBe(player);
+        expect(player.destroy).not.toHaveBeenCalled();
+        expect(mocks.apiClient.reportPlaybackStopped).not.toHaveBeenCalled();
+        expect(mocks.alert).not.toHaveBeenCalled();
+        await manager.stop(player);
+    });
+
+    it('shows a subtitle-change ErrorCode without stopping the episode', async () => {
+        const { play, manager, player } = setup();
+        Object.assign(player, { setSubtitleStreamIndex: vi.fn() });
+        mocks.getPostedPlaybackInfo.mockResolvedValueOnce({ data: { MediaSources: [{
+            ...source(), MediaStreams: [{ Type: 'Subtitle', Index: 0, DeliveryMethod: 'Encode' }], DefaultSubtitleStreamIndex: -1
+        }] } });
+        await play();
+        const streamInfo = player.streamInfo;
+        mocks.getPostedPlaybackInfo.mockResolvedValueOnce({ data: { ErrorCode: 'NoCompatibleStream' } });
+        manager.setSubtitleStreamIndex(0, player);
+        await vi.waitFor(() => expect(mocks.getPostedPlaybackInfo).toHaveBeenCalledTimes(2));
+        await vi.advanceTimersByTimeAsync(0);
+        expect(mocks.alert).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ text: 'PlaybackErrorNoCompatibleStream' }));
+        expect(player.streamInfo).toBe(streamInfo);
+        expect(player.isChangingStream).toBe(false);
+        expect(manager.getCurrentPlayer()).toBe(player);
+        expect(player.destroy).not.toHaveBeenCalled();
+        expect(mocks.apiClient.reportPlaybackStopped).not.toHaveBeenCalled();
+        await manager.stop(player);
+    });
+
+    it('stops a failed-start fallback when the server returns ErrorCode', async () => {
+        const { play, manager, player } = setup();
+        mocks.getPostedPlaybackInfo.mockResolvedValueOnce({ data: { MediaSources: [{ ...source(), SupportsTranscoding: true }] } })
+            .mockResolvedValueOnce({ data: { ErrorCode: 'NoCompatibleStream' } });
+        player.play.mockRejectedValueOnce(new DOMException('unsupported', 'NotSupportedError'));
+        expect(await play()).toBe(false);
+        expect(player.destroy).toHaveBeenCalledOnce();
+        expect(mocks.apiClient.reportPlaybackStart).not.toHaveBeenCalled();
+        expect(mocks.apiClient.reportPlaybackStopped).toHaveBeenCalledOnce();
+        expect(manager.getCurrentPlaylistIndex(player)).toBe(-1);
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('stops an error fallback request failure even after a genuine start', async () => {
+        const { play, manager, player } = setup();
+        mocks.getPostedPlaybackInfo.mockResolvedValueOnce({ data: { MediaSources: [{ ...source(), SupportsTranscoding: true }] } });
+        await play();
+        mocks.getPostedPlaybackInfo.mockRejectedValueOnce(new Error('offline'));
+        Events.trigger(player, 'error', [{ type: MediaError.PLAYER_ERROR }]);
+        await vi.waitFor(() => expect(mocks.apiClient.reportPlaybackStopped).toHaveBeenCalledOnce());
+        expect(player.destroy).toHaveBeenCalledOnce();
+        expect(mocks.apiClient.reportPlaybackStart).toHaveBeenCalledOnce();
+        expect(manager.getCurrentPlaylistIndex(player)).toBe(-1);
+        expect(vi.getTimerCount()).toBe(0);
     });
 });
