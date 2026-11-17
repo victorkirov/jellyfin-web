@@ -1,15 +1,16 @@
-import Box from '@mui/material/Box/Box';
 import DOMPurify from 'dompurify';
 import React, { type FC, useMemo } from 'react';
 
 import { renderMarkdown } from 'utils/markdown';
+
+import './MarkdownBox.scss';
 
 interface MarkdownBoxProps {
     markdown?: string | null
     fallback?: string
 }
 
-/** A component to render Markdown content within a MUI Box component. */
+/** Sanitized Markdown for legacy and React views. */
 const MarkdownBox: FC<MarkdownBoxProps> = ({
     markdown,
     fallback
@@ -21,21 +22,12 @@ const MarkdownBox: FC<MarkdownBoxProps> = ({
     ), [markdown]);
 
     return (
-        <Box
+        <div
+            className='markdownBox'
             dangerouslySetInnerHTML={html}
-            sx={{
-                '> :first-child /* emotion-disable-server-rendering-unsafe-selector-warning-please-do-not-use-this-the-warning-exists-for-a-reason */': {
-                    marginTop: 0,
-                    paddingTop: 0
-                },
-                '> :last-child': {
-                    marginBottom: 0,
-                    paddingBottom: 0
-                }
-            }}
         >
             {markdown ? undefined : fallback}
-        </Box>
+        </div>
     );
 };
 

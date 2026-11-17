@@ -3,8 +3,6 @@ import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client';
 import type { NameGuidPair } from '@jellyfin/sdk/lib/generated-client/models/name-guid-pair';
 import { PersonKind } from '@jellyfin/sdk/lib/generated-client/models/person-kind';
 import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
 import LinkButton from 'elements/emby-button/LinkButton';
 import { appRouter } from 'components/router/appRouter';
 import globalize from 'lib/globalize';
@@ -27,21 +25,21 @@ const ItemDetailsMetadataList: FC<ItemDetailsMetadataListProps> = ({
     }
 
     return (
-        <Box className='detailsGroupItem'>
-            <Typography className='label'>
+        <div className='detailsGroupItem'>
+            <div className='label'>
                 {getLabel(type, items.length)}
-            </Typography>
-            <Box className='focuscontainer-x'>
+            </div>
+            <div className='focuscontainer-x'>
                 {items.map((metadataItem, index) => (
-                    <Box key={metadataItem.Id} component='span'>
+                    <span key={metadataItem.Id}>
                         {index > 0 ? ', ' : ''}
                         <LinkButton href={getLink(type, item, context, metadataItem)} className='button-link button-link-inherit'>
                             {metadataItem.Name}
                         </LinkButton>
-                    </Box>
+                    </span>
                 ))}
-            </Box>
-        </Box>
+            </div>
+        </div>
     );
 };
 

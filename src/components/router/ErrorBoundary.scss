@@ -1,0 +1,22 @@
+@use '../../themes/_base/palette' as palette;
+
+.routeError {
+    padding: 1em;
+    border: 1px solid palette.$error-main;
+    border-radius: 0.2em;
+    background: palette.$background-paper;
+    color: palette.$text-primary;
+}
+
+.routeError h1 {
+    margin-top: 0;
+    font-size: 1.5em;
+}
+
+.routeErrorTrace {
+    overflow: auto;
+    max-height: 25rem;
+    padding: 1em;
+    border: 1px solid palette.$divider;
+    font-size: 0.85em;
+}

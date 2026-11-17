@@ -1,14 +1,11 @@
-import Alert from '@mui/material/Alert/Alert';
-import AlertTitle from '@mui/material/AlertTitle/AlertTitle';
-import Box from '@mui/material/Box/Box';
-import Paper from '@mui/material/Paper/Paper';
-import Typography from '@mui/material/Typography/Typography';
 import classNames from 'classnames';
 import React, { type FC, useEffect } from 'react';
 import { useRouteError } from 'react-router-dom';
 
 import loading from 'components/loading/loading';
 import Page from 'components/Page';
+
+import './ErrorBoundary.scss';
 
 interface ErrorBoundaryParams {
     pageClasses?: string[]
@@ -28,38 +25,15 @@ const ErrorBoundary: FC<ErrorBoundaryParams> = ({
             id='errorBoundary'
             className={classNames('mainAnimatedPage', pageClasses)}
         >
-            <Box className='content-primary'>
-                <Alert severity='error'>
-                    <AlertTitle>
-                        {error.name}
-                    </AlertTitle>
-
-                    <Typography>
-                        {error.message}
-                    </Typography>
-
+            <div className='content-primary'>
+                <section className='routeError' role='alert'>
+                    <h1>{error.name}</h1>
+                    <p>{error.message}</p>
                     {error.stack && (
-                        <Paper
-                            variant='outlined'
-                            sx={{
-                                marginTop: 1,
-                                backgroundColor: 'transparent'
-                            }}
-                        >
-                            <Box
-                                component='pre'
-                                sx={{
-                                    overflow: 'auto',
-                                    margin: 2,
-                                    maxHeight: '25rem' // 20 lines
-                                }}
-                            >
-                                {error.stack}
-                            </Box>
-                        </Paper>
+                        <pre className='routeErrorTrace'>{error.stack}</pre>
                     )}
-                </Alert>
-            </Box>
+                </section>
+            </div>
         </Page>
     );
 };
