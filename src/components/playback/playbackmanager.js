@@ -34,6 +34,7 @@ import { ServerConnections } from 'lib/jellyfin-apiclient';
 import { OutboundWebSocketMessageType } from '@jellyfin/sdk/lib/websocket';
 import { MediaError } from 'types/mediaError';
 import { getMediaError } from 'utils/mediaError';
+import { getHttpStatus } from 'utils/httpStatus';
 import { bindSkipSegment } from './skipsegment.ts';
 import * as bitrateTest from 'utils/bitrateTest';
 
@@ -2442,12 +2443,11 @@ export class PlaybackManager {
 
             let displayErrorCode = 'ErrorDefault';
 
-            if (e instanceof Response) {
-                if (e.status >= 500) {
-                    displayErrorCode = `PlaybackError.${MediaError.SERVER_ERROR}`;
-                } else if (e.status >= 400) {
-                    displayErrorCode = `PlaybackError.${MediaError.NO_MEDIA_ERROR}`;
-                }
+            const status = getHttpStatus(e);
+            if (status >= 500) {
+                displayErrorCode = `PlaybackError.${MediaError.SERVER_ERROR}`;
+            } else if (status >= 400) {
+                displayErrorCode = `PlaybackError.${MediaError.NO_MEDIA_ERROR}`;
             }
 
             showPlaybackInfoErrorMessage(self, displayErrorCode);
@@ -2613,25 +2613,21 @@ export class PlaybackManager {
             const api = ServerConnections.getApi(item.ServerId);
             const apiClient = ServerConnections.getApiClient(item.ServerId);
 
-            // FIXME: This is gnarly, but don't want to change too much here in a bugfix
-            return Promise.resolve()
-                .then(() => {
-                    if (!isServerItem(item) || itemHelper.isLocalItem(item)) {
-                        return Promise.reject(new Error('skip bitrate detection'));
+            if (!isServerItem(item) || itemHelper.isLocalItem(item)) {
+                return Promise.resolve(getSavedMaxStreamingBitrate(apiClient, mediaType));
+            }
+
+            return apiClient.getEndpointInfo()
+                .then((endpointInfo) => {
+                    if ((mediaType === 'Video' || mediaType === 'Audio') && appSettings.enableAutomaticBitrateDetection(endpointInfo.IsInNetwork, mediaType)) {
+                        return bitrateTest.detectBitrate(api)
+                            .then((bitrate) => {
+                                appSettings.maxStreamingBitrate(endpointInfo.IsInNetwork, mediaType, bitrate);
+                                return bitrate;
+                            });
                     }
 
-                    return apiClient.getEndpointInfo()
-                        .then((endpointInfo) => {
-                            if ((mediaType === 'Video' || mediaType === 'Audio') && appSettings.enableAutomaticBitrateDetection(endpointInfo.IsInNetwork, mediaType)) {
-                                return bitrateTest.detectBitrate(api)
-                                    .then((bitrate) => {
-                                        appSettings.maxStreamingBitrate(endpointInfo.IsInNetwork, mediaType, bitrate);
-                                        return bitrate;
-                                    });
-                            }
-
-                            return Promise.reject(new Error('skip bitrate detection'));
-                        });
+                    return getSavedMaxStreamingBitrate(apiClient, mediaType);
                 })
                 .catch(() => getSavedMaxStreamingBitrate(apiClient, mediaType));
         }
