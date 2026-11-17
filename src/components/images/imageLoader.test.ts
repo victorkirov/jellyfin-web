@@ -110,3 +110,51 @@ describe('late blurhash replies', () => {
         expect(document.querySelector('canvas')?.classList.contains('lazy-hidden')).toBe(true);
     });
 });
+
+function mockImageLoading() {
+    const preloaders: HTMLImageElement[] = [];
+    vi.stubGlobal('Image', class {
+        constructor() {
+            const image = document.createElement('img');
+            preloaders.push(image);
+            return image;
+        }
+    });
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => callback(0));
+    return preloaders;
+}
+
+describe('lazy image fade-in settings', () => {
+    it('reads fast fade-in once per batch and preserves it until image load', () => {
+        const preloaders = mockImageLoading();
+        document.body.innerHTML += document.body.innerHTML;
+        enableFastFadein.mockReturnValue(true);
+        imageLoader.lazyChildren(document.body);
+        enableFastFadein.mockReturnValue(false);
+        for (const target of document.querySelectorAll('.lazy')) {
+            intersect(target);
+        }
+        for (const image of preloaders) {
+            image.dispatchEvent(new Event('load'));
+        }
+        expect(enableFastFadein).toHaveBeenCalledTimes(1);
+        for (const target of document.querySelectorAll('.lazy')) {
+            expect(target.classList.contains('lazy-image-fadein-fast')).toBe(true);
+        }
+    });
+
+    it('unloads and reloads an image when it leaves and enters the viewport', () => {
+        const preloaders = mockImageLoading();
+        imageLoader.lazyChildren(document.body);
+        const target = document.body.firstElementChild!;
+        intersect(target);
+        preloaders[0].dispatchEvent(new Event('load'));
+        expect(target.hasAttribute('data-src')).toBe(false);
+        intersect(target, false);
+        expect(target.getAttribute('data-src')).toBe('image.jpg');
+        intersect(target);
+        preloaders[1].dispatchEvent(new Event('load'));
+        expect(target.hasAttribute('data-src')).toBe(false);
+        expect(postMessage).toHaveBeenCalledTimes(1);
+    });
+});
