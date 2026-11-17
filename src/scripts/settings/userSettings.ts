@@ -13,6 +13,7 @@ const defaultSubtitleAppearanceSettings = {
 export class UserSettings extends DisplayPreferenceSettings {
     allowedAudioChannels(): string;
     allowedAudioChannels(val: string): boolean;
+    /** @returns Stored value when reading, persistence result when writing. */
     allowedAudioChannels(val?: string) {
         if (val !== undefined) {
             return this.set('allowedAudioChannels', val, false);
@@ -48,6 +49,7 @@ export class UserSettings extends DisplayPreferenceSettings {
 
     selectAudioNormalization(): string;
     selectAudioNormalization(val: string): boolean;
+    /** @returns Stored value when reading, persistence result when writing. */
     selectAudioNormalization(val?: string) {
         if (val !== undefined) {
             return this.set('selectAudioNormalization', val, false);
@@ -122,6 +124,7 @@ export class UserSettings extends DisplayPreferenceSettings {
 
     customCss(): string | null | undefined;
     customCss(val: string): boolean;
+    /** @returns Stored value when reading, persistence result when writing. */
     customCss(val?: string) {
         if (val !== undefined) {
             return this.set('customCss', val.toString(), false);
@@ -138,7 +141,7 @@ export class UserSettings extends DisplayPreferenceSettings {
         return toBoolean(this.get('detailsBanner', false), true);
     }
 
-    useEpisodeImagesInNextUpAndResume(val?: string|boolean) {
+    useEpisodeImagesInNextUpAndResume(val?: string | boolean) {
         if (val !== undefined) {
             return this.set('useEpisodeImagesInNextUpAndResume', val.toString(), true);
         }
@@ -148,6 +151,7 @@ export class UserSettings extends DisplayPreferenceSettings {
 
     language(): string | null | undefined;
     language(val: string): boolean;
+    /** @returns Stored value when reading, persistence result when writing. */
     language(val?: string) {
         if (val !== undefined) {
             return this.set('language', val.toString(), false);
@@ -158,6 +162,7 @@ export class UserSettings extends DisplayPreferenceSettings {
 
     dateTimeLocale(): string | null | undefined;
     dateTimeLocale(val: string): boolean;
+    /** @returns Stored value when reading, persistence result when writing. */
     dateTimeLocale(val?: string) {
         if (val !== undefined) {
             return this.set('datetimelocale', val.toString(), false);
@@ -168,6 +173,7 @@ export class UserSettings extends DisplayPreferenceSettings {
 
     skipBackLength(): number;
     skipBackLength(val: number): boolean;
+    /** @returns Stored value when reading, persistence result when writing. */
     skipBackLength(val?: number) {
         if (val !== undefined) {
             return this.set('skipBackLength', val.toString());
@@ -178,6 +184,7 @@ export class UserSettings extends DisplayPreferenceSettings {
 
     skipForwardLength(): number;
     skipForwardLength(val: number): boolean;
+    /** @returns Stored value when reading, persistence result when writing. */
     skipForwardLength(val?: number) {
         if (val !== undefined) {
             return this.set('skipForwardLength', val.toString());
@@ -188,6 +195,7 @@ export class UserSettings extends DisplayPreferenceSettings {
 
     dashboardTheme(): string | null | undefined;
     dashboardTheme(val: string): boolean;
+    /** @returns Stored value when reading, persistence result when writing. */
     dashboardTheme(val?: string) {
         if (val !== undefined) {
             return this.set('dashboardTheme', val);
@@ -198,6 +206,7 @@ export class UserSettings extends DisplayPreferenceSettings {
 
     skin(): string | null | undefined;
     skin(val: string): boolean;
+    /** @returns Stored value when reading, persistence result when writing. */
     skin(val?: string) {
         if (val !== undefined) {
             return this.set('skin', val, false);
@@ -208,6 +217,7 @@ export class UserSettings extends DisplayPreferenceSettings {
 
     theme(): string | null | undefined;
     theme(val: string): boolean;
+    /** @returns Stored value when reading, persistence result when writing. */
     theme(val?: string) {
         if (val !== undefined) {
             return this.set('appTheme', val, false);
@@ -218,6 +228,7 @@ export class UserSettings extends DisplayPreferenceSettings {
 
     screensaver(): string | null | undefined;
     screensaver(val: string): boolean;
+    /** @returns Stored value when reading, persistence result when writing. */
     screensaver(val?: string) {
         if (val !== undefined) {
             return this.set('screensaver', val, false);
@@ -228,6 +239,7 @@ export class UserSettings extends DisplayPreferenceSettings {
 
     backdropScreensaverInterval(): number;
     backdropScreensaverInterval(val: number): boolean;
+    /** @returns Stored value when reading, persistence result when writing. */
     backdropScreensaverInterval(val?: number) {
         if (val !== undefined) {
             return this.set('backdropScreensaverInterval', val.toString(), false);
@@ -238,6 +250,7 @@ export class UserSettings extends DisplayPreferenceSettings {
 
     slideshowInterval(): number;
     slideshowInterval(val: number): boolean;
+    /** @returns Stored value when reading, persistence result when writing. */
     slideshowInterval(val?: number) {
         if (val !== undefined) {
             return this.set('slideshowInterval', val.toString(), false);
@@ -248,6 +261,7 @@ export class UserSettings extends DisplayPreferenceSettings {
 
     screensaverTime(): number;
     screensaverTime(val: number): boolean;
+    /** @returns Stored value when reading, persistence result when writing. */
     screensaverTime(val?: number) {
         if (val !== undefined) {
             return this.set('screensaverTime', val.toString(), false);
@@ -258,6 +272,7 @@ export class UserSettings extends DisplayPreferenceSettings {
 
     libraryPageSize(): number;
     libraryPageSize(val: number): boolean;
+    /** @returns Stored value when reading, persistence result when writing. */
     libraryPageSize(val?: number) {
         if (val !== undefined) {
             return this.set('libraryPageSize', val.toString(), false);
@@ -274,6 +289,7 @@ export class UserSettings extends DisplayPreferenceSettings {
 
     maxDaysForNextUp(): number;
     maxDaysForNextUp(val: number): boolean;
+    /** @returns Stored value when reading, persistence result when writing. */
     maxDaysForNextUp(val?: number) {
         if (val !== undefined) {
             return this.set('maxDaysForNextUp', val.toString(), false);
@@ -298,6 +314,7 @@ export class UserSettings extends DisplayPreferenceSettings {
 
     soundEffects(): string | null | undefined;
     soundEffects(val: string): boolean;
+    /** @returns Stored value when reading, persistence result when writing. */
     soundEffects(val?: string) {
         if (val !== undefined) {
             return this.set('soundeffects', val, false);
@@ -308,6 +325,7 @@ export class UserSettings extends DisplayPreferenceSettings {
 
     stillWatchingPrompt(): string;
     stillWatchingPrompt(val: string): boolean;
+    /** @returns Stored value when reading, persistence result when writing. */
     stillWatchingPrompt(val?: string) {
         if (val !== undefined) {
             return this.set('stillWatchingPrompt', val, false);
@@ -315,7 +333,6 @@ export class UserSettings extends DisplayPreferenceSettings {
 
         return this.get('stillWatchingPrompt', false) || StillWatchingOptions.Disabled;
     }
-
 
     loadQuerySettings<T extends object>(key: string, query: T) {
         const sortSettings = filterQuerySettings(readJsonSetting(this.get(key)), allowedSortSettings);
