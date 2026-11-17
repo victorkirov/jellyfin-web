@@ -137,7 +137,7 @@ function showContextMenu(card, options = {}) {
             .then(result => {
                 if (result.command === 'playallfromhere' || result.command === 'queueallfromhere') {
                     executeAction(card, options.positionTo, result.command);
-                } else if (result.updated || result.deleted) {
+                } else if (result.updated) {
                     notifyRefreshNeeded(card, options.itemsContainer);
                 }
             })

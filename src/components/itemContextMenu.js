@@ -24,23 +24,6 @@ const DOWNLOAD_ALL_TYPES = [
     BaseItemKind.Series
 ];
 
-function getDeleteLabel(type) {
-    switch (type) {
-        case BaseItemKind.Series:
-            return globalize.translate('DeleteSeries');
-
-        case BaseItemKind.Episode:
-            return globalize.translate('DeleteEpisode');
-
-        case BaseItemKind.Playlist:
-        case BaseItemKind.BoxSet:
-            return globalize.translate('Delete');
-
-        default:
-            return globalize.translate('DeleteMedia');
-    }
-}
-
 export async function getCommands(options) {
     const item = options.item;
     const user = options.user;
@@ -191,14 +174,6 @@ export async function getCommands(options) {
         }
     }
 
-    if (item.CanDelete && options.deleteItem !== false) {
-        commands.push({
-            name: getDeleteLabel(item.Type),
-            id: 'delete',
-            icon: 'delete'
-        });
-    }
-
     if (commands.length) {
         commands.push({
             divider: true
@@ -265,13 +240,11 @@ export async function getCommands(options) {
     return commands;
 }
 
-function getResolveFunction(resolve, commandId, changed, deleted, itemId) {
+function getResolveFunction(resolve, commandId, changed) {
     return function () {
         resolve({
             command: commandId,
-            updated: changed,
-            deleted: deleted,
-            itemId: itemId
+            updated: changed
         });
     };
 }
@@ -412,9 +385,6 @@ function executeCommand(item, id, options) {
                 playbackManager.instantMix(item);
                 getResolveFunction(resolve, id)();
                 break;
-            case 'delete':
-                deleteItem(apiClient, item).then(getResolveFunction(resolve, id, true, true, itemId), getResolveFunction(resolve, id));
-                break;
             case 'share':
                 navigator.share({
                     title: item.Name,
@@ -509,19 +479,6 @@ function play(item, resume, queue, queueNext) {
             }
         });
     }
-}
-
-function deleteItem(apiClient, item) {
-    return new Promise(function (resolve, reject) {
-        import('../scripts/deleteHelper').then((deleteHelper) => {
-            deleteHelper.deleteItem({
-                item: item,
-                navigate: false
-            }).then(function () {
-                resolve(true);
-            }, reject);
-        });
-    });
 }
 
 export async function show(options) {

@@ -1,16 +1,12 @@
 
-import { AppFeature } from 'constants/appFeature';
 import { EventType } from 'constants/eventType';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import Events from 'utils/events';
 
 import browser from '../../scripts/browser';
-import { appHost } from '../apphost';
 import globalize from '../../lib/globalize';
 import dom from '../../utils/dom';
 import './multiSelect.scss';
-import alert from '../alert';
-import confirm from '../confirm/confirm';
 import datetime from '../../scripts/datetime';
 
 let selectedItems = [];
@@ -152,114 +148,68 @@ function showSelectionCommands() {
     }
 }
 
-function alertText(options) {
-    return new Promise((resolve) => {
-        alert(options).then(resolve, resolve);
-    });
-}
-
-function deleteItems(apiClient, itemIds) {
-    return new Promise((resolve, reject) => {
-        let msg = globalize.translate('ConfirmDeleteItem');
-        let title = globalize.translate('HeaderDeleteItem');
-
-        if (itemIds.length > 1) {
-            msg = globalize.translate('ConfirmDeleteItems');
-            title = globalize.translate('HeaderDeleteItems');
-        }
-
-        confirm(msg, title).then(() => {
-            const promises = itemIds.map(itemId => apiClient.deleteItem(itemId));
-
-            Promise.all(promises).then(resolve, () => {
-                alertText(globalize.translate('ErrorDeletingItem')).then(reject, reject);
-            });
-        }, reject);
-    });
-}
-
 function showMenuForSelectedItems(e) {
     const apiClient = ServerConnections.currentApiClient();
 
-    apiClient.getCurrentUser().then(user => {
-        const menuItems = [];
+    const menuItems = [];
 
-        menuItems.push({
-            name: globalize.translate('SelectAll'),
-            id: 'selectall',
-            icon: 'select_all'
-        });
+    menuItems.push({
+        name: globalize.translate('SelectAll'),
+        id: 'selectall',
+        icon: 'select_all'
+    });
 
-        // TODO: Be more dynamic based on what is selected
-        if (user.Policy.EnableContentDeletion) {
-            menuItems.push({
-                name: globalize.translate('Delete'),
-                id: 'delete',
-                icon: 'delete'
-            });
-        }
+    menuItems.push({
+        name: globalize.translate('MarkPlayed'),
+        id: 'markplayed',
+        icon: 'check_box'
+    });
 
-        if (user.Policy.EnableContentDownloading && appHost.supports(AppFeature.FileDownload)) {
-            // Disabled because there is no callback for this item
-        }
+    menuItems.push({
+        name: globalize.translate('MarkUnplayed'),
+        id: 'markunplayed',
+        icon: 'check_box_outline_blank'
+    });
 
-        menuItems.push({
-            name: globalize.translate('MarkPlayed'),
-            id: 'markplayed',
-            icon: 'check_box'
-        });
+    import('../actionSheet/actionSheet').then((actionsheet) => {
+        actionsheet.show({
+            items: menuItems,
+            positionTo: e.target,
+            callback: function (id) {
+                const items = selectedItems.slice(0);
 
-        menuItems.push({
-            name: globalize.translate('MarkUnplayed'),
-            id: 'markunplayed',
-            icon: 'check_box_outline_blank'
-        });
+                switch (id) {
+                    case 'selectall':
+                        {
+                            const elems = document.querySelectorAll('.itemSelectionPanel');
+                            for (let i = 0, length = elems.length; i < length; i++) {
+                                const chkItemSelect = elems[i].querySelector('.chkItemSelect');
 
-        import('../actionSheet/actionSheet').then((actionsheet) => {
-            actionsheet.show({
-                items: menuItems,
-                positionTo: e.target,
-                callback: function (id) {
-                    const items = selectedItems.slice(0);
-
-                    switch (id) {
-                        case 'selectall':
-                            {
-                                const elems = document.querySelectorAll('.itemSelectionPanel');
-                                for (let i = 0, length = elems.length; i < length; i++) {
-                                    const chkItemSelect = elems[i].querySelector('.chkItemSelect');
-
-                                    if (chkItemSelect && !chkItemSelect.classList.contains('checkedInitial') && !chkItemSelect.checked && chkItemSelect.getBoundingClientRect().width != 0) {
-                                        chkItemSelect.checked = true;
-                                        updateItemSelection(chkItemSelect, true);
-                                    }
+                                if (chkItemSelect && !chkItemSelect.classList.contains('checkedInitial') && !chkItemSelect.checked && chkItemSelect.getBoundingClientRect().width != 0) {
+                                    chkItemSelect.checked = true;
+                                    updateItemSelection(chkItemSelect, true);
                                 }
                             }
-                            break;
-                        case 'delete':
-                            deleteItems(apiClient, items).then(dispatchNeedsRefresh);
-                            hideSelections();
-                            dispatchNeedsRefresh();
-                            break;
-                        case 'markplayed':
-                            items.forEach(itemId => {
-                                apiClient.markPlayed(apiClient.getCurrentUserId(), itemId);
-                            });
-                            hideSelections();
-                            dispatchNeedsRefresh();
-                            break;
-                        case 'markunplayed':
-                            items.forEach(itemId => {
-                                apiClient.markUnplayed(apiClient.getCurrentUserId(), itemId);
-                            });
-                            hideSelections();
-                            dispatchNeedsRefresh();
-                            break;
-                        default:
-                            break;
-                    }
+                        }
+                        break;
+                    case 'markplayed':
+                        items.forEach(itemId => {
+                            apiClient.markPlayed(apiClient.getCurrentUserId(), itemId);
+                        });
+                        hideSelections();
+                        dispatchNeedsRefresh();
+                        break;
+                    case 'markunplayed':
+                        items.forEach(itemId => {
+                            apiClient.markUnplayed(apiClient.getCurrentUserId(), itemId);
+                        });
+                        hideSelections();
+                        dispatchNeedsRefresh();
+                        break;
+                    default:
+                        break;
                 }
-            });
+            }
         });
     });
 }

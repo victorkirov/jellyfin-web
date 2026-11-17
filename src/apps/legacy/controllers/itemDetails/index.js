@@ -111,7 +111,6 @@ function getContextMenuOptions(item, user, button) {
         positionTo: button,
         cancelTimer: false,
         record: false,
-        deleteItem: item.CanDelete === true,
         shuffle: false,
         instantMix: false,
         user: user,
@@ -2062,15 +2061,7 @@ export default function (view, params) {
             apiClient.getCurrentUser().then(function (user) {
                 itemContextMenu.show(getContextMenuOptions(selectedItem, user, button))
                     .then(function (result) {
-                        if (result.deleted) {
-                            const parentId = selectedItem.SeasonId || selectedItem.SeriesId || selectedItem.ParentId;
-
-                            if (parentId) {
-                                appRouter.showItem(parentId, item.ServerId);
-                            } else {
-                                appRouter.goHome();
-                            }
-                        } else if (result.updated) {
+                        if (result.updated) {
                             reload(self, view, params);
                         }
                     })
