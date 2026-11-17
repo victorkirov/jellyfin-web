@@ -17,11 +17,8 @@
     "htmlAudioPlayer/plugin",
     "htmlVideoPlayer/plugin",
     "photoPlayer/plugin",
-    "comicsPlayer/plugin",
-    "bookPlayer/plugin",
     "youtubePlayer/plugin",
     "backdropScreensaver/plugin",
-    "pdfPlayer/plugin",
     "logoScreensaver/plugin",
     "stillWatching/plugin"
   ]

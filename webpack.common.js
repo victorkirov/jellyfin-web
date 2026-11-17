@@ -5,18 +5,15 @@ const CopyPlugin = require('copy-webpack-plugin');
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const { ContextExclusionPlugin, DefinePlugin, IgnorePlugin } = require('webpack');
+const { ContextExclusionPlugin, DefinePlugin } = require('webpack');
 const packageJson = require('./package.json');
 
 const Assets = [
     'native-promise-only/npo.js',
-    'libarchive.js/dist/worker-bundle.js',
-    'libarchive.js/dist/libarchive.wasm',
     '@jellyfin/libass-wasm/dist/js/default.woff2',
     '@jellyfin/libass-wasm/dist/js/subtitles-octopus-worker.js',
     '@jellyfin/libass-wasm/dist/js/subtitles-octopus-worker.wasm',
-    '@jellyfin/libass-wasm/dist/js/subtitles-octopus-worker-legacy.js',
-    'pdfjs-dist/build/pdf.worker.js'
+    '@jellyfin/libass-wasm/dist/js/subtitles-octopus-worker-legacy.js'
 ];
 
 const DEV_MODE = process.env.NODE_ENV !== 'production';
@@ -103,12 +100,6 @@ const config = {
                     };
                 })
             ]
-        }),
-        // The libarchive.js worker-bundle is copied manually.
-        // If it is automatically bundled, escheck will fail since it uses import.meta.url.
-        new IgnorePlugin({
-            resourceRegExp: /worker-bundle\.js$/,
-            contextRegExp: /libarchive.js/
         }),
         new ForkTsCheckerWebpackPlugin({
             typescript: {
@@ -235,11 +226,9 @@ const config = {
                     path.resolve(__dirname, 'node_modules/compare-versions'),
                     path.resolve(__dirname, 'node_modules/date-fns'),
                     path.resolve(__dirname, 'node_modules/dom7'),
-                    path.resolve(__dirname, 'node_modules/epubjs'),
                     path.resolve(__dirname, 'node_modules/flv.js'),
                     path.resolve(__dirname, 'node_modules/highlight-words'),
                     path.resolve(__dirname, 'node_modules/idb-keyval'),
-                    path.resolve(__dirname, 'node_modules/libarchive.js'),
                     path.resolve(__dirname, 'node_modules/libbitsub'),
                     path.resolve(__dirname, 'node_modules/linkify-it'),
                     path.resolve(__dirname, 'node_modules/markdown-it'),
@@ -302,24 +291,6 @@ const config = {
                     loader: 'ts-loader',
                     options: {
                         transpileOnly: true
-                    }
-                }]
-            },
-            /* modules that Babel breaks when transforming to ESM */
-            {
-                test: /\.js$/,
-                include: [
-                    path.resolve(__dirname, 'node_modules/pdfjs-dist'),
-                    path.resolve(__dirname, 'node_modules/xmldom')
-                ],
-                use: [{
-                    loader: 'babel-loader',
-                    options: {
-                        cacheCompression: false,
-                        cacheDirectory: true,
-                        plugins: [
-                            '@babel/transform-modules-umd'
-                        ]
                     }
                 }]
             },
