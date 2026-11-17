@@ -6,12 +6,10 @@ import {
     Outlet
 } from 'react-router-dom';
 
-import { APP_ROUTES as MODERN_APP_ROUTES } from 'apps/modern/routes/routes';
 import { APP_ROUTES as LEGACY_APP_ROUTES } from 'apps/legacy/routes/routes';
 import AppHeader from 'components/AppHeader';
 import Backdrop from 'components/Backdrop';
 import ColorSchemeSync from 'components/ColorSchemeSync';
-import layoutManager from 'components/layoutManager';
 import BangRedirect from 'components/router/BangRedirect';
 import { createRouterHistory } from 'components/router/routerHistory';
 import { getTheme } from 'themes';
@@ -21,7 +19,7 @@ const router = createHashRouter([
     {
         element: <RootAppLayout />,
         children: [
-            ...(layoutManager.modern ? MODERN_APP_ROUTES : LEGACY_APP_ROUTES),
+            ...LEGACY_APP_ROUTES,
             {
                 path: '!/*',
                 Component: BangRedirect
@@ -51,7 +49,7 @@ function RootAppLayout() {
         >
             <ColorSchemeSync colorScheme={theme.defaultColorScheme} />
             <Backdrop />
-            <AppHeader isHidden={layoutManager.modern} />
+            <AppHeader />
 
             <Outlet />
         </ThemeProvider>

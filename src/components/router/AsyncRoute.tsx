@@ -1,7 +1,5 @@
 import type { RouteObject } from 'react-router-dom';
 
-import { AppType } from 'constants/appType';
-
 export interface AsyncRoute {
     /** The URL path for this route. */
     path: string
@@ -10,22 +8,15 @@ export interface AsyncRoute {
      * Will fallback to using the `path` value if not specified.
      */
     page?: string
-    /** The app that this page is part of. */
-    type?: AppType
 }
 
-const importRoute = (page: string, type: AppType) => {
-    if (type === AppType.Modern) {
-        return import(/* webpackChunkName: "[request]" */ `../../apps/modern/routes/${page}`);
-    }
-
-    return import(/* webpackChunkName: "[request]" */ `../../apps/legacy/routes/${page}`);
-};
+const importRoute = (page: string) => (
+    import(/* webpackChunkName: "[request]" */ `../../apps/legacy/routes/${page}`)
+);
 
 export const toAsyncPageRoute = ({
     path,
-    page,
-    type = AppType.Legacy
+    page
 }: AsyncRoute): RouteObject => {
     return {
         path,
@@ -34,7 +25,7 @@ export const toAsyncPageRoute = ({
                 // If there is a default export, use it as the Component for compatibility
                 default: Component,
                 ...route
-            } = await importRoute(page ?? path, type);
+            } = await importRoute(page ?? path);
 
             return {
                 Component,

@@ -18,7 +18,6 @@ describe('TV layout', () => {
             expect(layoutManager.tv).toBe(true);
             expect(layoutManager.mobile).toBe(false);
             expect(layoutManager.desktop).toBe(false);
-            expect(layoutManager.modern).toBe(false);
             expect(settings.set).toHaveBeenCalledWith('layout', 'tv');
             expect(document.documentElement.className).toBe('layout-tv');
         }

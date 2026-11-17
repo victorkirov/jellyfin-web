@@ -1,17 +1,4 @@
-/** The different layout modes supported by the web app. */
+/** The layout supported by the TV-only build. */
 export const enum LayoutMode {
-    /** Automatic layout - the app chose the best layout for the detected device. */
-    Auto = 'auto',
-    /** The desktop layout. */
-    Desktop = 'desktop',
-    /** The legacy desktop layout. */
-    DesktopLegacy = 'desktop-legacy',
-    /** The modern responsive layout. */
-    Modern = 'modern',
-    /** The mobile layout. */
-    Mobile = 'mobile',
-    /** The legacy mobile layout. */
-    MobileLegacy = 'mobile-legacy',
-    /** The TV layout. */
     Tv = 'tv'
 };
