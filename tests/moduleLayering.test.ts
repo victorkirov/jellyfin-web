@@ -3,7 +3,7 @@ import { ESLint } from 'eslint';
 import { describe, expect, it } from 'vitest';
 
 const eslint = new ESLint();
-const restrictions = results => results.flatMap(result => result.messages
+const restrictions = (results: ESLint.LintResult[]) => results.flatMap(result => result.messages
     .filter(message => message.ruleId === 'import/no-restricted-paths'));
 
 describe('resolved module layers', () => {
