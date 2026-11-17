@@ -61,19 +61,15 @@ function setState(button: StateButton, played?: boolean, updateAttribute?: boole
         button.setAttribute('data-played', String(played));
     }
 
-    setTitle(button, button.getAttribute('data-type'), played);
+    setTitle(button, played);
 }
 
-function setTitle(button: StateButton, itemType: string | null, played?: boolean) {
-    if (itemType !== 'AudioBook') {
-        button.title = played ? globalize.translate('Watched') : globalize.translate('MarkPlayed');
-    } else {
-        button.title = played ? globalize.translate('Played') : globalize.translate('MarkPlayed');
-    }
+function setTitle(button: StateButton, played?: boolean) {
+    button.title = globalize.translate(played ? 'Played' : 'MarkPlayed');
 
     const text = button.querySelector<HTMLElement>('.button-text');
     if (text) {
-        text.innerText = button.title;
+        text.textContent = button.title;
     }
 }
 

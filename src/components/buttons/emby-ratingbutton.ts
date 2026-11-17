@@ -76,7 +76,7 @@ function setTitle(button: StateButton, isFavorite?: boolean) {
 
     const text = button.querySelector<HTMLElement>('.button-text');
     if (text) {
-        text.innerText = button.title;
+        text.textContent = button.title;
     }
 }
 
