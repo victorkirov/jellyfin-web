@@ -56,7 +56,7 @@ vi.mock('components/maintabsmanager', () => ({
 }));
 vi.mock('components/playback/playbackmanager', () => ({ playbackManager: {} }));
 vi.mock('utils/dom', () => ({ default: { getWindowSize: () => ({ innerWidth: 1920 }) } }));
-vi.mock('lib/globalize', () => ({ default: { translate: (key: string) => key } }));
+vi.mock('lib/globalize', () => ({ default: { translate: vi.fn((key: string) => key) } }));
 vi.mock('scripts/inputManager', () => ({ default: { on: vi.fn(), off: vi.fn() } }));
 vi.mock('scripts/libraryMenu', () => ({ default: { getTopParentId: () => 'menu-parent', setTitle: vi.fn() } }));
 vi.mock('scripts/settings/userSettings', () => ({ get: vi.fn(), useEpisodeImagesInNextUpAndResume: () => false }));
@@ -75,6 +75,9 @@ import { playbackManager } from 'components/playback/playbackmanager';
 import Events from 'utils/events';
 import * as userSettings from 'scripts/settings/userSettings';
 import { queryClient } from 'utils/query/queryClient';
+import inputManager from 'scripts/inputManager';
+import Dashboard from 'components/dashboard';
+import globalize from 'lib/globalize';
 
 const api = {
     getCurrentUserId: () => 'user', serverId: () => 'server',
@@ -106,6 +109,7 @@ function select(index: number, preload = false) {
 
 beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(globalize.translate).mockImplementation(key => key);
     mocks.children.length = 0;
     Object.assign(playbackManager, { _callbacks: {} });
     queryClient.clear();
@@ -122,7 +126,30 @@ describe.each([
     { name: 'movies', Factory: Movies, count: 5, type: 'Movie', limit: 18, fields: ['PrimaryImageAspectRatio', 'MediaSourceCount'], images: ['Primary', 'Backdrop', 'Banner', 'Thumb'] },
     { name: 'shows', Factory: Shows, count: 6, type: 'Episode', limit: 30, fields: ['PrimaryImageAspectRatio'], images: ['Primary', 'Backdrop', 'Thumb'] },
     { name: 'music', Factory: Music, count: 7, type: 'Audio', limit: 27, fields: ['PrimaryImageAspectRatio'], images: ['Primary', 'Backdrop', 'Banner', 'Thumb'] }
-])('$name recommended controller', ({ Factory, count, type, limit, fields, images }) => {
+])('$name recommended controller', ({ name, Factory, count, type, limit, fields, images }) => {
+    it('handles Search commands and unregisters the same listener on hide', () => {
+        vi.mocked(inputManager.on).mockImplementationOnce((scope, listener) => scope.addEventListener('command', listener));
+        vi.mocked(inputManager.off).mockImplementationOnce((scope, listener) => scope.removeEventListener('command', listener));
+        const view = makeView(Factory);
+        try {
+            const search = new CustomEvent('command', { detail: { command: 'search' }, cancelable: true });
+            window.dispatchEvent(search);
+            expect(search.defaultPrevented).toBe(true);
+            expect(Dashboard.navigate).toHaveBeenCalledWith('search?collectionType=' + (name === 'shows' ? 'tvshows' : name) + '&parentId=parent');
+            const next = new CustomEvent('command', { detail: { command: 'next' }, cancelable: true });
+            window.dispatchEvent(next);
+            expect(next.defaultPrevented).toBe(false);
+            expect(Dashboard.navigate).toHaveBeenCalledTimes(1);
+            view.dispatchEvent(new Event('viewbeforehide'));
+            expect(inputManager.off).toHaveBeenCalledWith(window, vi.mocked(inputManager.on).mock.calls[0][1]);
+            window.dispatchEvent(new CustomEvent('command', { detail: { command: 'search' }, cancelable: true }));
+            expect(Dashboard.navigate).toHaveBeenCalledTimes(1);
+        } finally {
+            view.dispatchEvent(new Event('viewbeforehide'));
+            view.dispatchEvent(new Event('viewdestroy'));
+        }
+    });
+
     it('preserves preloaded and completed tabs across switching and Back', async () => {
         const view = makeView(Factory);
         expect(userSettings.get).toHaveBeenCalledWith('landing-parent');
@@ -205,4 +232,34 @@ describe.each([
         }
         second.dispatchEvent(new Event('viewdestroy'));
     });
+});
+
+it('retains recommendation heading escaping and legacy missing-name failures', async () => {
+    const actualGlobalize = await vi.importActual<typeof import('lib/globalize')>('lib/globalize');
+    actualGlobalize.defaultModule('recommendation-compatibility');
+    await actualGlobalize.loadStrings({ name: 'recommendation-compatibility', strings: [{ lang: 'en-us', path: 'en-us.json' }] });
+    vi.mocked(globalize.translate).mockImplementation(actualGlobalize.translate);
+    type Recommendation = { RecommendationType: string; BaselineItemName?: string | null; Items: never[] };
+    let renderRecommendations!: (recommendations: Recommendation[]) => void;
+    api.getJSON.mockReturnValueOnce({ then: (render: typeof renderRecommendations) => {
+        renderRecommendations = render;
+    } });
+    const view = makeView(Movies);
+    try {
+        select(1);
+        await vi.waitFor(() => expect(renderRecommendations).toBeTypeOf('function'));
+        renderRecommendations([{ RecommendationType: 'SimilarToRecentlyPlayed', BaselineItemName: '<sample>', Items: [] }]);
+        expect(view.querySelector('.recommendations h2')?.textContent).toBe('Because you watched <sample>');
+        expect(view.querySelector('.recommendations h2')?.innerHTML).toBe('Because you watched &lt;sample&gt;');
+        for (const RecommendationType of ['SimilarToRecentlyPlayed', 'SimilarToLikedItem', 'HasLikedDirector', 'HasLikedActor']) {
+            for (const BaselineItemName of [undefined, null]) {
+                expect(() => renderRecommendations([{ RecommendationType, BaselineItemName, Items: [] }])).toThrow(TypeError);
+            }
+        }
+        renderRecommendations([{ RecommendationType: 'Unknown', Items: [] }]);
+        expect(view.querySelector('.recommendations h2')?.textContent).toBe('');
+    } finally {
+        view.dispatchEvent(new Event('viewbeforehide'));
+        view.dispatchEvent(new Event('viewdestroy'));
+    }
 });

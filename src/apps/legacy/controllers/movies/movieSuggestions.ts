@@ -93,27 +93,28 @@ function loadResume(page: HTMLElement, userId: string, parentId?: string) {
     });
 }
 
-function getRecommendationHtml(recommendation: { RecommendationType?: string; BaselineItemName?: string; Items: LibraryResult['Items'] }) {
+function getRecommendationHtml(recommendation: { RecommendationType?: string; BaselineItemName?: string | null; Items: LibraryResult['Items'] }) {
     let html = '';
     let title = '';
 
+    // The translator historically throws when a named recommendation omits its baseline.
     switch (recommendation.RecommendationType) {
         case 'SimilarToRecentlyPlayed':
-            title = globalize.translate('RecommendationBecauseYouWatched', recommendation.BaselineItemName);
+            title = globalize.translate('RecommendationBecauseYouWatched', recommendation.BaselineItemName!);
             break;
 
         case 'SimilarToLikedItem':
-            title = globalize.translate('RecommendationBecauseYouLike', recommendation.BaselineItemName);
+            title = globalize.translate('RecommendationBecauseYouLike', recommendation.BaselineItemName!);
             break;
 
         case 'HasDirectorFromRecentlyPlayed':
         case 'HasLikedDirector':
-            title = globalize.translate('RecommendationDirectedBy', recommendation.BaselineItemName);
+            title = globalize.translate('RecommendationDirectedBy', recommendation.BaselineItemName!);
             break;
 
         case 'HasActorFromRecentlyPlayed':
         case 'HasLikedActor':
-            title = globalize.translate('RecommendationStarring', recommendation.BaselineItemName);
+            title = globalize.translate('RecommendationStarring', recommendation.BaselineItemName!);
             break;
     }
 

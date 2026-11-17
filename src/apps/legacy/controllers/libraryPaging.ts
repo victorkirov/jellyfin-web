@@ -13,6 +13,7 @@ const layoutOptions = {
 export const libraryLayouts = Object.keys(layoutOptions);
 
 export function getLibraryLayoutOptions(layout: string) {
+    // The validated layout is one of the saved-layout keys above.
     return layoutOptions[supportedLibraryLayout(layout) as keyof typeof layoutOptions];
 }
 
@@ -22,8 +23,8 @@ export function getLibraryLayout(key: string, legacyFirst = false) {
     return supportedLibraryLayout(value);
 }
 
-export function supportedLibraryLayout(value: string) {
-    return libraryLayouts.indexOf(value) === -1 ? 'Poster' : value;
+export function supportedLibraryLayout(value: string | null | undefined) {
+    return value != null && libraryLayouts.indexOf(value) !== -1 ? value : 'Poster';
 }
 
 export function bindLibraryPaging({ view, query, totalRecordCount, isLoading, getRequestId, refresh, focus }: {

@@ -87,9 +87,11 @@ export default class RecommendedPage {
             }
         };
 
-        const onInputCommand = (e: CustomEvent<{ command: string }>) => {
-            if (e.detail.command === 'search') {
-                e.preventDefault();
+        const onInputCommand: EventListener = (event) => {
+            // inputManager dispatches command CustomEvents with this detail.
+            const command = (event as CustomEvent<{ command: string }>).detail.command;
+            if (command === 'search') {
+                event.preventDefault();
                 void Dashboard.navigate('search?collectionType=movies&parentId=' + params.topParentId);
             }
         };
