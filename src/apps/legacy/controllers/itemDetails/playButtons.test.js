@@ -2,16 +2,22 @@ import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ItemDetails from './index';
 
-const { apiClient, playbackManager, fixture } = vi.hoisted(() => {
+const { apiClient, playbackManager, fixture, hideLoading } = vi.hoisted(() => {
     const data = { item: null };
     const client = {
         getItem: vi.fn(() => Promise.resolve(data.item)),
         getCurrentUser: vi.fn(() => Promise.resolve({ Id: 'user', Policy: {} })),
         getCurrentUserId: () => 'user',
+        getItems: vi.fn(() => Promise.resolve({ Items: [] })),
+        getEpisodes: vi.fn(() => Promise.resolve({ Items: [] })),
+        getSeasons: vi.fn(() => Promise.resolve({ Items: [] })),
+        getLiveTvPrograms: vi.fn(() => Promise.resolve({ Items: [] })),
+        getNextUpEpisodes: vi.fn(() => Promise.resolve({ Items: [] })),
+
         getSimilarItems: vi.fn(() => Promise.resolve({ Items: [] })),
         subscribe: vi.fn()
     };
-    return { apiClient: client, fixture: data, playbackManager: { canPlay: () => true, getSupportedCommands: () => [], play: vi.fn() } };
+    return { apiClient: client, fixture: data, hideLoading: vi.fn(), playbackManager: { canPlay: () => true, getSupportedCommands: () => [], play: vi.fn() } };
 });
 const strings = JSON.parse(readFileSync('src/strings/en-us.json', 'utf8'));
 const template = readFileSync('src/apps/legacy/controllers/itemDetails/index.html', 'utf8');
@@ -33,14 +39,15 @@ vi.mock('components/itemHelper', () => ({ default: {
 } }));
 vi.mock('components/mediainfo/mediainfo', () => ({ default: { fillPrimaryMediaInfo: vi.fn(), fillSecondaryMediaInfo: vi.fn() } }));
 vi.mock('components/homesections/deferSection', () => ({ deferSection: () => vi.fn() }));
-vi.mock('components/focusManager', () => ({ default: {} }));
+vi.mock('components/focusManager', () => ({ default: { isCurrentlyFocusable: () => false, focus: vi.fn(), autoFocus: vi.fn() } }));
 vi.mock('components/layoutManager', () => ({ default: { tv: true } }));
-vi.mock('components/listview/listview', () => ({ default: {} }));
-vi.mock('components/loading/loading', () => ({ default: { show: vi.fn(), hide: vi.fn() } }));
+vi.mock('components/listview/listview', () => ({ default: { getListViewHtml: () => '' } }));
+vi.mock('components/loading/loading', () => ({ default: { show: vi.fn(), hide: hideLoading } }));
 vi.mock('components/itemDetails/ItemDetailsMetadataGroup', () => ({ default: vi.fn() }));
 vi.mock('components/router/appRouter', () => ({ appRouter: {} }));
 vi.mock('components/shortcuts', () => ({ default: { on: vi.fn(), off: vi.fn() } }));
 vi.mock('components/autoFocuser', () => ({ default: { autoFocus: vi.fn() } }));
+vi.mock('scripts/playlistViewer', () => ({ default: { render: vi.fn() } }));
 vi.mock('scripts/browser', () => ({ default: {} }));
 vi.mock('scripts/libraryMenu', () => ({ default: { setTitle: vi.fn(), setTransparentMenu: vi.fn() } }));
 vi.mock('scripts/settings/userSettings', () => ({ enableBackdrops: () => false }));
@@ -55,6 +62,7 @@ vi.mock('elements/emby-scroller/emby-scroller', () => ({}));
 vi.mock('elements/emby-select/emby-select', () => ({}));
 
 beforeEach(() => {
+    vi.clearAllMocks();
     document.body.innerHTML = template.replace(/\$\{(\w+)\}/g, (match, key) => strings[key] || key);
     document.querySelectorAll('.btnPlaystate, .btnUserRating').forEach(button => {
         button.setItem = vi.fn();
@@ -94,5 +102,25 @@ describe('Details playback labels and actions', () => {
         expect(page.querySelector('.btnPlayTrailer .detailButton-text').textContent).toBe('Trailer');
         expect(page.querySelector('.btnPlaystate .button-text')).not.toBeNull();
         expect(page.querySelector('.btnUserRating .button-text')).not.toBeNull();
+    });
+});
+
+describe('Details metadata order by item type', () => {
+    it.each(['Series', 'Season', 'MusicAlbum', 'Playlist', 'BoxSet'])('keeps the intended metadata order for %s', async type => {
+        const page = document.querySelector('#itemDetailPage');
+        fixture.item = { Id: type, Type: type, IsFolder: true, SeriesId: 'series' };
+        new ItemDetails(page, { id: type });
+        page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+        await vi.waitFor(() => expect(hideLoading).toHaveBeenCalled());
+        const viewingFirst = type === 'Series' || type === 'Season';
+        const firstChoice = page.querySelector(viewingFirst ? '.nextUpSection' : '.collectionItems');
+        const children = page.querySelector('#listChildrenCollapsible');
+        for (const selector of ['.detailSectionContent', '.itemDetailsGroup']) {
+            const metadata = page.querySelector(selector);
+            const isAfterChoices = Boolean(firstChoice.compareDocumentPosition(metadata) & Node.DOCUMENT_POSITION_FOLLOWING);
+            expect(isAfterChoices).toBe(viewingFirst);
+            const isAfterChildren = Boolean(children.compareDocumentPosition(metadata) & Node.DOCUMENT_POSITION_FOLLOWING);
+            expect(isAfterChildren).toBe(viewingFirst);
+        }
     });
 });

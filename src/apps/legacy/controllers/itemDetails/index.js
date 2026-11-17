@@ -466,6 +466,12 @@ function reloadFromItem(instance, page, params, item, user) {
     unmount(instance);
     clearDeferredDetails(page);
 
+    const detailSection = page.querySelector('.detailSection');
+    const metadataBefore = item.Type === 'Series' || item.Type === 'Season' ?
+        null : page.querySelector('.collectionItems');
+    detailSection.insertBefore(page.querySelector('.detailSectionContent'), metadataBefore);
+    detailSection.insertBefore(page.querySelector('.itemDetailsGroup'), metadataBefore);
+
     // Start rendering the artwork first
     renderImage(page, item, apiClient);
 
