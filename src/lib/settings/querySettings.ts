@@ -30,4 +30,3 @@ export function filterQuerySettings(query: object, allowedItems: string[]) {
             return acc;
         }, {} as Record<string, unknown>);
 }
-
