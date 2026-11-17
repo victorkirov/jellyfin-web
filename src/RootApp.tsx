@@ -5,7 +5,6 @@ import React from 'react';
 import QueryClientEventHandler from 'components/QueryClientEventHandler';
 import { ApiProvider } from 'hooks/useApi';
 import { UserSettingsProvider } from 'hooks/useUserSettings';
-import { WebConfigProvider } from 'hooks/useWebConfig';
 import browser from 'scripts/browser';
 import { persister, queryClient } from 'utils/query/queryClient';
 
@@ -24,10 +23,8 @@ const RootApp = () => (
     >
         <ApiProvider>
             <UserSettingsProvider>
-                <WebConfigProvider>
-                    <QueryClientEventHandler />
-                    <RootAppRouter />
-                </WebConfigProvider>
+                <QueryClientEventHandler />
+                <RootAppRouter />
             </UserSettingsProvider>
         </ApiProvider>
         {useReactQueryDevtools && (

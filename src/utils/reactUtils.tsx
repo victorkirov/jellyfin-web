@@ -8,7 +8,6 @@ import ColorSchemeSync from 'components/ColorSchemeSync';
 import { ApiProvider } from 'hooks/useApi';
 import { UserSettingsProvider } from 'hooks/useUserSettings';
 import { useUserTheme } from 'hooks/useUserTheme';
-import { WebConfigProvider } from 'hooks/useWebConfig';
 import { getTheme } from 'themes';
 import { queryClient } from 'utils/query/queryClient';
 
@@ -61,11 +60,9 @@ const RootContext: FC<PropsWithChildren> = ({ children }) => {
         <QueryClientProvider client={queryClient}>
             <ApiProvider>
                 <UserSettingsProvider>
-                    <WebConfigProvider>
-                        <UserThemeProvider>
-                            {children}
-                        </UserThemeProvider>
-                    </WebConfigProvider>
+                    <UserThemeProvider>
+                        {children}
+                    </UserThemeProvider>
                 </UserSettingsProvider>
             </ApiProvider>
         </QueryClientProvider>

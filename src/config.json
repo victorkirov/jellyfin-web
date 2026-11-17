@@ -9,7 +9,6 @@
       "default": true
     }
   ],
-  "menuLinks": [],
   "servers": [],
   "plugins": [
     "playAccessValidation/plugin",
