@@ -1498,6 +1498,7 @@
     "SearchForMissingMetadata": "Search for missing metadata",
     "SearchForSubtitles": "Search for Subtitles",
     "SearchResults": "Search Results",
+    "SearchLoadError": "Search could not load. Try again.",
     "SearchResultsEmpty": "Sorry! No results found for \"{0}\"",
     "Season": "Season",
     "SecondarySubtitles": "Secondary Subtitles",

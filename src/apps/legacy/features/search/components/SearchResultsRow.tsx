@@ -2,6 +2,7 @@ import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client';
 import React, { type FC, useEffect, useRef } from 'react';
 
 import cardBuilder from 'components/cardbuilder/cardBuilder';
+import { CardShape } from 'components/cardbuilder/utils/shape';
 import type { CardOptions } from 'types/cardOptions';
 import 'elements/emby-scroller/emby-scroller';
 import 'elements/emby-itemscontainer/emby-itemscontainer';
@@ -22,11 +23,23 @@ interface SearchResultsRowProps {
     cardOptions?: CardOptions;
 }
 
-const SearchResultsRow: FC<SearchResultsRowProps> = ({ title, items = [], cardOptions = {} }) => {
+const EMPTY_ITEMS: BaseItemDto[] = [];
+
+const DEFAULT_CARD_OPTIONS: CardOptions = {
+    shape: CardShape.AutoOverflow,
+    scalable: true,
+    showTitle: true,
+    overlayText: false,
+    centerText: true,
+    allowBottomPadding: false
+};
+
+const SearchResultsRow: FC<SearchResultsRowProps> = ({ title, items = EMPTY_ITEMS, cardOptions = DEFAULT_CARD_OPTIONS }) => {
     const element = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         cardBuilder.buildCards(items, {
+            ...DEFAULT_CARD_OPTIONS,
             itemsContainer: element.current?.querySelector('.itemsContainer'),
             ...cardOptions
         });

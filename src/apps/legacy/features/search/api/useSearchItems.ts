@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { userQueryKey } from 'utils/query/queryKeys';
 import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
 import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client/models/base-item-dto';
@@ -16,56 +17,29 @@ import { fetchItemsByType } from './fetchItemsByType';
 import { useProgramsSearch } from './useProgramsSearch';
 import { LIVETV_CARD_OPTIONS } from '../constants/liveTvCardOptions';
 
+const COVER_CARD_OPTIONS = { coverImage: true };
+const STUDIO_CARD_OPTIONS = { shape: CardShape.SquareOverflow };
+const VIDEO_CARD_OPTIONS = { showParentTitle: true };
+
 export const useSearchItems = (
     parentId?: string,
     collectionType?: CollectionType,
     searchTerm?: string
 ) => {
-    const { data: artists, isPending: isArtistsPending } = useArtistsSearch(parentId, collectionType, searchTerm);
-    const { data: people, isPending: isPeoplePending } = usePeopleSearch(parentId, collectionType, searchTerm);
-    const { data: studios, isPending: isStudiosPending } = useStudiosSearch(parentId, collectionType, searchTerm);
-    const { data: videos, isPending: isVideosPending } = useVideoSearch(parentId, collectionType, searchTerm);
-    const { data: programs, isPending: isProgramsPending } = useProgramsSearch(parentId, collectionType, searchTerm);
-    const { data: liveTvSections, isPending: isLiveTvPending } = useLiveTvSearch(parentId, collectionType, searchTerm);
+    const artists = useArtistsSearch(parentId, collectionType, searchTerm);
+    const people = usePeopleSearch(parentId, collectionType, searchTerm);
+    const studios = useStudiosSearch(parentId, collectionType, searchTerm);
+    const videos = useVideoSearch(parentId, collectionType, searchTerm);
+    const programs = useProgramsSearch(parentId, collectionType, searchTerm);
+    const liveTv = useLiveTvSearch(parentId, collectionType, searchTerm);
     const { api, user } = useApi();
     const userId = user?.Id;
 
-    const isArtistsEnabled = !isArtistsPending || (collectionType && !isMusic(collectionType));
-    const isPeopleEnabled = !isPeoplePending || (collectionType && !isMovies(collectionType) && !isTVShows(collectionType));
-    const isStudiosEnabled = !isStudiosPending || (collectionType && !isMovies(collectionType) && !isTVShows(collectionType));
-    const isVideosEnabled = !isVideosPending || collectionType;
-    const isProgramsEnabled = !isProgramsPending || collectionType;
-    const isLiveTvEnabled = !isLiveTvPending || !collectionType || !isLivetv(collectionType);
-
-    return useQuery({
-        queryKey: userQueryKey(api, userId, 'Search', 'Items', collectionType, parentId, searchTerm),
+    const isLiveTv = !!collectionType && isLivetv(collectionType);
+    const items = useQuery({
+        queryKey: userQueryKey(api, userId, 'Search', 'PrimaryItems', collectionType, parentId, searchTerm),
         queryFn: async ({ signal }) => {
-            if (liveTvSections && collectionType && isLivetv(collectionType)) {
-                return sortSections(liveTvSections);
-            }
-
             const sections: Section[] = [];
-
-            addSection(sections, 'Artists', artists?.Items, {
-                coverImage: true
-            });
-
-            addSection(sections, 'Programs', programs?.Items, {
-                ...LIVETV_CARD_OPTIONS
-            });
-
-            addSection(sections, 'People', people?.Items, {
-                coverImage: true
-            });
-
-            addSection(sections, 'Studios', studios?.Items, {
-                shape: CardShape.SquareOverflow
-            });
-
-            addSection(sections, 'HeaderVideos', videos?.Items, {
-                showParentTitle: true
-            });
-
             const itemTypes: BaseItemKind[] = getItemTypesFromCollectionType(collectionType);
 
             const searchData = await fetchItemsByType(
@@ -83,27 +57,52 @@ export const useSearchItems = (
 
             if (searchData.Items) {
                 for (const itemType of itemTypes) {
-                    const items: BaseItemDto[] = [];
+                    const matchingItems: BaseItemDto[] = [];
                     for (const searchItem of searchData.Items) {
                         if (searchItem.Type === itemType) {
-                            items.push(searchItem);
+                            matchingItems.push(searchItem);
                         }
                     }
-                    addSection(sections, getTitleFromType(itemType), items, getCardOptionsFromType(itemType));
+                    addSection(sections, getTitleFromType(itemType), matchingItems, getCardOptionsFromType(itemType));
                 }
             }
 
             return sortSections(sections);
         },
-        enabled: (
-            !!api
-            && !!userId
-            && !!isArtistsEnabled
-            && !!isPeopleEnabled
-            && !!isStudiosEnabled
-            && !!isVideosEnabled
-            && !!isLiveTvEnabled
-            && !!isProgramsEnabled
-        )
+        enabled: !!api && !!userId && !isLiveTv
     });
+
+    // Derive rows from their source queries instead of caching an aggregate that
+    // can outlive a failed or retried subsidiary request.
+    const data = useMemo(() => {
+        if (isLiveTv) return sortSections([...(liveTv.data?.sections || [])]);
+        const sections: Section[] = [...(items.data || [])];
+        if (!collectionType || isMusic(collectionType)) {
+            addSection(sections, 'Artists', artists.data?.Items, COVER_CARD_OPTIONS);
+        }
+        if (!collectionType || isMovies(collectionType) || isTVShows(collectionType)) {
+            addSection(sections, 'People', people.data?.Items, COVER_CARD_OPTIONS);
+            addSection(sections, 'Studios', studios.data?.Items, STUDIO_CARD_OPTIONS);
+        }
+        if (!collectionType) {
+            addSection(sections, 'Programs', programs.data?.Items, LIVETV_CARD_OPTIONS);
+            addSection(sections, 'HeaderVideos', videos.data?.Items, VIDEO_CARD_OPTIONS);
+        }
+        return sortSections(sections);
+    }, [isLiveTv, collectionType, liveTv.data, items.data, artists.data, programs.data, people.data, studios.data, videos.data]);
+
+    const sources = isLiveTv ? [liveTv] : [
+        items,
+        ...(!collectionType || isMusic(collectionType) ? [artists] : []),
+        ...(!collectionType || isMovies(collectionType) || isTVShows(collectionType) ? [people, studios] : []),
+        ...(!collectionType ? [videos, programs] : [])
+    ];
+    return {
+        data,
+        isPending: sources.some(source => source.isLoading),
+        isFetching: sources.some(source => source.isFetching),
+        isError: sources.some(source => source.isError) || (isLiveTv && !!liveTv.data?.hasError),
+        refetch: () => isLiveTv ? liveTv.refetch() :
+            Promise.all(sources.filter(source => source.isError).map(source => source.refetch()))
+    };
 };

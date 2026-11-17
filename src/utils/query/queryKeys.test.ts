@@ -1,3 +1,5 @@
+import React, { act } from 'react';
+import { createRoot } from 'react-dom/client';
 import { Api } from '@jellyfin/sdk';
 import { QueryClient, dehydrate, hydrate, useQuery } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
@@ -56,9 +58,21 @@ describe('query identity', () => {
                 { api: makeApi('https://second'), user: { Id: 'a' } }
             ].map(context => {
                 vi.mocked(useApi).mockReturnValue(context);
-                hook('parent');
-                const options = vi.mocked(useQuery).mock.lastCall?.[0];
-                return JSON.stringify(options?.queryKey);
+                const container = document.createElement('div');
+                const root = createRoot(container);
+                const Probe = () => {
+                    hook('parent');
+                    return null;
+                };
+                vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+                try {
+                    act(() => root.render(React.createElement(Probe)));
+                    const options = vi.mocked(useQuery).mock.lastCall?.[0];
+                    return JSON.stringify(options?.queryKey);
+                } finally {
+                    act(() => root.unmount());
+                    vi.unstubAllGlobals();
+                }
             });
             expect(new Set(keys).size).toBe(3);
         });

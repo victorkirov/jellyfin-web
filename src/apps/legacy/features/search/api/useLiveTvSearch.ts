@@ -131,7 +131,10 @@ const fetchLiveTv = (api: Api, userId: string | undefined, searchTerm: string | 
         addSection(sections, 'Channels', channelsData.Items);
     });
 
-    return Promise.all([ movies, episodes, sports, kids, news, programs, channels ]).then(() => sections);
+    let hasError = false;
+    return Promise.all([ movies, episodes, sports, kids, news, programs, channels ].map(searchRequest => searchRequest.catch(() => {
+        hasError = true;
+    }))).then(() => ({ sections, hasError }));
 };
 
 export const useLiveTvSearch = (
@@ -143,7 +146,7 @@ export const useLiveTvSearch = (
     const userId = user?.Id;
 
     return useQuery({
-        queryKey: userQueryKey(api, userId, 'Search', 'LiveTv', collectionType, parentId, searchTerm),
+        queryKey: userQueryKey(api, userId, 'Search', 'LiveTvSections', collectionType, parentId, searchTerm),
         queryFn: ({ signal }) =>
             fetchLiveTv(api!, userId!, searchTerm, signal),
         enabled: !!api && !!userId && !!collectionType && !!isLivetv(collectionType)
