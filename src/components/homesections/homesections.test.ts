@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadSections, pause, resume } from './homesections';
+import { loadLibraryButtons } from './sections/libraryButtons';
+import { loadLibraryTiles } from './sections/libraryTiles';
+import { loadResume } from './sections/resume';
 import { deferSection } from './deferSection';
 
 const emptyLibraries = vi.hoisted(() => ({ fetchQuery: vi.fn(), translate: vi.fn((key: string) => key) }));
@@ -23,6 +26,7 @@ vi.mock('elements/emby-scroller/emby-scroller', () => ({}));
 vi.mock('elements/emby-button/emby-button', () => ({}));
 
 beforeEach(() => {
+    vi.clearAllMocks();
     vi.mocked(deferSection).mockReturnValue(vi.fn());
 });
 
@@ -99,5 +103,52 @@ describe('Empty libraries', () => {
         }, {});
         expect(container.textContent).toContain('AskAdminToCreateLibrary');
         expect(container.querySelector('a, button, #button-createLibrary')).toBeNull();
+    });
+});
+
+describe('TV home section preferences', () => {
+    async function load(saved: string[] = []) {
+        emptyLibraries.fetchQuery.mockResolvedValue({ Items: [{ Id: 'movies' }] });
+        const container = document.createElement('main');
+        document.body.appendChild(container);
+        const settings = { get: vi.fn((key: string) => saved[Number(key.replace('homesection', ''))]) };
+        await loadSections(container, { serverId: () => 'server' }, { Id: 'user' }, settings);
+        return { container, settings };
+    }
+
+    it('defaults to Continue Watching followed by compact library buttons', async () => {
+        const { container, settings } = await load();
+        expect(vi.mocked(loadResume).mock.calls[0][0]).toBe(container.querySelector('.section0'));
+        expect(vi.mocked(loadResume).mock.calls[0][2]).toBe('HeaderContinueWatching');
+        expect(loadLibraryButtons).toHaveBeenCalledWith(container.querySelector('.section1'), [{ Id: 'movies' }]);
+        expect(loadLibraryTiles).not.toHaveBeenCalled();
+        expect(Object.keys(settings)).toEqual(['get']);
+    });
+
+    it('preserves saved section positions and the legacy folders library section', async () => {
+        const saved = ['latestmedia', 'smalllibrarytiles', 'none', 'resume', 'none', 'none', 'none', 'none', 'none', 'none'];
+        const { container } = await load(saved);
+        expect(loadLibraryTiles).toHaveBeenCalledWith(container.querySelector('.section1'), [{ Id: 'movies' }], { enableOverflow: true });
+        expect(vi.mocked(loadResume).mock.calls[0][0]).toBe(container.querySelector('.section3'));
+        expect(loadLibraryButtons).not.toHaveBeenCalled();
+        vi.mocked(loadLibraryTiles).mockClear();
+        const legacy = await load(['folders', ...Array<string>(9).fill('none')]);
+        expect(vi.mocked(loadLibraryTiles).mock.calls[0][0]).toBe(legacy.container.querySelector('.section0'));
+    });
+
+    it('keeps libraries reachable when the first resume row is empty', async () => {
+        vi.mocked(loadResume).mockImplementation(element => {
+            element.classList.add('hide');
+        });
+        vi.mocked(loadLibraryButtons).mockImplementation(element => {
+            element.innerHTML = '<button>Movies</button>';
+        });
+        const { container } = await load();
+        const library = container.querySelector<HTMLButtonElement>('.section1 button')!;
+        library.focus();
+        await resume(container, {});
+        expect(container.querySelector('.section0')?.classList.contains('hide')).toBe(true);
+        expect(library.closest('.hide')).toBeNull();
+        expect(document.activeElement).toBe(library);
     });
 });

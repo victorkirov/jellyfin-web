@@ -13,11 +13,10 @@ export enum HomeSectionType {
     ResumeBook = 'resumebook'
 }
 
-// NOTE: This needs to match the server defaults
-// https://github.com/jellyfin/jellyfin/blob/1b4394199a2f9883cd601bdb8c9d66015397aa52/Jellyfin.Api/Controllers/DisplayPreferencesController.cs#L120
+// TV defaults apply only when a local section preference is unset.
 export const DEFAULT_SECTIONS: HomeSectionType[] = [
-    HomeSectionType.SmallLibraryTiles,
     HomeSectionType.Resume,
+    HomeSectionType.LibraryButtons,
     HomeSectionType.ResumeAudio,
     HomeSectionType.ResumeBook,
     HomeSectionType.LiveTv,

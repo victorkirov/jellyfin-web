@@ -35,7 +35,7 @@ function getAllSectionsToShow(userSettings) {
     for (let i = 0, length = MAX_SECTIONS; i < length; i++) {
         let section = userSettings.get('homesection' + i) || getDefaultSection(i);
         if (section === 'folders') {
-            section = getDefaultSection(0);
+            section = HomeSectionType.SmallLibraryTiles;
         }
 
         sections.push(section);
