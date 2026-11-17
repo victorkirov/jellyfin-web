@@ -401,9 +401,11 @@ export default function (view, params) {
         inputManager.off(window, onInputCommand);
         Events.off(playbackManager, 'playbackstop', onPlaybackStop);
     });
-    for (const tabController of tabControllers) {
-        if (tabController.destroy) {
-            tabController.destroy();
-        }
-    }
+    view.addEventListener('viewdestroy', function () {
+        tabControllers.forEach(function (tabController) {
+            if (tabController.destroy) {
+                tabController.destroy();
+            }
+        });
+    });
 }
