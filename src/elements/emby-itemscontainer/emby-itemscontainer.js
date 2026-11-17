@@ -142,8 +142,30 @@ ItemsContainerPrototype.enableDragReordering = function (enabled) {
     });
 };
 
+function updateCards(itemsContainer, update) {
+    if (update) {
+        const pendingUpdates = itemsContainer.pendingCardUpdates || [];
+        pendingUpdates.push(update);
+        itemsContainer.pendingCardUpdates = pendingUpdates;
+    }
+    if (itemsContainer.paused) {
+        return Promise.resolve();
+    }
+
+    return import('../../components/cardbuilder/cardBuilder').then(cardBuilder => {
+        if (itemsContainer.paused) {
+            return;
+        }
+        const pendingUpdates = itemsContainer.pendingCardUpdates || [];
+        itemsContainer.pendingCardUpdates = null;
+        for (const pendingUpdate of pendingUpdates) {
+            pendingUpdate(cardBuilder);
+        }
+    });
+}
+
 function onUserDataChanged({ Data }, itemsContainer) {
-    import('../../components/cardbuilder/cardBuilder').then((cardBuilder) => {
+    updateCards(itemsContainer, cardBuilder => {
         for (const userData of Data?.UserDataList ?? []) {
             cardBuilder.onUserDataChanged(userData, itemsContainer);
         }
@@ -178,7 +200,7 @@ function onTimerCreated({ Data }, itemsContainer) {
     // This could be null, not supported by all tv providers
     const newTimerId = Data?.Id;
 
-    import('../../components/cardbuilder/cardBuilder').then((cardBuilder) => {
+    updateCards(itemsContainer, cardBuilder => {
         cardBuilder.onTimerCreated(programId, newTimerId, itemsContainer);
     });
 }
@@ -195,7 +217,7 @@ function onTimerCancelled({ Data }, itemsContainer) {
         return;
     }
 
-    import('../../components/cardbuilder/cardBuilder').then((cardBuilder) => {
+    updateCards(itemsContainer, cardBuilder => {
         cardBuilder.onTimerCancelled(Data?.Id, itemsContainer);
     });
 }
@@ -206,7 +228,7 @@ function onSeriesTimerCancelled({ Data }, itemsContainer) {
         return;
     }
 
-    import('../../components/cardbuilder/cardBuilder').then((cardBuilder) => {
+    updateCards(itemsContainer, cardBuilder => {
         cardBuilder.onSeriesTimerCancelled(Data?.Id, itemsContainer);
     });
 }
@@ -327,6 +349,7 @@ ItemsContainerPrototype.detachedCallback = function () {
 
     removeNotificationEvent(this, 'playbackstop', playbackManager);
 
+    this.pendingCardUpdates = null;
     this.fetchData = null;
     this.getItemsHtml = null;
     this.itemsHtml = null;
@@ -352,8 +375,12 @@ ItemsContainerPrototype.resume = function (options) {
         }
     }
 
-    if (this.needsRefresh || (options?.refresh)) {
+    if ((this.needsRefresh || options?.refresh) && this.fetchData) {
         return this.refreshItems();
+    }
+
+    if (this.pendingCardUpdates?.length) {
+        return updateCards(this);
     }
 
     return Promise.resolve();
@@ -370,6 +397,7 @@ ItemsContainerPrototype.refreshItems = function () {
     }
 
     this.needsRefresh = false;
+    this.pendingCardUpdates = null;
 
     return this.fetchData().then(onDataFetched.bind(this));
 };
@@ -420,6 +448,10 @@ function onDataFetched(result) {
     // Skip updating if getItemsHtml is not defined.
     // This happens when the view is unloaded while the request is still pending.
     if (!this.getItemsHtml) return;
+    if (this.paused) {
+        this.needsRefresh = true;
+        return;
+    }
 
     const items = result.Items || result;
 
