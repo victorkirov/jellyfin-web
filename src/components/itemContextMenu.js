@@ -232,22 +232,6 @@ export async function getCommands(options) {
         }
     }
 
-    if (itemHelper.canEditSubtitles(user, item) && options.editSubtitles !== false) {
-        commands.push({
-            name: globalize.translate('EditSubtitles'),
-            id: 'editsubtitles',
-            icon: 'closed_caption'
-        });
-    }
-
-    if (itemHelper.canEditLyrics(user, item)) {
-        commands.push({
-            name: globalize.translate('EditLyrics'),
-            id: 'editlyrics',
-            icon: 'lyrics'
-        });
-    }
-
     if (item.MediaSources && options.moremediainfo !== false) {
         commands.push({
             name: globalize.translate('MoreMediaInfo'),
@@ -457,16 +441,6 @@ function executeCommand(item, id, options) {
                 getResolveFunction(resolve, id)();
                 break;
             }
-            case 'editsubtitles':
-                import('./subtitleeditor/subtitleeditor').then(({ default: subtitleEditor }) => {
-                    subtitleEditor.show(itemId, serverId).then(getResolveFunction(resolve, id, true), getResolveFunction(resolve, id));
-                });
-                break;
-            case 'editlyrics':
-                import('./lyricseditor/lyricseditor').then(({ default: lyricseditor }) => {
-                    lyricseditor.show(itemId, serverId).then(getResolveFunction(resolve, id, true), getResolveFunction(resolve, id));
-                });
-                break;
             case 'editplaylist':
                 import('./playlisteditor/playlisteditor').then(({ default: PlaylistEditor }) => {
                     const playlistEditor = new PlaylistEditor();

@@ -73,28 +73,6 @@ export function deleteItem(options) {
     });
 }
 
-export function deleteLyrics (item) {
-    return confirm({
-        title: globalize.translate('HeaderDeleteLyrics'),
-        text: globalize.translate('ConfirmDeleteLyrics'),
-        confirmText: globalize.translate('Delete'),
-        primary: 'delete'
-    }).then(() => {
-        const apiClient = ServerConnections.getApiClient(item.ServerId);
-        return apiClient.ajax({
-            url: apiClient.getUrl('Audio/' + item.Id + '/Lyrics'),
-            type: 'DELETE'
-        }).catch((err) => {
-            const result = function () {
-                return Promise.reject(err);
-            };
-
-            return alertText(globalize.translate('ErrorDeletingLyrics')).then(result, result);
-        });
-    });
-}
-
 export default {
-    deleteItem,
-    deleteLyrics
+    deleteItem
 };

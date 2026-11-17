@@ -1,8 +1,4 @@
 import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collection-type';
-import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
-import { LocationType } from '@jellyfin/sdk/lib/generated-client/models/location-type';
-import { RecordingStatus } from '@jellyfin/sdk/lib/generated-client/models/recording-status';
-import { MediaType } from '@jellyfin/sdk/lib/generated-client/models/media-type';
 import { getPlaylistApi } from '@jellyfin/sdk/lib/utils/api/playlist-api';
 
 import { appHost } from './apphost';
@@ -115,43 +111,6 @@ export async function canEditPlaylist(user, item) {
     }
 
     return false;
-}
-
-export function canEditSubtitles (user, item) {
-    if (item.MediaType !== MediaType.Video) {
-        return false;
-    }
-    const itemType = item.Type;
-    if (itemType === BaseItemKind.Recording && item.Status !== RecordingStatus.Completed) {
-        return false;
-    }
-    if (itemType === BaseItemKind.TvChannel
-        || itemType === BaseItemKind.Program
-        || itemType === 'Timer'
-        || itemType === 'SeriesTimer'
-        || itemType === BaseItemKind.UserRootFolder
-        || itemType === BaseItemKind.UserView
-    ) {
-        return false;
-    }
-    if (isLocalItem(item)) {
-        return false;
-    }
-    if (item.LocationType === LocationType.Virtual) {
-        return false;
-    }
-    return user.Policy.EnableSubtitleManagement
-           || user.Policy.IsAdministrator;
-}
-
-export function canEditLyrics (user, item) {
-    if (item.MediaType !== MediaType.Audio) {
-        return false;
-    }
-    if (isLocalItem(item)) {
-        return false;
-    }
-    return user.Policy.IsAdministrator;
 }
 
 export function canShare (item, user) {
@@ -277,8 +236,6 @@ export default {
     supportsAddingToCollection: supportsAddingToCollection,
     supportsAddingToPlaylist: supportsAddingToPlaylist,
     isLocalItem: isLocalItem,
-    canEditSubtitles,
-    canEditLyrics,
     canShare: canShare,
     enableDateAddedDisplay: enableDateAddedDisplay,
     canMarkPlayed: canMarkPlayed,
