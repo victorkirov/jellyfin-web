@@ -212,8 +212,19 @@ export function createPlaybackLifecycle(self: PlaybackContext, services: Pick<Pl
         }
     }
 
+    function releaseIdlePlayer(player: PlaybackPlayer) {
+        if (self._currentPlayer !== player || self._playNextAfterEnded) return;
+        stopPlaybackProgressTimer(player);
+        self._playQueueManager.reset();
+        services.destroyPlayer(player);
+        services.removeCurrentPlayer(player);
+    }
+
     function onPlaybackStopped(this: PlaybackPlayer, e?: unknown, displayErrorCode?: string) {
-        if (services.getPlayerData(this).isChangingStream || !services.getPlayerData(this).streamInfo) {
+        const stoppedData = services.getPlayerData(this);
+        if (stoppedData.isChangingStream) return;
+        if (!stoppedData.streamInfo) {
+            releaseIdlePlayer(this);
             return;
         }
 
@@ -286,6 +297,7 @@ export function createPlaybackLifecycle(self: PlaybackContext, services: Pick<Pl
         const state = self.getPlayerState(activePlayer);
 
         const serverId = self.currentItem(activePlayer)!.ServerId;
+        const previousStreamInfo = services.getPlayerData(activePlayer).streamInfo;
 
         // User started playing something new while existing content is playing
         let promise;
@@ -302,10 +314,9 @@ export function createPlaybackLifecycle(self: PlaybackContext, services: Pick<Pl
         }
 
         return promise.then(function () {
-            // Clear the data since we were not listening 'stopped'
-            services.getPlayerData(activePlayer).streamInfo = null;
-
             bindStopped(activePlayer);
+            if (services.getPlayerData(activePlayer).streamInfo !== previousStreamInfo) return;
+            services.getPlayerData(activePlayer).streamInfo = null;
 
             if (enableLocalPlaylistManagement(activePlayer)) {
                 reportPlayback(self, state, activePlayer, true, serverId, 'reportPlaybackStopped');

@@ -30,7 +30,7 @@ function changeStreamToUrl(services: Pick<PlaybackServices, 'getPlayerData' | 's
     return services.setSrcIntoPlayer(apiClient, player, streamInfo);
 }
 
-export function createPlaybackStreamChange(self: PlaybackContext, services: Pick<PlaybackServices, 'canPlayerSeek' | 'getPlayerData' | 'getDefaultPlayOptions' | 'onPlaybackStopped' | 'sendProgressUpdate' | 'onPlaybackError' | 'setSrcIntoPlayer'>) {
+export function createPlaybackStreamChange(self: PlaybackContext, services: Pick<PlaybackServices, 'canPlayerSeek' | 'getPlayerData' | 'getDefaultPlayOptions' | 'onPlaybackStopped' | 'assertPlaybackAttempt' | 'sendProgressUpdate' | 'onPlaybackError' | 'setSrcIntoPlayer'>) {
     function changeStream(player: PlaybackPlayer, ticks: number, params?: { EnableDirectPlay?: boolean; EnableDirectStream?: boolean; AllowVideoStreamCopy?: boolean; AllowAudioStreamCopy?: boolean | null; AudioStreamIndex?: number; SubtitleStreamIndex?: number; SecondarySubtitleStreamIndex?: number; MaxStreamingBitrate?: number }): Promise<boolean | void> | void {
         if (services.canPlayerSeek(player) && params == null) {
             player.currentTime(parseInt(String(ticks / TICKS_PER_MILLISECOND), 10));
@@ -127,14 +127,17 @@ export function createPlaybackStreamChange(self: PlaybackContext, services: Pick
         });
     }
 
-    function setSrcIntoPlayer(apiClient: PlaybackApiClient, player: PlaybackPlayer, streamInfo: PlaybackStreamInfo): Promise<boolean | void> {
+    function setSrcIntoPlayer(apiClient: PlaybackApiClient, player: PlaybackPlayer, streamInfo: PlaybackStreamInfo, attempt?: number, onAccepted?: () => void): Promise<boolean | void> {
+        services.assertPlaybackAttempt(attempt);
         const playerData = services.getPlayerData(player);
         streamInfo.started = playerData.streamInfo?.started;
         streamInfo.onPlaybackStarted = playerData.streamInfo?.onPlaybackStarted;
         playerData.streamInfo = streamInfo;
 
-        return player.play(streamInfo).then(function () {
-            if (playerData.streamInfo !== streamInfo || self._currentPlayer !== player) return false;
+        const playing = player.play(streamInfo);
+        onAccepted?.();
+        return playing.then(function () {
+            if ((attempt != null && !self._playbackAttempt.isCurrent(attempt)) || playerData.streamInfo !== streamInfo || self._currentPlayer !== player) return false;
             playerData.isChangingStream = false;
             streamInfo.ended = false;
 
@@ -148,7 +151,7 @@ export function createPlaybackStreamChange(self: PlaybackContext, services: Pick
             }
             return true;
         }, /** @returns The immediate cancellation result or the existing pending stream operation. */ function (e: unknown) {
-            if (playerData.streamInfo !== streamInfo || self._currentPlayer !== player) return false;
+            if ((attempt != null && !self._playbackAttempt.isCurrent(attempt)) || playerData.streamInfo !== streamInfo || self._currentPlayer !== player) return false;
             playerData.isChangingStream = false;
 
             return services.onPlaybackError.call(player, e, {

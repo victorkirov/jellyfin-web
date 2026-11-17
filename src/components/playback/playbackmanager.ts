@@ -4,6 +4,8 @@ import { MediaType } from '@jellyfin/sdk/lib/generated-client/models/media-type'
 import { AppFeature } from 'constants/appFeature';
 import { TICKS_PER_MILLISECOND, TICKS_PER_SECOND } from 'constants/time';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
+import { PlaybackAttempt } from 'lib/playback/playbackAttempt';
+import loading from '../loading/loading';
 import { enableLocalPlaylistManagement } from 'lib/playback/playerSelection';
 import type { PlaybackItem, PlaybackOptions } from 'lib/playback/types';
 import { bindMediaSegmentManager } from 'lib/playback/utils/mediaSegmentManager';
@@ -13,6 +15,7 @@ import * as userSettings from '../../scripts/settings/userSettings';
 import Events from '../../utils/events';
 import { appHost } from '../apphost';
 import itemHelper from '../itemHelper';
+import { bindBrightnessPresentation } from './brightnessPresentation';
 import type { PlaybackContext, PlaybackServices } from './playbackContext';
 import { initializePlaybackManager } from './playbackSession';
 import PlayQueueManager from './playqueuemanager';
@@ -24,6 +27,8 @@ function normalizeName(t: string) {
 }
 
 class PlaybackManagerCore {
+    readonly _playbackAttempt = new PlaybackAttempt();
+
     _playNextAfterEnded!: boolean;
     _playQueueManager!: PlayQueueManager;
     _currentPlayer?: PlaybackPlayer | null;
@@ -34,6 +39,7 @@ class PlaybackManagerCore {
         this._services = session.services;
         Object.assign(this, session.api);
         session.activate();
+        bindBrightnessPresentation(this);
     }
 
     getCurrentPlayer(this: PlaybackContext) {
@@ -241,18 +247,24 @@ class PlaybackManagerCore {
     }
 
     stop(this: PlaybackContext, player?: PlaybackPlayer | null) {
-        player = player || this._currentPlayer;
-        if (player) {
-            if (enableLocalPlaylistManagement(player)) {
-                this._playNextAfterEnded = false;
-                player.isChangingStream = false;
+        const ownsLoading = this._playbackAttempt.invalidate();
+        if (ownsLoading) loading.hide();
+        const stoppedPlayer = player || this._currentPlayer;
+        if (!stoppedPlayer) return Promise.resolve();
+        if (!enableLocalPlaylistManagement(stoppedPlayer)) return stoppedPlayer.stop(true, true);
+
+        this._playNextAfterEnded = false;
+        stoppedPlayer.isChangingStream = false;
+        const streamInfo = stoppedPlayer.streamInfo;
+        const generation = this._playbackAttempt.capture();
+        return stoppedPlayer.stop(true, true).then(result => {
+            if (this._playbackAttempt.isCurrent(generation) && this._currentPlayer === stoppedPlayer
+                && stoppedPlayer.streamInfo === streamInfo) {
+                // An already-idle player may resolve Stop without another stopped event.
+                this._services.onPlaybackStopped.call(stoppedPlayer);
             }
-
-            // TODO: remove second param
-            return player.stop(true, true);
-        }
-
-        return Promise.resolve();
+            return result;
+        });
     }
 
     getBufferedRanges(this: PlaybackContext, player = this._currentPlayer) {

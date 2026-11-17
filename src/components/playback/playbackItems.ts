@@ -13,6 +13,20 @@ import { showPlaybackInfoErrorMessage } from './playbackNegotiation';
 import { getPlayer } from './playbackRegistry';
 
 export function createPlaybackItems(self: PlaybackContext) {
+    function assertPlaybackAttempt(attempt?: number) {
+        if (attempt != null) self._playbackAttempt.assertCurrent(attempt);
+    }
+
+    async function preparePlayers(items: PlaybackItem[], attempt?: number) {
+        try {
+            await pluginManager.prepareForPlayback(items);
+        } catch (error) {
+            assertPlaybackAttempt(attempt);
+            onPlayerLoadFailure(error);
+        }
+        assertPlaybackAttempt(attempt);
+    }
+
     function onPlayerLoadFailure(error: unknown) {
         loading.hide();
         showPlaybackInfoErrorMessage(self, 'ErrorPlayerNotFound');
@@ -28,7 +42,7 @@ export function createPlaybackItems(self: PlaybackContext) {
         }
     }
 
-    function getPlaybackPromise(firstItem: PlaybackItem, serverId: string | null | undefined, options: PlaybackOptions, queryOptions: PlaybackQuery, items: PlaybackItem[]) {
+    function getPlaybackPromise(firstItem: PlaybackItem, serverId: string | null | undefined, options: PlaybackOptions, queryOptions: PlaybackQuery, items: PlaybackItem[], attempt?: number) {
         const SortBy = options.shuffle ? ItemSortBy.Random : ItemSortBy.SortName;
 
         switch (firstItem.Type) {
@@ -96,7 +110,7 @@ export function createPlaybackItems(self: PlaybackContext) {
                 }, queryOptions));
             case BaseItemKind.Series:
             case BaseItemKind.Season:
-                return getSeriesOrSeasonPlaybackPromise(firstItem, options, items);
+                return getSeriesOrSeasonPlaybackPromise(firstItem, options, items, attempt);
             case BaseItemKind.Episode:
                 return getEpisodePlaybackPromise(firstItem, options, items);
         }
@@ -162,7 +176,7 @@ export function createPlaybackItems(self: PlaybackContext) {
         return null;
     }
 
-    async function getSeriesOrSeasonPlaybackPromise(firstItem: PlaybackItem, options: PlaybackOptions, items: PlaybackItem[]) {
+    async function getSeriesOrSeasonPlaybackPromise(firstItem: PlaybackItem, options: PlaybackOptions, items: PlaybackItem[], attempt?: number) {
         const apiClient = ServerConnections.getApiClient(firstItem.ServerId);
         const startSeasonId = firstItem.Type === 'Season' ? items[options.startIndex || 0].Id : undefined;
 
@@ -175,6 +189,7 @@ export function createPlaybackItems(self: PlaybackContext) {
         // Start from a specific (the next unwatched) episode if we want to watch in order and have not chosen a specific season
         if (!options.shuffle && !seasonId) {
             const nextUp = await apiClient!.getNextUpEpisodes({ SeriesId, UserId });
+            assertPlaybackAttempt(attempt);
             startItemId = nextUp?.Items?.[0]?.Id;
         }
 
@@ -190,6 +205,7 @@ export function createPlaybackItems(self: PlaybackContext) {
             startItemId
         });
 
+        assertPlaybackAttempt(attempt);
         episodesResult.StartIndex = options.shuffle ? 0 : getEpisodeStartIndex(
             episodesResult.Items!, startSeasonId, Boolean(startSeasonId && items.length != 1)
         );
@@ -259,10 +275,10 @@ export function createPlaybackItems(self: PlaybackContext) {
     }
 
     const api = {
-        translateItemsForPlayback: async function(items: PlaybackItem[], options: PlaybackOptions) {
+        translateItemsForPlayback: async function(items: PlaybackItem[], options: PlaybackOptions, attempt?: number) {
             if (!items.length) return [];
 
-            await pluginManager.prepareForPlayback(items).catch(onPlayerLoadFailure);
+            await preparePlayers(items, attempt);
 
             sortItemsIfNeeded(items, options);
 
@@ -270,12 +286,13 @@ export function createPlaybackItems(self: PlaybackContext) {
             const serverId = firstItem.ServerId;
             const queryOptions = options.queryOptions || {};
 
-            const promise = getPlaybackPromise(firstItem, serverId, options, queryOptions, items);
+            const promise = getPlaybackPromise(firstItem, serverId, options, queryOptions, items, attempt);
 
             if (promise) {
                 const result = await promise;
+                assertPlaybackAttempt(attempt);
                 const translated = result ? result.Items! : items;
-                await pluginManager.prepareForPlayback(translated).catch(onPlayerLoadFailure);
+                await preparePlayers(translated, attempt);
                 return translated;
             } else {
                 return items;
@@ -284,7 +301,7 @@ export function createPlaybackItems(self: PlaybackContext) {
     };
     return {
 
-        services: { translateItemsForPlayback: api.translateItemsForPlayback },
+        services: { assertPlaybackAttempt, translateItemsForPlayback: api.translateItemsForPlayback },
         api
     };
 }

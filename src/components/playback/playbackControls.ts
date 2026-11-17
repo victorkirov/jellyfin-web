@@ -8,7 +8,9 @@ import Screenfull from 'screenfull';
 import type { PlaybackPlayer } from 'types/plugin';
 import * as bitrateTest from 'utils/bitrateTest';
 import appSettings from '../../scripts/settings/appSettings';
+import Events from '../../utils/events';
 import { appHost } from '../apphost';
+import { PlaybackManagerEvent } from 'lib/playback/constants/playbackManagerEvent';
 import { includesAny } from '../../utils/container';
 import type { PlaybackContext, PlaybackServices } from './playbackContext';
 
@@ -17,8 +19,6 @@ function supportsPhysicalVolumeControl(player: PlaybackPlayer) {
 }
 
 export function createPlaybackControls(self: PlaybackContext, services: Pick<PlaybackServices, 'getPlayerData' | 'getCurrentTicks' | 'changeStream' | 'getCurrentSubtitleStream'>) {
-    let brightnessOsdLoaded: boolean | undefined;
-
     function isAudioStreamSupported(mediaSource: PlaybackMediaSource, index: number, deviceProfile: PlaybackDeviceProfile) {
         let mediaStream;
         const mediaStreams = mediaSource.MediaStreams;
@@ -191,11 +191,7 @@ export function createPlaybackControls(self: PlaybackContext, services: Pick<Pla
             player = (player || self._currentPlayer)!;
 
             if (player) {
-                if (!brightnessOsdLoaded) {
-                    brightnessOsdLoaded = true;
-                    // TODO: Have this trigger an event instead to get the osd out of here
-                    void import('./brightnessosd').then();
-                }
+                Events.trigger(self, PlaybackManagerEvent.BrightnessRequested, [player]);
                 player.setBrightness!(val);
             }
         },

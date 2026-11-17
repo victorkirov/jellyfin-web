@@ -2,6 +2,7 @@
  * Events triggered by PlaybackManager.
  */
 export enum PlaybackManagerEvent {
+    BrightnessRequested = 'brightnessrequested',
     Pairing = 'pairing',
     Paired = 'paired',
     PairError = 'pairerror',

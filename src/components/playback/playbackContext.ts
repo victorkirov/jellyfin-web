@@ -1,6 +1,7 @@
 import type { bindSkipSegment } from './skipsegment';
 import type { MediaStream } from '@jellyfin/sdk/lib/generated-client/models/media-stream';
 import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/media-source-info';
+import type { PlaybackAttempt } from 'lib/playback/playbackAttempt';
 import type { ApiClient as PlaybackApiClient } from 'jellyfin-apiclient';
 import type { SubtitleDeliveryMethod } from '@jellyfin/sdk/lib/generated-client/models/subtitle-delivery-method';
 import type { PlaybackPlayer } from 'types/plugin';
@@ -10,7 +11,8 @@ import type PlayQueueManager from './playqueuemanager';
 /** Self contract breaks recursive inference between separately composed capabilities. */
 export type PlaybackContext = {
     readonly _services: PlaybackServices;
-    translateItemsForPlayback: (items: PlaybackItem[], options: PlaybackOptions) => Promise<PlaybackItem[]>;
+    _playbackAttempt: PlaybackAttempt;
+    translateItemsForPlayback: (items: PlaybackItem[], options: PlaybackOptions, attempt?: number) => Promise<PlaybackItem[]>;
     getItemsForPlayback: (serverId: string | null | undefined, query: PlaybackQuery) => Promise<PlaybackResult>;
     currentItem: (player?: PlaybackPlayer | null) => PlaybackItem | null | undefined;
     currentMediaSource: (player?: PlaybackPlayer | null) => PlaybackMediaSource | null | undefined;
@@ -147,17 +149,18 @@ export type PlaybackServices = {
     getPlayerData: (player: PlaybackPlayer | null | undefined) => PlaybackPlayer;
     getDefaultPlayOptions: () => PlaybackOptions;
     onPlaybackStopped: (this: PlaybackPlayer, e?: unknown, displayErrorCode?: string) => void;
+    assertPlaybackAttempt: (attempt?: number) => void;
     sendProgressUpdate: (player: PlaybackPlayer, progressEventName?: string, reportPlaylist?: boolean) => void;
     onPlaybackError: (this: PlaybackPlayer, e: unknown, error?: PlaybackFailure) => Promise<boolean | void> | boolean | void;
-    translateItemsForPlayback: (items: PlaybackItem[], options: PlaybackOptions) => Promise<PlaybackItem[]>;
+    translateItemsForPlayback: (items: PlaybackItem[], options: PlaybackOptions, attempt?: number) => Promise<PlaybackItem[]>;
     setPlaylistState: (playlistItemId: string, index: number) => void;
     removeCurrentPlayer: (player: PlaybackPlayer) => void;
     onPlaybackChanging: (activePlayer: PlaybackPlayer, newPlayer: PlaybackPlayer | null | undefined, newItem: PlaybackItem) => Promise<void>;
     setCurrentPlayerInternal: (player: PlaybackPlayer | null, targetInfo?: PlaybackTarget | null) => void;
     onPlaybackStarted: (player: PlaybackPlayer, playOptions: PlaybackOptions, streamInfo: PlaybackStreamInfo, mediaSource?: PlaybackMediaSource) => void;
-    setSrcIntoPlayer: (apiClient: PlaybackApiClient, player: PlaybackPlayer, streamInfo: PlaybackStreamInfo) => Promise<boolean | void>;
+    setSrcIntoPlayer: (apiClient: PlaybackApiClient, player: PlaybackPlayer, streamInfo: PlaybackStreamInfo, attempt?: number, onAccepted?: () => void) => Promise<boolean | void>;
     getSavedMaxStreamingBitrate: (apiClient: PlaybackApiClient | null | undefined, mediaType: string | null | undefined) => number;
-    playInternal: (item: PlaybackItem, playOptions: PlaybackOptions, onPlaybackStartedFn: () => void, prevSource?: PlaybackMediaSource | null) => Promise<unknown>;
+    playInternal: (item: PlaybackItem, playOptions: PlaybackOptions, onPlaybackStartedFn: () => void, prevSource?: PlaybackMediaSource | null, attempt?: number) => Promise<unknown>;
     destroyPlayer: (player: PlaybackPlayer) => void;
     getCurrentTicks: (player: PlaybackPlayer | null | undefined) => number;
     changeStream: (player: PlaybackPlayer, ticks: number, params?: { EnableDirectPlay?: boolean; EnableDirectStream?: boolean; AllowVideoStreamCopy?: boolean; AllowAudioStreamCopy?: boolean | null; AudioStreamIndex?: number; SubtitleStreamIndex?: number; SecondarySubtitleStreamIndex?: number; MaxStreamingBitrate?: number; }) => Promise<boolean | void> | void;
