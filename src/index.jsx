@@ -12,7 +12,6 @@ import autoFocuser from './components/autoFocuser';
 import loading from 'components/loading/loading';
 import { pluginManager } from './components/pluginManager';
 import { appRouter } from './components/router/appRouter';
-import { AppFeature } from 'constants/appFeature';
 import { EventType } from 'constants/eventType';
 import globalize from './lib/globalize';
 import { loadCoreDictionary } from 'lib/globalize/loader';
@@ -111,9 +110,6 @@ build: ${__JF_BUILD_VERSION__}`);
     // Render the app
     await renderApp();
 
-    // Load platform specific features
-    loadPlatformFeatures();
-
     // Enable navigation controls
     keyboardNavigation.enable();
     autoFocuser.enable();
@@ -141,12 +137,6 @@ async function loadPlugins() {
     }
 
     console.groupEnd('loading installed plugins');
-}
-
-function loadPlatformFeatures() {
-    if (!appHost.supports(AppFeature.PhysicalVolumeControl)) {
-        import('./components/playback/volumeosd');
-    }
 }
 
 async function renderApp() {
