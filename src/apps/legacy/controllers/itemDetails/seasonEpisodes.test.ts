@@ -4,14 +4,16 @@ import listView from 'components/listview/listview';
 import shortcuts from 'components/shortcuts';
 import focusManager from 'lib/focusManager';
 import viewManager from 'components/viewManager/viewManager';
+import type { ItemDto } from 'types/base/models/item-dto';
+import { ItemAction } from 'constants/itemAction';
 
 const { showItem, play, layout, viewContainer, getScaledImageUrl } = vi.hoisted(() => ({
     showItem: vi.fn(), play: vi.fn(), layout: { tv: true },
     getScaledImageUrl: vi.fn(() => 'thumbnail.jpg'),
     viewContainer: { setOnBeforeChange: vi.fn(), loadView: vi.fn(), tryRestoreView: vi.fn() }
 }));
-const strings = JSON.parse(readFileSync('src/strings/en-us.json', 'utf8'));
-vi.mock('lib/globalize', () => ({ default: { translate: (key, value) => (strings[key] || key).replace('{0}', value), getCurrentDateTimeLocale: () => 'en-US' } }));
+const strings: Record<string, string> = JSON.parse(readFileSync('src/strings/en-us.json', 'utf8'));
+vi.mock('lib/globalize', () => ({ default: { translate: (key: string, value?: string | number) => (strings[key] || key).replace('{0}', String(value)), getCurrentDateTimeLocale: () => 'en-US' } }));
 vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: { getApiClient: () => ({ getScaledImageUrl }) } }));
 vi.mock('components/cardbuilder/cardBuilder', () => ({ default: { getDefaultText: () => '' } }));
 vi.mock('lib/layoutManager', () => ({ default: layout }));
@@ -27,24 +29,24 @@ vi.mock('elements/emby-progressbar/emby-progressbar', () => ({}));
 vi.mock('components/buttons/emby-ratingbutton', () => ({}));
 vi.mock('components/buttons/emby-playstatebutton', () => ({}));
 
-const items = [1, 3, 4].map((number, index) => ({
+const items = [1, 3, 4].map((number, index): ItemDto => ({
     Id: 'episode-' + number, ServerId: 'server', Type: 'Episode', MediaType: 'Video',
     IndexNumber: number, IndexNumberEnd: index === 0 ? 2 : undefined, ParentIndexNumber: 1, Name: 'Episode title ' + number, RunTimeTicks: 18000000000,
-    ImageTags: { Primary: 'image' }, UserData: { Played: index === 0, PlayedPercentage: index === 1 ? 50 : 0, PlaybackPositionTicks: index === 1 ? 9000000000 : 0 }
+    ImageTags: { Primary: 'image' }, UserData: { Key: 'episode-' + number, Played: index === 0, PlayedPercentage: index === 1 ? 50 : 0, PlaybackPositionTicks: index === 1 ? 9000000000 : 0 }
 }));
-let page;
-let rows;
+let page: HTMLElement;
+let rows: HTMLButtonElement[];
 beforeEach(() => {
     vi.clearAllMocks();
     layout.tv = true;
     document.body.innerHTML = '<main class="page"><div class="itemsContainer vertical-list"></div></main>';
-    page = document.querySelector('main');
-    const container = page.querySelector('.itemsContainer');
-    container.innerHTML = listView.getListViewHtml({ items, imageSize: 'episode', showIndexNumber: false, enableOverview: false, enableSideMediaInfo: false, action: 'link', imagePlayButton: true, includeParentInfoInTitle: false });
-    rows = [...container.querySelectorAll('.listItem')];
+    page = document.querySelector<HTMLElement>('main')!;
+    const container = page.querySelector<HTMLElement>('.itemsContainer')!;
+    container.innerHTML = listView.getListViewHtml({ items, imageSize: 'episode', showIndexNumber: false, enableOverview: false, enableSideMediaInfo: false, action: ItemAction.Link, imagePlayButton: true, includeParentInfoInTitle: false });
+    rows = [...container.querySelectorAll<HTMLButtonElement>('.listItem')];
     rows.forEach((row, index) => {
         Object.defineProperty(row, 'offsetParent', { configurable: true, value: container });
-        row.getBoundingClientRect = () => ({ left: 50, right: 950, top: index * 140, bottom: index * 140 + 130, width: 900, height: 130 });
+        row.getBoundingClientRect = () => ({ left: 50, right: 950, top: index * 140, bottom: index * 140 + 130, width: 900, height: 130, x: 50, y: index * 140, toJSON: () => ({}) });
     });
     shortcuts.on(container);
 });
@@ -53,7 +55,7 @@ describe('Compact season episodes', () => {
     it('renders episode numbers, titles, duration, watched and progress with smaller image requests', () => {
         expect(rows).toHaveLength(3);
         expect(rows.every(row => row.classList.contains('listItem-episode'))).toBe(true);
-        expect(rows[0].querySelector('.listItemBodyText bdi').textContent).toBe('1-2. Episode title 1');
+        expect(rows[0].querySelector('.listItemBodyText bdi')!.textContent).toBe('1-2. Episode title 1');
         expect(rows[0].textContent).toContain('30');
         expect(rows[0].querySelector('.playedIndicator')).not.toBeNull();
         expect(rows[1].querySelector('.listItemProgressBar')).not.toBeNull();
@@ -64,9 +66,9 @@ describe('Compact season episodes', () => {
 
     it('keeps specials labels without a numeric prefix', () => {
         const special = { ...items[0], ParentIndexNumber: 0, IndexNumberEnd: undefined, Name: 'Behind the scenes' };
-        const container = page.querySelector('.itemsContainer');
+        const container = page.querySelector<HTMLElement>('.itemsContainer')!;
         container.innerHTML = listView.getListViewHtml({ items: [special], imageSize: 'episode', showIndexNumber: false, includeParentInfoInTitle: false });
-        expect(container.querySelector('.listItemBodyText bdi').textContent).toBe(strings.ValueSpecialEpisodeName.replace('{0}', special.Name));
+        expect(container.querySelector('.listItemBodyText bdi')!.textContent).toBe(strings.ValueSpecialEpisodeName.replace('{0}', special.Name!));
     });
 
     it('opens details on native button activation and moves through consecutive episodes', () => {
@@ -103,9 +105,9 @@ describe('Compact season episodes', () => {
 
     it('retains the separate image resume target in the existing pointer layout', () => {
         layout.tv = false;
-        const container = page.querySelector('.itemsContainer');
-        container.innerHTML = listView.getListViewHtml({ items: [items[1]], imageSize: 'episode', action: 'link', imagePlayButton: true, enableUserDataButtons: false, moreButton: false });
-        container.querySelector('.listItemImageButton').click();
+        const container = page.querySelector<HTMLElement>('.itemsContainer')!;
+        container.innerHTML = listView.getListViewHtml({ items: [items[1]], imageSize: 'episode', action: ItemAction.Link, imagePlayButton: true, enableUserDataButtons: false, moreButton: false });
+        container.querySelector<HTMLElement>('.listItemImageButton')!.click();
         expect(play).toHaveBeenCalledWith(expect.objectContaining({ ids: ['episode-3'], startPositionTicks: 9000000000 }));
     });
 });

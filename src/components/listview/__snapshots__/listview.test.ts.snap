@@ -1,0 +1,3 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TV list markup > keeps whole-row actions, escaped titles and no nested buttons 1`] = `"<button class="listItem itemAction listItem-button listItem-focusscale listItem-episode" data-action="link" data-isfolder="false" data-id="episode" data-serverid="server" data-type="Episode" data-positionticks="20"><div data-action="link" class="listItemImage lazy" data-src="image" item-icon></div><div class="listItemBody"><div class="listItemBodyText"><bdi>&lt;Pilot&gt;</bdi></div></div><div class="secondary listItemMediaInfo"><span>media</span></div><div class="listViewUserDataButtons"></div></button>"`;
