@@ -1,24 +1,34 @@
+import type { UserDataChangedMessage } from '@jellyfin/sdk/lib/generated-client';
+import type { ItemDto } from 'types/base/models/item-dto';
 import globalize from '../../lib/globalize/index';
 import { ServerConnections } from 'lib/jellyfin-apiclient/index';
 import { OutboundWebSocketMessageType } from '@jellyfin/sdk/lib/websocket';
 import EmbyButtonPrototype from './emby-button';
 
-function onClick() {
-    const button = this;
-    const id = button.getAttribute('data-id');
-    const serverId = button.getAttribute('data-serverid');
-    const apiClient = ServerConnections.getApiClient(serverId);
+type StateButton = HTMLButtonElement & {
+    iconElement?: Element | null;
+    _unsubscribeUserData?: (() => void) | null;
+    setItem(item: ItemDto | null): void;
+    createdCallback(): void;
+    attachedCallback(): void;
+    detachedCallback(): void;
+};
 
-    if (!button.classList.contains('playstatebutton-played')) {
-        apiClient.markPlayed(apiClient.getCurrentUserId(), id, new Date());
-        setState(button, true);
+function onClick(this: StateButton) {
+    const id = this.getAttribute('data-id')!;
+    const serverId = this.getAttribute('data-serverid');
+    const apiClient = ServerConnections.getApiClient(serverId)!;
+
+    if (!this.classList.contains('playstatebutton-played')) {
+        void apiClient.markPlayed(apiClient.getCurrentUserId(), id, new Date());
+        setState(this, true);
     } else {
-        apiClient.markUnplayed(apiClient.getCurrentUserId(), id, new Date());
-        setState(button, false);
+        void apiClient.markUnplayed(apiClient.getCurrentUserId(), id, new Date());
+        setState(this, false);
     }
 }
 
-function onUserDataChanged({ Data }, button) {
+function onUserDataChanged({ Data }: UserDataChangedMessage, button: StateButton) {
     const itemId = button.dataset.id;
     const userData = (Data?.UserDataList ?? []).find(u => u.ItemId === itemId);
     if (userData) {
@@ -26,7 +36,7 @@ function onUserDataChanged({ Data }, button) {
     }
 }
 
-function setState(button, played, updateAttribute) {
+function setState(button: StateButton, played?: boolean, updateAttribute?: boolean) {
     let icon = button.iconElement;
     if (!icon) {
         button.iconElement = button.querySelector('.material-icons');
@@ -48,44 +58,44 @@ function setState(button, played, updateAttribute) {
     }
 
     if (updateAttribute !== false) {
-        button.setAttribute('data-played', played);
+        button.setAttribute('data-played', String(played));
     }
 
     setTitle(button, button.getAttribute('data-type'), played);
 }
 
-function setTitle(button, itemType, played) {
+function setTitle(button: StateButton, itemType: string | null, played?: boolean) {
     if (itemType !== 'AudioBook') {
         button.title = played ? globalize.translate('Watched') : globalize.translate('MarkPlayed');
     } else {
         button.title = played ? globalize.translate('Played') : globalize.translate('MarkPlayed');
     }
 
-    const text = button.querySelector('.button-text');
+    const text = button.querySelector<HTMLElement>('.button-text');
     if (text) {
         text.innerText = button.title;
     }
 }
 
-function clearEvents(button) {
+function clearEvents(button: StateButton) {
     button.removeEventListener('click', onClick);
     button._unsubscribeUserData?.();
     button._unsubscribeUserData = null;
 }
 
-function bindEvents(button) {
+function bindEvents(button: StateButton) {
     clearEvents(button);
 
     button.addEventListener('click', onClick);
     const serverId = button.dataset.serverid;
-    const apiClient = ServerConnections.getApiClient(serverId);
-    button._unsubscribeUserData = apiClient?.subscribe(
+    const apiClient = ServerConnections.getApiClient(serverId)!;
+    button._unsubscribeUserData = apiClient?.subscribe!(
         [OutboundWebSocketMessageType.UserDataChanged],
         (msg) => onUserDataChanged(msg, button)
     );
 }
 
-const EmbyPlaystateButtonPrototype = Object.create(EmbyButtonPrototype);
+const EmbyPlaystateButtonPrototype = Object.create(EmbyButtonPrototype) as StateButton;
 
 EmbyPlaystateButtonPrototype.createdCallback = function () {
     // base method
@@ -118,11 +128,11 @@ EmbyPlaystateButtonPrototype.detachedCallback = function () {
     this.iconElement = null;
 };
 
-EmbyPlaystateButtonPrototype.setItem = function (item) {
+EmbyPlaystateButtonPrototype.setItem = function (item: ItemDto | null) {
     if (item) {
-        this.setAttribute('data-id', item.Id);
-        this.setAttribute('data-serverid', item.ServerId);
-        this.setAttribute('data-type', item.Type);
+        this.setAttribute('data-id', item.Id!);
+        this.setAttribute('data-serverid', item.ServerId!);
+        this.setAttribute('data-type', item.Type!);
 
         const played = item.UserData?.Played;
         setState(this, played);
@@ -136,7 +146,7 @@ EmbyPlaystateButtonPrototype.setItem = function (item) {
     }
 };
 
-document.registerElement('emby-playstatebutton', {
+(document as Document & { registerElement(name: string, options: { prototype: StateButton; extends: string }): void }).registerElement('emby-playstatebutton', {
     prototype: EmbyPlaystateButtonPrototype,
     extends: 'button'
 });
