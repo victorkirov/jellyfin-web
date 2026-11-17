@@ -147,7 +147,7 @@ const config = {
         removeAvailableModules: false,
         removeEmptyChunks: false,
         splitChunks: {
-            chunks: 'all',
+            chunks: chunk => chunk.name !== 'serviceworker',
             maxInitialRequests: Infinity,
             cacheGroups: {
                 node_modules: {
