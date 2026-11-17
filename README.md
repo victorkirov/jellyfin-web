@@ -8,13 +8,13 @@ The admin dashboard, setup wizard, modern UI, metadata editing, and other non-TV
 
 ## Run with Docker
 
-Set `JELLYFIN_UPSTREAM` in [docker/compose.yaml](docker/compose.yaml) to your existing Jellyfin server's URL, then run from the repository root:
+Set `JELLYFIN_UPSTREAM_HOST` in [docker/compose.yaml](docker/compose.yaml) to your existing Jellyfin server's `host:port` (plain HTTP), then run from the repository root:
 
 ```sh
 docker compose -f docker/compose.yaml up -d --build
 ```
 
-The container serves the client at `http://<host>:8097/web/` and proxies server requests to `JELLYFIN_UPSTREAM`. Point the TV app at `http://<host>:8097`, using a host address reachable from the TV.
+The container serves the client at `http://<host>:8097/web/` and proxies server requests to `JELLYFIN_UPSTREAM_HOST`, reusing connections. Point the TV app at `http://<host>:8097`, using a host address reachable from the TV.
 
 ## Local development
 
