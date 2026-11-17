@@ -18,6 +18,7 @@ function onSaveTimeout() {
     this.saveTimeout = null;
     const apiClient = this.currentApiClient;
     const userId = this.currentUserId;
+    const binding = this.binding;
     const displayPrefs = Object.assign({}, this.displayPrefs, {
         CustomPrefs: Object.assign({}, this.displayPrefs.CustomPrefs)
     });
@@ -25,7 +26,7 @@ function onSaveTimeout() {
         .then(() => apiClient.updateDisplayPreferences(DISPLAY_PREFERENCES_ID, displayPrefs, userId, CLIENT_ID))
         .catch(error => {
             // The local copy remains available; another change can retry the save.
-            Events.trigger(this, 'saveerror', [error]);
+            if (this.binding === binding) Events.trigger(this, 'saveerror', [error]);
         });
 }
 
@@ -85,29 +86,33 @@ export class UserSettings {
             clearTimeout(this.saveTimeout);
         }
 
+        const binding = {};
+        this.binding = binding;
+        this.saveTimeout = null;
         this.currentUserId = userId;
         this.currentApiClient = apiClient;
+        this.displayPrefs = null;
 
         if (!userId) {
-            this.displayPrefs = null;
             return Promise.resolve();
         }
 
         const self = this;
 
         const api = ServerConnections.getApi(apiClient.serverId());
+        const query = getDisplayPreferencesQuery(api, {
+            displayPreferencesId: DISPLAY_PREFERENCES_ID,
+            client: CLIENT_ID,
+            userId
+        });
+        binding.queryKey = query.queryKey;
         return queryClient
-            .fetchQuery(getDisplayPreferencesQuery(
-                api,
-                {
-                    displayPreferencesId: DISPLAY_PREFERENCES_ID,
-                    client: CLIENT_ID,
-                    userId
-                }
-            ))
+            .fetchQuery(query)
             .then(result => {
-                result.CustomPrefs = result.CustomPrefs || {};
-                self.displayPrefs = result;
+                if (self.binding !== binding) return;
+                self.displayPrefs = Object.assign({}, result, {
+                    CustomPrefs: Object.assign({}, result.CustomPrefs)
+                });
             });
     }
 
@@ -146,7 +151,12 @@ export class UserSettings {
         // Display preferences keep their legacy local backup and server serialization.
         const result = appSettings.set(name, value, this.currentUserId);
         if (this.displayPrefs) {
-            this.displayPrefs.CustomPrefs[name] = value == null ? value : value.toString();
+            const customPrefs = Object.assign({}, this.displayPrefs.CustomPrefs);
+            customPrefs[name] = value == null ? value : value.toString();
+            this.displayPrefs = Object.assign({}, this.displayPrefs, { CustomPrefs: customPrefs });
+            if (this.binding?.queryKey) {
+                queryClient.setQueryData(this.binding.queryKey, this.displayPrefs);
+            }
             saveServerPreferences(this);
         }
         if (currentValue !== value) {

@@ -17,32 +17,26 @@ export const useApi = () => useContext(ApiContext);
 
 export const ApiProvider: FC<PropsWithChildren<unknown>> = ({ children }) => {
     const [ legacyApiClient, setLegacyApiClient ] = useState<ApiClient>();
-    const [ api, setApi ] = useState<Api>();
     const [ user, setUser ] = useState<UserDto>();
 
     const context = useMemo(() => ({
         __legacyApiClient__: legacyApiClient,
-        api,
+        api: legacyApiClient ? ServerConnections.getApi(legacyApiClient.serverId()) : undefined,
         user
-    }), [ api, legacyApiClient, user ]);
+    }), [ legacyApiClient, user ]);
 
     useEffect(() => {
-        ServerConnections.currentApiClient()
-            ?.getCurrentUser()
-            .then(newUser => updateApiUser(undefined, newUser))
-            .catch(err => {
-                console.info('[ApiProvider] Could not get current user', err);
-            });
+        let initialRequestCurrent = true;
+        const initialClient = ServerConnections.currentApiClient();
 
         const updateApiUser = (_e: Event | undefined, newUser: UserDto) => {
+            initialRequestCurrent = false;
             setUser(newUser);
-
-            if (newUser.ServerId) {
-                setLegacyApiClient(ServerConnections.getApiClient(newUser.ServerId));
-            }
+            setLegacyApiClient(newUser.ServerId ? ServerConnections.getApiClient(newUser.ServerId) : undefined);
         };
 
         const resetApiUser = () => {
+            initialRequestCurrent = false;
             setLegacyApiClient(undefined);
             setUser(undefined);
         };
@@ -50,15 +44,22 @@ export const ApiProvider: FC<PropsWithChildren<unknown>> = ({ children }) => {
         events.on(ServerConnections, 'localusersignedin', updateApiUser);
         events.on(ServerConnections, 'localusersignedout', resetApiUser);
 
+        initialClient?.getCurrentUser()
+            .then(newUser => {
+                if (initialRequestCurrent && ServerConnections.currentApiClient() === initialClient) {
+                    updateApiUser(undefined, newUser);
+                }
+            })
+            .catch(err => {
+                console.info('[ApiProvider] Could not get current user', err);
+            });
+
         return () => {
+            initialRequestCurrent = false;
             events.off(ServerConnections, 'localusersignedin', updateApiUser);
             events.off(ServerConnections, 'localusersignedout', resetApiUser);
         };
     }, [ setLegacyApiClient, setUser ]);
-
-    useEffect(() => {
-        setApi(legacyApiClient ? ServerConnections.getApi(legacyApiClient.serverId()) : undefined);
-    }, [ legacyApiClient, setApi ]);
 
     return (
         <ApiContext.Provider value={context}>
