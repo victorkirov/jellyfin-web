@@ -5,6 +5,8 @@ import './style.scss';
 
 const worker = new Worker();
 const targetDic = {};
+const blurhashEnabled = new WeakMap();
+const blurhashTargets = new WeakSet();
 worker.addEventListener(
     'message',
     ({ data: { pixels, hsh, width, height } }) => {
@@ -27,6 +29,10 @@ export function lazyImage(elem, source = elem.getAttribute('data-src')) {
 }
 
 function drawBlurhash(target, pixels, width, height) {
+    if (!document.documentElement.contains(target)) {
+        return;
+    }
+
     const canvas = document.createElement('canvas');
     canvas.setAttribute('aria-hidden', 'true');
     canvas.width = width;
@@ -38,8 +44,15 @@ function drawBlurhash(target, pixels, width, height) {
     ctx.putImageData(imgData, 0, 0);
 
     requestAnimationFrame(() => {
+        if (!document.documentElement.contains(target)) {
+            return;
+        }
+
         // This class is just an utility class, so users can customize the canvas using their own CSS.
         canvas.classList.add('blurhash-canvas');
+        if (target.classList.contains('lazy-image-fadein') || target.classList.contains('lazy-image-fadein-fast')) {
+            canvas.classList.add('lazy-hidden');
+        }
 
         target.parentNode.insertBefore(canvas, target);
         target.classList.add('blurhashed');
@@ -54,8 +67,16 @@ function itemBlurhashing(target, hash) {
         // Lower values had more visible pixelation
         const width = 20;
         const height = 20;
-        targetDic[hash] = (targetDic[hash] || []).filter(item => item !== target);
-        targetDic[hash].push(target);
+        if (blurhashTargets.has(target)) {
+            return;
+        }
+        blurhashTargets.add(target);
+
+        if (targetDic[hash]) {
+            targetDic[hash].push(target);
+            return;
+        }
+        targetDic[hash] = [target];
 
         worker.postMessage({
             hash,
@@ -83,6 +104,16 @@ export function fillImage(entry) {
     }
 
     if (entry.isIntersecting) {
+        if (blurhashEnabled.get(target)) {
+            const hash = target.getAttribute('data-blurhash');
+            if (!target.classList.contains('blurhashed') && !target.classList.contains('non-blurhashable')) {
+                if (hash) {
+                    itemBlurhashing(target, hash);
+                } else {
+                    target.classList.add('non-blurhashable');
+                }
+            }
+        }
         if (source) {
             fillImageElement(target, source);
         }
@@ -161,15 +192,9 @@ function emptyImageElement(elem) {
 }
 
 export function lazyChildren(elem) {
-    if (userSettings.enableBlurhash()) {
-        for (const lazyElem of elem.querySelectorAll('.lazy')) {
-            const blurhashstr = lazyElem.getAttribute('data-blurhash');
-            if (!lazyElem.classList.contains('blurhashed', 'non-blurhashable') && blurhashstr) {
-                itemBlurhashing(lazyElem, blurhashstr);
-            } else if (!blurhashstr && !lazyElem.classList.contains('blurhashed')) {
-                lazyElem.classList.add('non-blurhashable');
-            }
-        }
+    const enableBlurhash = userSettings.enableBlurhash();
+    for (const lazyElem of elem.querySelectorAll('.lazy')) {
+        blurhashEnabled.set(lazyElem, enableBlurhash);
     }
 
     lazyLoader.lazyChildren(elem, fillImage);
