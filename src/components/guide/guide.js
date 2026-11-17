@@ -32,6 +32,7 @@ import '../../styles/flexstyles.scss';
 import 'webcomponents.js/webcomponents-lite';
 
 import template from './tvguide.template.html';
+import sortPrograms from './sortPrograms';
 
 function showViewSettings(instance) {
     import('./guide-settings').then(({ default: guideSettingsDialog }) => {
@@ -661,26 +662,8 @@ function Guide(options) {
         updateProgramCellsOnScroll(programGrid, programCells);
     }
 
-    function getProgramSortOrder(program, channels) {
-        const channelId = program.ChannelId;
-        let channelIndex = -1;
-
-        for (let i = 0, length = channels.length; i < length; i++) {
-            if (channelId === channels[i].Id) {
-                channelIndex = i;
-                break;
-            }
-        }
-
-        const start = datetime.parseISO8601Date(program.StartDate, { toLocal: true });
-
-        return (channelIndex * 10000000) + (start.getTime() / 60000);
-    }
-
     function renderGuide(context, date, channels, programs, renderOptions, guideOptions, apiClient) {
-        programs.sort(function (a, b) {
-            return getProgramSortOrder(a, channels) - getProgramSortOrder(b, channels);
-        });
+        sortPrograms(programs, channels);
 
         const activeElement = document.activeElement;
         const itemId = activeElement?.getAttribute ? activeElement.getAttribute('data-id') : null;
