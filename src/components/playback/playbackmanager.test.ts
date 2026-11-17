@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PlaybackManager } from './playbackmanager';
 import Events from '../../utils/events';
+import { pluginManager } from '../pluginManager';
 import { MediaError } from 'types/mediaError';
 
 const mocks = vi.hoisted(() => ({
@@ -24,7 +25,7 @@ const mocks = vi.hoisted(() => ({
     }
 }));
 vi.mock('@jellyfin/sdk/lib/utils/api/media-info-api', () => ({ getMediaInfoApi: () => ({ getPostedPlaybackInfo: mocks.getPostedPlaybackInfo }) }));
-vi.mock('../pluginManager', () => ({ pluginManager: { ofType: (type: string) => type === 'mediaplayer' ? mocks.players : mocks.interceptors } }));
+vi.mock('../pluginManager', () => ({ pluginManager: { prepareForPlayback: vi.fn().mockResolvedValue(undefined), canPlayDeferred: () => false, ofType: (type: string) => type === 'mediaplayer' ? mocks.players : mocks.interceptors } }));
 vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: { getApi: () => ({}), getApiClient: () => mocks.apiClient, currentApiClient: () => mocks.apiClient } }));
 vi.mock('../../scripts/settings/appSettings', () => ({ default: {
     enableAutomaticBitrateDetection: mocks.automaticBitrate, maxStreamingBitrate: mocks.maxBitrate,
@@ -70,6 +71,7 @@ function setup() {
 
 beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(pluginManager.prepareForPlayback).mockResolvedValue(undefined);
     mocks.players.length = 0;
     mocks.interceptors.length = 0;
     mocks.localItem.mockReturnValue(false);
@@ -390,5 +392,46 @@ describe('player millisecond and server tick boundaries', () => {
         expect(currentTime).toHaveBeenCalledWith(12_500);
         expect(manager.getCurrentTicks(player)).toBe(125_000_000);
         await manager.stop(player);
+    });
+});
+
+describe('deferred player initialization', () => {
+    it('awaits player loading before preparing and starting immediate playback', async () => {
+        const { manager, player } = setup();
+        let finish!: () => void;
+        vi.mocked(pluginManager.prepareForPlayback).mockImplementationOnce(() => new Promise<void>(resolve => {
+            finish = resolve;
+        }));
+        const playing = manager.play({ items: [{ ...item }] });
+        expect(player.getDeviceProfile).not.toHaveBeenCalled();
+        expect(player.play).not.toHaveBeenCalled();
+        finish();
+        await playing;
+        expect(player.play).toHaveBeenCalledOnce();
+    });
+
+    it('hides loading and reports a first-load failure, then permits a successful retry', async () => {
+        const { manager, player } = setup();
+        const error = new Error('player chunk failed');
+        vi.mocked(pluginManager.prepareForPlayback).mockRejectedValueOnce(error);
+        await expect(manager.play({ items: [{ ...item }] })).rejects.toBe(error);
+        expect(mocks.loading.show).toHaveBeenCalled();
+        expect(mocks.loading.hide).toHaveBeenCalled();
+        expect(mocks.alert).toHaveBeenCalledExactlyOnceWith({
+            text: 'ErrorPlayerNotFound', title: 'HeaderPlaybackError'
+        });
+        expect(player.play).not.toHaveBeenCalled();
+        await manager.play({ items: [{ ...item }] });
+        expect(player.play).toHaveBeenCalledOnce();
+        expect(mocks.alert).toHaveBeenCalledOnce();
+    });
+
+    it('keeps denied playback behind required interceptors on first play', async () => {
+        const { play, player } = setup();
+        const intercept = vi.fn().mockRejectedValue(new Error('denied'));
+        mocks.interceptors.push({ intercept });
+        await play();
+        expect(intercept).toHaveBeenCalledOnce();
+        expect(player.play).not.toHaveBeenCalled();
     });
 });

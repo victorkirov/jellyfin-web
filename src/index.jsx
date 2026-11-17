@@ -130,7 +130,7 @@ async function loadPlugins() {
     }
 
     try {
-        await Promise.all(list.map(plugin => pluginManager.loadPlugin(plugin)));
+        await Promise.all(list.map(plugin => pluginManager.registerDeferredPlugin(plugin)));
         console.debug('finished loading plugins');
     } catch (e) {
         console.warn('failed loading plugins', e);

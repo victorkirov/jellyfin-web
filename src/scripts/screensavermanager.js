@@ -60,8 +60,12 @@ function ScreenSaverManager() {
 
         document.body.classList.add('screensaver-noScroll');
 
-        screensaver.show();
+        const activation = screensaver.show();
         activeScreenSaver = screensaver;
+        Promise.resolve(activation).catch(error => {
+            if (activeScreenSaver === screensaver) hide();
+            console.error('Failed to show screensaver', error);
+        });
 
         if (screensaver.hideOnClick !== false) {
             window.addEventListener('click', hide, true);

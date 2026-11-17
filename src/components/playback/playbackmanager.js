@@ -1063,7 +1063,7 @@ export class PlaybackManager {
                 }
             }
 
-            return getPlayer(item, getDefaultPlayOptions()) != null;
+            return getPlayer(item, getDefaultPlayOptions()) != null || pluginManager.canPlayDeferred(item);
         };
 
         self.toggleAspectRatio = function (player) {
@@ -1861,8 +1861,16 @@ export class PlaybackManager {
             });
         }
 
+        function onPlayerLoadFailure(error) {
+            loading.hide();
+            showPlaybackInfoErrorMessage(self, 'ErrorPlayerNotFound');
+            throw error;
+        }
+
         async function translateItemsForPlayback(items, options) {
             if (!items.length) return [];
+
+            await pluginManager.prepareForPlayback(items).catch(onPlayerLoadFailure);
 
             sortItemsIfNeeded(items, options);
 
@@ -1874,7 +1882,9 @@ export class PlaybackManager {
 
             if (promise) {
                 const result = await promise;
-                return result ? result.Items : items;
+                const translated = result ? result.Items : items;
+                await pluginManager.prepareForPlayback(translated).catch(onPlayerLoadFailure);
+                return translated;
             } else {
                 return items;
             }

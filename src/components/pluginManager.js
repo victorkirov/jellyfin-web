@@ -11,7 +11,7 @@ import confirm from '../components/confirm/confirm';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import * as dashboard from '../utils/dashboard';
 
-class PluginManager {
+export class PluginManager {
     pluginsList = [];
 
     get plugins() {
@@ -29,19 +29,16 @@ class PluginManager {
     async #registerPlugin(plugin) {
         this.#register(plugin);
 
-        if (plugin.type === 'skin') {
-            // translations won't be loaded for skins until needed
-            return plugin;
-        } else {
-            return this.#loadStrings(plugin);
-        }
+        // Skins load translations when selected.
+        if (plugin.type !== 'skin') await this.#loadStrings(plugin);
+        return plugin;
     }
 
     async #preparePlugin(pluginSpec, plugin) {
         if (typeof pluginSpec === 'string') {
             // See if it's already installed
             const existing = this.plugins.filter(function (p) {
-                return p.id === plugin.id;
+                return p.id === plugin.id && !p.load;
             })[0];
 
             if (existing) {
@@ -55,6 +52,71 @@ class PluginManager {
         }
 
         return this.#registerPlugin(plugin);
+    }
+
+    registerDeferredPlugin(pluginSpec) {
+        const definitions = {
+            htmlAudioPlayer: ['htmlaudioplayer', 'Html Audio Player', 'Audio'],
+            htmlVideoPlayer: ['htmlvideoplayer', 'Html Video Player', 'Video'],
+            photoPlayer: ['photoplayer', 'Photo Player', 'Photo'],
+            youtubePlayer: ['youtubeplayer', 'Youtube Player', 'Audio,Video'],
+            backdropScreensaver: ['backdropscreensaver', 'BackdropScreensaver'],
+            logoScreensaver: ['logoscreensaver', 'LogoScreensaver']
+        };
+        const definition = typeof pluginSpec === 'string' && pluginSpec.endsWith('/plugin') ?
+            definitions[pluginSpec.slice(0, -7)] : undefined;
+        if (!definition || pluginSpec in window) return this.loadPlugin(pluginSpec);
+        const [id, name, mediaTypes] = definition;
+        let pending;
+        let implementation;
+        let activation = 0;
+        const descriptor = {
+            id,
+            name,
+            type: mediaTypes ? 'mediaplayer' : 'screensaver',
+            priority: 1,
+            supportsAnonymous: id === 'logoscreensaver',
+            canPlayMediaType: type => mediaTypes?.toLowerCase().split(',').includes((type || '').toLowerCase()),
+            canPlayItem: item => id !== 'youtubeplayer' && !!item.Id,
+            canPlayUrl: url => id === 'youtubeplayer' && url.toLowerCase().includes('youtube.com'),
+            load: () => {
+                if (!pending) {
+                    pending = this.loadPlugin(pluginSpec).then(plugin => {
+                        implementation = plugin;
+                        return plugin;
+                    }).catch(error => {
+                        pending = undefined;
+                        throw error;
+                    });
+                }
+                return pending;
+            },
+            show: () => {
+                const currentActivation = ++activation;
+                return descriptor.load().then(plugin => {
+                    if (currentActivation === activation) return plugin.show();
+                });
+            },
+            hide: () => {
+                activation++;
+                return implementation ? implementation.hide() : Promise.resolve();
+            }
+        };
+        this.pluginsList.push(descriptor);
+        return Promise.resolve(descriptor);
+    }
+
+    canPlayDeferred(item) {
+        return this.plugins.some(plugin => plugin.load && plugin.type === 'mediaplayer'
+            && plugin.canPlayMediaType(item.MediaType)
+            && (item.Id ? plugin.canPlayItem(item) : item.Url && plugin.canPlayUrl(item.Url)));
+    }
+
+    async prepareForPlayback(items) {
+        const plugins = this.plugins.filter(plugin => plugin.load && plugin.type === 'mediaplayer'
+            && items.some(item => plugin.canPlayMediaType(item.MediaType)
+                && (item.Id ? plugin.canPlayItem(item) : item.Url && plugin.canPlayUrl(item.Url))));
+        await Promise.all(plugins.map(plugin => plugin.load()));
     }
 
     async loadPlugin(pluginSpec) {
@@ -111,7 +173,9 @@ class PluginManager {
     // name
     // type (skin, screensaver, etc)
     #register(obj) {
-        this.pluginsList.push(obj);
+        const index = this.pluginsList.findIndex(plugin => plugin.load && plugin.id === obj.id);
+        if (index === -1) this.pluginsList.push(obj);
+        else this.pluginsList[index] = obj;
         Events.trigger(this, 'registered', [obj]);
     }
 
