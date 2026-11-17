@@ -2,11 +2,8 @@ import escapeHtml from 'escape-html';
 
 import { AppFeature } from 'constants/appFeature';
 import { PluginType } from 'constants/pluginType';
-import { getUserQuery } from 'hooks/api/useUser';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
-import { queryClient } from 'utils/query/queryClient';
 
-import browser from '../../scripts/browser';
 import { pluginManager } from '../pluginManager';
 import { appHost } from '../apphost';
 import focusManager from '../focusManager';
@@ -49,16 +46,7 @@ function loadScreensavers(context, userSettings) {
     }
 }
 
-function showOrHideMissingEpisodesField(context) {
-    if (browser.tizen || browser.web0s) {
-        context.querySelector('.fldDisplayMissingEpisodes').classList.add('hide');
-        return;
-    }
-
-    context.querySelector('.fldDisplayMissingEpisodes').classList.remove('hide');
-}
-
-function loadForm(context, user, userSettings) {
+function loadForm(context, userSettings) {
     if (appHost.supports(AppFeature.DisplayLanguage)) {
         context.querySelector('.languageSection').classList.remove('hide');
     } else {
@@ -95,8 +83,6 @@ function loadForm(context, user, userSettings) {
     context.querySelector('#txtSlideshowInterval').value = userSettings.slideshowInterval();
     context.querySelector('#txtScreensaverTime').value = userSettings.screensaverTime();
 
-    context.querySelector('.chkDisplayMissingEpisodes').checked = user.Configuration.DisplayMissingEpisodes || false;
-
     context.querySelector('#chkThemeSong').checked = userSettings.enableThemeSongs();
     context.querySelector('#chkThemeVideo').checked = userSettings.enableThemeVideos();
     context.querySelector('#chkFadein').checked = userSettings.enableFastFadein();
@@ -114,16 +100,11 @@ function loadForm(context, user, userSettings) {
 
     context.querySelector('#txtMaxDaysForNextUp').value = userSettings.maxDaysForNextUp();
     context.querySelector('#chkRewatchingNextUp').checked = userSettings.enableRewatchingInNextUp();
-    context.querySelector('#chkUseEpisodeImagesInNextUp').checked = userSettings.useEpisodeImagesInNextUpAndResume();
-
-    showOrHideMissingEpisodesField(context);
 
     loading.hide();
 }
 
-function saveUser(context, user, userSettingsInstance, apiClient) {
-    user.Configuration.DisplayMissingEpisodes = context.querySelector('.chkDisplayMissingEpisodes').checked;
-
+function saveUser(context, userSettingsInstance) {
     if (appHost.supports(AppFeature.DisplayLanguage)) {
         userSettingsInstance.language(context.querySelector('#selectLanguage').value);
     }
@@ -141,7 +122,6 @@ function saveUser(context, user, userSettingsInstance, apiClient) {
 
     userSettingsInstance.maxDaysForNextUp(context.querySelector('#txtMaxDaysForNextUp').value);
     userSettingsInstance.enableRewatchingInNextUp(context.querySelector('#chkRewatchingNextUp').checked);
-    userSettingsInstance.useEpisodeImagesInNextUpAndResume(context.querySelector('#chkUseEpisodeImagesInNextUp').checked);
 
     userSettingsInstance.enableFastFadein(context.querySelector('#chkFadein').checked);
     userSettingsInstance.enableBlurhash(context.querySelector('#chkBlurhash').checked);
@@ -150,24 +130,16 @@ function saveUser(context, user, userSettingsInstance, apiClient) {
 
     userSettingsInstance.disableCustomCss(context.querySelector('#chkDisableCustomCss').checked);
     userSettingsInstance.customCss(context.querySelector('#txtLocalCustomCss').value);
-
-    return apiClient.updateUserConfiguration(user.Id, user.Configuration);
 }
 
-function save(instance, context, userId, userSettings, apiClient, enableSaveConfirmation) {
+function save(instance, context, userSettings, enableSaveConfirmation) {
     loading.show();
-
-    apiClient.getUser(userId).then(user => {
-        saveUser(context, user, userSettings, apiClient).then(() => {
-            loading.hide();
-            if (enableSaveConfirmation) {
-                toast(globalize.translate('SettingsSaved'));
-            }
-            Events.trigger(instance, 'saved');
-        }, () => {
-            loading.hide();
-        });
-    });
+    saveUser(context, userSettings);
+    loading.hide();
+    if (enableSaveConfirmation) {
+        toast(globalize.translate('SettingsSaved'));
+    }
+    Events.trigger(instance, 'saved');
 }
 
 function onSubmit(e) {
@@ -178,7 +150,7 @@ function onSubmit(e) {
 
     userSettings.setUserInfo(userId, apiClient).then(() => {
         const enableSaveConfirmation = self.options.enableSaveConfirmation;
-        save(self, self.options.element, userId, userSettings, apiClient, enableSaveConfirmation);
+        save(self, self.options.element, userSettings, enableSaveConfirmation);
     });
 
     // Disable default form submission
@@ -210,15 +182,13 @@ class DisplaySettings {
         loading.show();
 
         const userId = self.options.userId;
-        const api = ServerConnections.getApi(self.options.serverId);
         const apiClient = ServerConnections.getApiClient(self.options.serverId);
         const userSettings = self.options.userSettings;
 
-        const user = await queryClient.fetchQuery(getUserQuery(api, { userId }));
         await userSettings.setUserInfo(userId, apiClient);
 
         self.dataLoaded = true;
-        loadForm(context, user, userSettings);
+        loadForm(context, userSettings);
         if (autoFocus) {
             focusManager.autoFocus(context);
         }

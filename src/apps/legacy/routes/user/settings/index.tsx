@@ -115,25 +115,6 @@ const UserSettingsPage: FC = () => {
                         </LinkButton>
 
                         <LinkButton
-                            href={`#/mypreferenceshome?userId=${userId}`}
-                            className='lnkHomePreferences listItem-border'
-                            style={{
-                                display: 'block',
-                                margin: 0,
-                                padding: 0
-                            }}
-                        >
-                            <div className='listItem'>
-                                <span className='material-icons listItemIcon listItemIcon-transparent home' aria-hidden='true' />
-                                <div className='listItemBody'>
-                                    <div className='listItemBodyText'>
-                                        {globalize.translate('Home')}
-                                    </div>
-                                </div>
-                            </div>
-                        </LinkButton>
-
-                        <LinkButton
                             href={`#/mypreferencesplayback?userId=${userId}`}
                             className='lnkPlaybackPreferences listItem-border'
                             style={{
