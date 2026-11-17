@@ -1,29 +1,8 @@
-import { serverQueryKey } from 'utils/query/queryKeys';
-import { Api } from '@jellyfin/sdk';
-import { getBrandingApi } from '@jellyfin/sdk/lib/utils/api/branding-api';
-import { queryOptions, useQuery } from '@tanstack/react-query';
-import type { AxiosRequestConfig } from 'axios';
-
+import { useQuery } from '@tanstack/react-query';
 import { useApi } from 'hooks/useApi';
+import { getBrandingOptionsQuery } from 'lib/queries/brandingOptions';
 
-export const QUERY_KEY = 'BrandingOptions';
-
-const fetchBrandingOptions = async (
-    api: Api,
-    options?: AxiosRequestConfig
-) => {
-    return getBrandingApi(api)
-        .getBrandingOptions(options)
-        .then(({ data }) => data);
-};
-
-export const getBrandingOptionsQuery = (
-    api?: Api
-) => queryOptions({
-    queryKey: serverQueryKey(api, QUERY_KEY),
-    queryFn: ({ signal }) => fetchBrandingOptions(api!, { signal }),
-    enabled: !!api
-});
+export { getBrandingOptionsQuery, QUERY_KEY } from 'lib/queries/brandingOptions';
 
 export const useBrandingOptions = () => {
     const { api } = useApi();
