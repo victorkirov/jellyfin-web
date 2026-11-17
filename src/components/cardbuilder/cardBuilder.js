@@ -1079,9 +1079,8 @@ export function buildCards(items, options) {
         if (options.itemsContainer.cardBuilderHtml !== html) {
             options.itemsContainer.innerHTML = html;
             options.itemsContainer.cardBuilderHtml = html;
+            imageLoader.lazyChildren(options.itemsContainer);
         }
-
-        imageLoader.lazyChildren(options.itemsContainer);
     } else {
         options.itemsContainer.innerHTML = html;
         options.itemsContainer.cardBuilderHtml = null;

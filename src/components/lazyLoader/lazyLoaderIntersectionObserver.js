@@ -1,7 +1,24 @@
+const sharedLoaders = new Map();
+const activeLoaders = new Set();
+let removalObserver;
+
+function watchRemovals() {
+    if (!removalObserver) {
+        removalObserver = new MutationObserver(records => {
+            if (records.some(record => Array.from(record.removedNodes).some(node => node.nodeType === 1))) {
+                activeLoaders.forEach(loader => {
+                    loader.removeDetachedElements();
+                });
+            }
+        });
+        removalObserver.observe(document.documentElement, { childList: true, subtree: true });
+    }
+}
 
 export class LazyLoader {
     constructor(options) {
         this.options = options;
+        this.elements = new Set();
     }
 
     createObserver() {
@@ -10,7 +27,9 @@ export class LazyLoader {
         const newObserver = new IntersectionObserver(
             (entries, observer) => {
                 entries.forEach(entry => {
-                    callback(entry, observer);
+                    if (document.documentElement.contains(entry.target)) {
+                        callback(entry, observer);
+                    }
                 });
             },
             {
@@ -30,8 +49,23 @@ export class LazyLoader {
         }
 
         Array.from(elements).forEach(element => {
+            this.elements.add(element);
             observer.observe(element);
         });
+        activeLoaders.add(this);
+        watchRemovals();
+    }
+
+    removeDetachedElements() {
+        this.elements.forEach(element => {
+            if (!document.documentElement.contains(element)) {
+                this.observer.unobserve(element);
+                this.elements.delete(element);
+            }
+        });
+        if (!this.elements.size) {
+            this.destroyObserver();
+        }
     }
 
     destroyObserver() {
@@ -40,6 +74,15 @@ export class LazyLoader {
         if (observer) {
             observer.disconnect();
             this.observer = null;
+            this.elements.clear();
+            activeLoaders.delete(this);
+            if (sharedLoaders.get(this.options.callback) === this) {
+                sharedLoaders.delete(this.options.callback);
+            }
+            if (!activeLoaders.size && removalObserver) {
+                removalObserver.disconnect();
+                removalObserver = null;
+            }
         }
     }
 
@@ -49,18 +92,20 @@ export class LazyLoader {
     }
 }
 
-function unveilElements(elements, root, callback) {
+function unveilElements(elements, callback) {
     if (!elements.length) {
         return;
     }
-    const lazyLoader = new LazyLoader({
-        callback: callback
-    });
+    let lazyLoader = sharedLoaders.get(callback);
+    if (!lazyLoader) {
+        lazyLoader = new LazyLoader({ callback: callback });
+        sharedLoaders.set(callback, lazyLoader);
+    }
     lazyLoader.addElements(elements);
 }
 
 export function lazyChildren(elem, callback) {
-    unveilElements(elem.getElementsByClassName('lazy'), elem, callback);
+    unveilElements(elem.getElementsByClassName('lazy'), callback);
 }
 
 export default {
