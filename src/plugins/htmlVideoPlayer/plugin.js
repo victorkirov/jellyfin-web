@@ -314,6 +314,10 @@ export class HtmlVideoPlayer {
      */
     #currentSecondaryTrackEvents;
     /**
+     * @type {WeakMap<HTMLElement, any>}
+     */
+    #renderedSubtitleEvents = new WeakMap();
+    /**
      * @type {string[] | undefined}
      */
     #supportedFeatures;
@@ -1723,6 +1727,12 @@ export class HtmlVideoPlayer {
                         break;
                     }
                 }
+
+                if (this.#renderedSubtitleEvents.has(subtitleTextElement)
+                    && this.#renderedSubtitleEvents.get(subtitleTextElement) === selectedTrackEvent) {
+                    continue;
+                }
+                this.#renderedSubtitleEvents.set(subtitleTextElement, selectedTrackEvent);
 
                 if (selectedTrackEvent?.Text) {
                     subtitleTextElement.innerHTML = DOMPurify.sanitize(
