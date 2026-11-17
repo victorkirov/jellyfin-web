@@ -82,7 +82,7 @@ export function loadResume(
     apiClient: ApiClient,
     titleLabel: string,
     mediaType: MediaType,
-    userSettings: UserSettings,
+    userSettings: Pick<UserSettings, 'useEpisodeImagesInNextUpAndResume'>,
     options: SectionOptions
 ) {
     let html = '';

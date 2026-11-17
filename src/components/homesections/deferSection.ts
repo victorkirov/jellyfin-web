@@ -1,8 +1,8 @@
 import focusManager from 'lib/focusManager';
 import { LazyLoader } from 'components/lazyLoader/lazyLoaderIntersectionObserver';
 
-export function deferSection(section, load) {
-    let placeholder;
+export function deferSection(section: HTMLElement, load: () => unknown) {
+    let placeholder: HTMLElement | null = null;
     let started = false;
     let destroyed = false;
 
@@ -19,12 +19,12 @@ export function deferSection(section, load) {
             heading.textContent = title.textContent;
             placeholder.appendChild(heading);
         }
-        section.parentNode.insertBefore(placeholder, section);
+        section.parentNode!.insertBefore(placeholder, section);
     }
 
     const target = placeholder || section;
     const loader = new LazyLoader({
-        callback: entry => {
+        callback: (entry: IntersectionObserverEntry) => {
             if (entry.isIntersecting) start();
         }
     });
@@ -32,11 +32,11 @@ export function deferSection(section, load) {
     function removePlaceholder() {
         if (!placeholder) return;
         const wasFocused = placeholder === document.activeElement;
-        let fallback;
+        let fallback: HTMLElement | undefined;
         if (wasFocused) {
             const candidates = focusManager.getFocusableElements();
-            const next = candidates.find(candidate => (
-                placeholder.compareDocumentPosition(candidate) & Node.DOCUMENT_POSITION_FOLLOWING
+            const next = candidates.find((candidate: HTMLElement) => (
+                placeholder!.compareDocumentPosition(candidate) & Node.DOCUMENT_POSITION_FOLLOWING
             ));
             fallback = next || candidates[candidates.indexOf(placeholder) - 1];
         }

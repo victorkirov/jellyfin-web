@@ -18,7 +18,7 @@ import type { SectionContainerElement, SectionOptions } from './section';
 
 function getNextUpFetchFn(
     apiClient: ApiClient,
-    userSettings: UserSettings,
+    userSettings: Pick<UserSettings, 'maxDaysForNextUp' | 'enableRewatchingInNextUp' | 'useEpisodeImagesInNextUpAndResume'>,
     { enableOverflow }: SectionOptions
 ) {
     return function () {
@@ -76,7 +76,7 @@ function getNextUpItemsHtmlFn(
 export function loadNextUp(
     elem: HTMLElement,
     apiClient: ApiClient,
-    userSettings: UserSettings,
+    userSettings: Pick<UserSettings, 'maxDaysForNextUp' | 'enableRewatchingInNextUp' | 'useEpisodeImagesInNextUpAndResume'>,
     options: SectionOptions
 ) {
     let html = '';

@@ -1,3 +1,5 @@
+import type { ApiClient } from 'jellyfin-apiclient';
+import type { HomeSettings } from './homeLifecycle';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadSections, pause, resume } from './homesections';
 import { loadLibraryButtons } from './sections/libraryButtons';
@@ -98,9 +100,9 @@ describe('Empty libraries', () => {
     it.each([true, false])('shows setup guidance without an admin link (administrator: %s)', async isAdministrator => {
         emptyLibraries.fetchQuery.mockResolvedValue({ Items: [] });
         const container = document.createElement('div');
-        await loadSections(container, { serverId: () => 'server' }, {
-            Id: 'user', Policy: { IsAdministrator: isAdministrator }
-        }, {});
+        await loadSections(container, { serverId: () => 'server' } as ApiClient, {
+            Id: 'user', Policy: { IsAdministrator: isAdministrator, AuthenticationProviderId: '', PasswordResetProviderId: '' }
+        }, {} as HomeSettings);
         expect(container.textContent).toContain('AskAdminToCreateLibrary');
         expect(container.querySelector('a, button, #button-createLibrary')).toBeNull();
     });
@@ -112,7 +114,7 @@ describe('TV home section preferences', () => {
         const container = document.createElement('main');
         document.body.appendChild(container);
         const settings = { get: vi.fn((key: string) => saved[Number(key.replace('homesection', ''))]) };
-        await loadSections(container, { serverId: () => 'server' }, { Id: 'user' }, settings);
+        await loadSections(container, { serverId: () => 'server' } as ApiClient, { Id: 'user' }, settings as unknown as HomeSettings);
         return { container, settings };
     }
 

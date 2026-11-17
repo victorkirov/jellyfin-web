@@ -1,3 +1,5 @@
+import type { ApiClient } from 'jellyfin-apiclient';
+import type { UserDto } from '@jellyfin/sdk/lib/generated-client/models/user-dto';
 import layoutManager from 'lib/layoutManager';
 import { DEFAULT_SECTIONS, HomeSectionType } from 'constants/homeSectionType';
 import { getUserViewsQuery } from 'hooks/api/useUserViews';
@@ -7,13 +9,8 @@ import { queryClient } from 'utils/query/queryClient';
 
 import { deferSection } from './deferSection';
 
-import { loadRecordings } from './sections/activeRecordings';
-import { loadLibraryButtons } from './sections/libraryButtons';
-import { loadLibraryTiles } from './sections/libraryTiles';
-import { loadLiveTV } from './sections/liveTv';
-import { loadNextUp } from './sections/nextUp';
-import { loadRecentlyAdded } from './sections/recentlyAdded';
-import { loadResume } from './sections/resume';
+import { loadSection } from './sectionComposition';
+import type { HomeContainer, HomeRow, ResumeOptions, HomeSettings } from './homeLifecycle';
 
 import 'elements/emby-button/paper-icon-button-light';
 import 'components/itemscontainer/emby-itemscontainer';
@@ -25,12 +22,12 @@ import './homesections.scss';
 const MAX_SECTIONS = 10;
 const MAX_SECTIONS_TV = MAX_SECTIONS + 1; // TV layout can have an extra section to ensure a library section is always visible
 
-export function getDefaultSection(index) {
+export function getDefaultSection(index: number) {
     if (index < 0 || index > DEFAULT_SECTIONS.length) return '';
     return DEFAULT_SECTIONS[index];
 }
 
-function getAllSectionsToShow(userSettings) {
+function getAllSectionsToShow(userSettings: HomeSettings) {
     const sections = [];
     for (let i = 0, length = MAX_SECTIONS; i < length; i++) {
         let section = userSettings.get('homesection' + i) || getDefaultSection(i);
@@ -56,7 +53,7 @@ function getAllSectionsToShow(userSettings) {
     return sections;
 }
 
-export function loadSections(elem, apiClient, user, userSettings) {
+export function loadSections(elem: HomeContainer, apiClient: ApiClient, user: UserDto, userSettings: HomeSettings) {
     const api = ServerConnections.getApi(apiClient.serverId());
     const userId = user.Id || apiClient.getCurrentUserId();
     return queryClient
@@ -82,7 +79,7 @@ export function loadSections(elem, apiClient, user, userSettings) {
 
                 return Promise.all(promises)
                     // Timeout for polyfilled CustomElements (webOS 1.2)
-                    .then(() => new Promise((resolve) => setTimeout(resolve, 0)))
+                    .then(() => new Promise<void>((resolve) => setTimeout(resolve, 0)))
                     .then(() => resume(elem, { refresh: true }));
             } else {
                 const noLibDescription = globalize.translate('AskAdminToCreateLibrary');
@@ -96,14 +93,14 @@ export function loadSections(elem, apiClient, user, userSettings) {
         });
 }
 
-function clearDeferredSections(elem) {
+function clearDeferredSections(elem: HomeContainer) {
     for (const destroy of elem.deferredSections || []) destroy();
     elem.deferredSections = [];
 }
 
-export function destroySections(elem) {
+export function destroySections(elem: HomeContainer) {
     clearDeferredSections(elem);
-    const elems = elem.querySelectorAll('.itemsContainer');
+    const elems = elem.querySelectorAll<HomeRow>('.itemsContainer');
     for (const e of elems) {
         e.fetchData = null;
         e.parentContainer = null;
@@ -113,25 +110,25 @@ export function destroySections(elem) {
     elem.innerHTML = '';
 }
 
-export function pause(elem) {
+export function pause(elem: HomeContainer) {
     clearDeferredSections(elem);
-    const elems = elem.querySelectorAll('.itemsContainer');
+    const elems = elem.querySelectorAll<HomeRow>('.itemsContainer');
     for (const e of elems) {
         e.pause();
     }
 }
 
-export function resume(elem, options) {
+export function resume(elem: HomeContainer, options: ResumeOptions) {
     clearDeferredSections(elem);
-    const elems = elem.querySelectorAll('.itemsContainer');
-    const promises = [];
+    const elems = elem.querySelectorAll<HomeRow>('.itemsContainer');
+    const promises: Promise<unknown>[] = [];
 
-    Array.prototype.forEach.call(elems, (section, index) => {
+    elems.forEach((section, index) => {
         if (!section.resume) return;
         if (layoutManager.tv && section.fetchData && index >= 2 && (options?.refresh || section.needsRefresh)) {
             section.needsRefresh = true;
             section.pause();
-            elem.deferredSections.push(deferSection(
+            elem.deferredSections!.push(deferSection(
                 section.parentContainer || section,
                 () => section.resume(options)
             ));
@@ -141,48 +138,6 @@ export function resume(elem, options) {
     });
 
     return Promise.all(promises);
-}
-
-function loadSection(page, apiClient, user, userSettings, userViews, section, index) {
-    const elem = page.querySelector('.section' + index);
-    const options = { enableOverflow: enableScrollX() };
-
-    switch (section) {
-        case HomeSectionType.ActiveRecordings:
-            loadRecordings(elem, true, apiClient, options);
-            break;
-        case HomeSectionType.LatestMedia:
-            loadRecentlyAdded(elem, apiClient, user, userViews, options);
-            break;
-        case HomeSectionType.LibraryButtons:
-            loadLibraryButtons(elem, userViews);
-            break;
-        case HomeSectionType.LiveTv:
-            return loadLiveTV(elem, apiClient, user, options);
-        case HomeSectionType.NextUp:
-            loadNextUp(elem, apiClient, userSettings, options);
-            break;
-        case HomeSectionType.Resume:
-            loadResume(elem, apiClient, 'HeaderContinueWatching', 'Video', userSettings, options);
-            break;
-        case HomeSectionType.ResumeAudio:
-            loadResume(elem, apiClient, 'HeaderContinueListening', 'Audio', userSettings, options);
-            break;
-        case HomeSectionType.ResumeBook:
-            loadResume(elem, apiClient, 'HeaderContinueReading', 'Book', userSettings, options);
-            break;
-        case HomeSectionType.SmallLibraryTiles:
-            loadLibraryTiles(elem, userViews, options);
-            break;
-        default:
-            elem.innerHTML = '';
-    }
-
-    return Promise.resolve();
-}
-
-function enableScrollX() {
-    return true;
 }
 
 export default {
