@@ -138,7 +138,7 @@ class MediaSegmentManager extends PlaybackSubscriber {
 
     onPlayerTimeUpdate() {
         if (this.hasSegments && this.mediaSegments.length) {
-            const time = this.playbackManager.currentTime(this.player) * TICKS_PER_MILLISECOND;
+            const time = Number(this.playbackManager.currentTime(this.player)) * TICKS_PER_MILLISECOND;
             const currentSegmentDetails = findCurrentSegment(this.mediaSegments, time, this.lastSegmentIndex);
             if (
                 // The current time falls within a segment

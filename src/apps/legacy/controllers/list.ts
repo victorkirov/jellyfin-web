@@ -153,7 +153,7 @@ class ItemsView extends ListSettings {
             const currentItem = this.currentItem;
 
             if (currentItem && !this.hasFilters) {
-                playbackManager.shuffle(currentItem);
+                void playbackManager.shuffle(currentItem);
             } else {
                 void getItems(this, this.params, currentItem, 'Random', 0, 300).then((result: ListResult) => {
                     void playbackManager.play({

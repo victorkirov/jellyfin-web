@@ -110,7 +110,7 @@ export default class LibraryTab {
 
         const shuffle = () => {
             void window.ApiClient.getItem(window.ApiClient.getCurrentUserId(), params.topParentId!).then((item) => {
-                playbackManager.shuffle(item);
+                void playbackManager.shuffle(item);
             });
         };
 

@@ -7,6 +7,7 @@ import type {
 } from '@jellyfin/sdk/lib/generated-client';
 
 import type { ItemDto } from 'types/base/models/item-dto';
+import type { PlaybackPlayer } from 'types/plugin';
 
 export interface BufferedRange {
     start?: number;
@@ -40,7 +41,7 @@ export interface PlayerState {
 }
 
 export interface PlaybackStopInfo {
-    player: unknown; // TODO: add a proper interface
+    player: PlaybackPlayer;
     state: PlayerState;
     nextItem: BaseItemDto | null;
     nextMediaType: MediaType | null;

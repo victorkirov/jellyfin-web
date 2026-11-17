@@ -3,6 +3,7 @@ import { MediaType } from '@jellyfin/sdk/lib/generated-client/models/media-type'
 import { getImageUrl } from 'lib/playback/utils/image';
 import { getItemTextLines } from 'lib/playback/utils/itemText';
 import { PlaybackSubscriber } from 'lib/playback/utils/playbackSubscriber';
+import type { PlaybackState } from 'lib/playback/types';
 import type { PlaybackManager } from 'components/playback/playbackmanager';
 import { MILLISECONDS_PER_SECOND, TICKS_PER_MILLISECOND } from 'constants/time';
 import browser from 'scripts/browser';
@@ -103,7 +104,7 @@ class MediaSessionSubscriber extends PlaybackSubscriber {
             return resetMediaSession();
         }
 
-        const state: PlayerState = stateOverride || this.playbackManager.getPlayerState(this.player);
+        const state: PlayerState | PlaybackState = stateOverride || this.playbackManager.getPlayerState(this.player);
         const item = state.NowPlayingItem;
 
         if (!item) {

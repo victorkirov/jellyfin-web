@@ -7,7 +7,7 @@ import type { PlaybackManager } from 'components/playback/playbackmanager';
 import type { MediaError } from 'types/mediaError';
 import type { PlayTarget } from 'types/playTarget';
 import type { PlaybackStopInfo, PlayerState } from 'types/playbackStopInfo';
-import type { PlayerPlugin } from 'types/plugin';
+import type { PlaybackPlayer } from 'types/plugin';
 import Events, { type Event } from 'utils/events';
 import { PlaybackManagerEvent } from '../constants/playbackManagerEvent';
 import { PlayerEvent } from '../constants/playerEvent';
@@ -16,9 +16,9 @@ import { PlayerEvent } from '../constants/playerEvent';
 export interface PlaybackSubscriber {
     onPlaybackCancelled?(e: Event): void
     onPlaybackError?(e: Event, errorType: MediaError): void
-    onPlaybackStart?(e: Event, player: PlayerPlugin, state: PlayerState): void
+    onPlaybackStart?(e: Event, player: PlaybackPlayer, state: PlayerState): void
     onPlaybackStop?(e: Event, info: PlaybackStopInfo): void
-    onPlayerChange?(e: Event, player: PlayerPlugin, target: PlayTarget, previousPlayer: PlayerPlugin): void
+    onPlayerChange?(e: Event, player: PlaybackPlayer, target: PlayTarget, previousPlayer: PlaybackPlayer): void
     onPromptSkip?(e: Event, mediaSegment: MediaSegmentDto): void
     onPlayerError?(e: Event, error: PlayerError): void
     onPlayerFullscreenChange?(e: Event, fullscreen: boolean): void
@@ -43,7 +43,7 @@ export interface PlaybackSubscriber {
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export abstract class PlaybackSubscriber {
-    protected player: PlayerPlugin | undefined;
+    protected player: PlaybackPlayer | null | undefined;
 
     private readonly playbackManagerEvents = {
         [PlaybackManagerEvent.PlaybackCancelled]: this.onPlaybackCancelled?.bind(this),

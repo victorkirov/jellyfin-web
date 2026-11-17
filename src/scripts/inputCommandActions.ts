@@ -50,7 +50,7 @@ const commandActions: Record<string, (options?: CommandOptions) => void> = {
     'playpause': () => playbackManager.playPause(),
     'stop': () => {
         if (checkCommandTime('stop')) {
-            playbackManager.stop();
+            void playbackManager.stop();
         }
     },
     'changezoom': () => playbackManager.toggleAspectRatio(),

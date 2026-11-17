@@ -81,7 +81,7 @@ export type PlaybackPlayer = {
     id: string;
     priority?: number;
     isLocalPlayer?: boolean;
-    streamInfo?: import('lib/playback/types').PlaybackStreamInfo;
+    streamInfo?: import('lib/playback/types').PlaybackStreamInfo | null;
     isChangingStream?: boolean;
     maxStreamingBitrate?: number;
     audioStreamIndex?: number | null;
@@ -117,18 +117,18 @@ export type PlaybackPlayer = {
     currentMediaSource?: () => import('lib/playback/types').PlaybackMediaSource | null;
     playMethod?: () => string | null;
     playSessionId?: () => string | null;
-    isPlaying?: (mediaType?: string) => boolean;
+    isPlaying?: (mediaType?: string | null) => boolean;
     enableMediaProbe?: (item: import('lib/playback/types').PlaybackItem) => boolean;
     supportsPlayMethod?: (method: string, item: import('lib/playback/types').PlaybackItem) => boolean;
     getDirectPlayProtocols?: () => string[];
     setAspectRatio?: (value: string) => void;
     getSupportedAspectRatios?: () => { name: string; id: string }[];
     getAspectRatio?: () => string;
-    getSupportedPlaybackRates?: () => number[];
+    getSupportedPlaybackRates?: () => { name: string; id: number }[];
     setBrightness?: (value: number) => void;
     getBrightness?: () => number;
-    volumeUp?: () => void;
-    volumeDown?: () => void;
+    volumeUp?: (step?: number) => void;
+    volumeDown?: (step?: number) => void;
     volume?: (value?: number) => number;
     changeAudioStream?: () => void;
     changeSubtitleStream?: () => void;
@@ -152,7 +152,7 @@ export type PlaybackPlayer = {
     setSubtitleOffset?: (value: number) => void;
     getSubtitleOffset?: () => number;
     seek?: (ticks: number) => void;
-    seekRelative?: (ticks: number) => void;
+    seekRelative?: (ticks?: number) => void;
     seekable?: () => boolean;
     getPlayerState?: () => import('lib/playback/types').PlaybackState;
     setCurrentPlaylistItem?: (id: string) => void;
@@ -168,8 +168,8 @@ export type PlaybackPlayer = {
     nextItem?: () => Promise<import('lib/playback/types').PlaybackItem>;
     setMute?: (muted: boolean) => void;
     toggleMute?: () => void;
-    fastForward?: (milliseconds: number) => void;
-    rewind?: (milliseconds: number) => void;
+    fastForward?: (milliseconds?: number) => void;
+    rewind?: (milliseconds?: number) => void;
     playTrailers?: (item: import('lib/playback/types').PlaybackItem) => Promise<unknown>;
     getBufferedRanges?: () => { start: number; end: number }[];
     playPause?: () => void;
@@ -187,5 +187,5 @@ export type PlaybackPlayer = {
     displayContent?: (options: object) => void;
     beginPlayerUpdates?: () => void;
     endPlayerUpdates?: () => void;
-    sendCommand?: (command: string) => void;
+    sendCommand?: (command: object) => void;
 };

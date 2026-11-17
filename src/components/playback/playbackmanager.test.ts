@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PlaybackManager } from './playbackmanager';
+import { createPlaybackControls } from './playbackControls';
 import Events from '../../utils/events';
 import { pluginManager } from '../pluginManager';
 import { MediaError } from 'types/mediaError';
@@ -44,7 +45,7 @@ vi.mock('lib/playback/utils/mediaSegmentManager', () => ({ bindMediaSegmentManag
 vi.mock('lib/playback/utils/mediaSessionSubscriber', () => ({ bindMediaSessionSubscriber: vi.fn() }));
 vi.mock('./skipsegment.ts', () => ({ bindSkipSegment: vi.fn() }));
 
-const item = { Id: 'item', ServerId: 'server', Type: 'Movie', MediaType: 'Video' };
+const item = { Id: 'item', ServerId: 'server', Type: 'Movie', MediaType: 'Video' } as const;
 const source = (transcode = false) => ({
     Id: 'item', MediaStreams: [], SupportsDirectStream: !transcode, SupportsTranscoding: transcode,
     TranscodingUrl: 'video?AllowVideoStreamCopy=false&AllowAudioStreamCopy=false&PlaySessionId=session',
@@ -433,5 +434,26 @@ describe('deferred player initialization', () => {
         await play();
         expect(intercept).toHaveBeenCalledOnce();
         expect(player.play).not.toHaveBeenCalled();
+    });
+});
+
+describe('playback facade composition', () => {
+    it('reads controls services when a command runs', async () => {
+        const { manager, play } = setup();
+        await play();
+        const services = { ...manager._services };
+        const controls = createPlaybackControls(manager, services);
+        services.getPlayerData = vi.fn(services.getPlayerData);
+        controls.api.getAudioStreamIndex();
+        expect(services.getPlayerData).toHaveBeenCalledWith(manager.getCurrentPlayer());
+    });
+
+    it('preserves the constructor and publishes each playback responsibility', () => {
+        const { manager } = setup();
+        expect(manager).toBeInstanceOf(PlaybackManager);
+        expect(manager.constructor.name).toBe('PlaybackManager');
+        for (const name of ['play', 'getPlayerState', 'getPlaybackInfo', 'getTargets', 'setActivePlayer', 'nextTrack', 'queue', 'setCurrentPlaylistItem', 'setBrightness', 'stop'] as const) {
+            expect(manager[name]).toBeTypeOf('function');
+        }
     });
 });
