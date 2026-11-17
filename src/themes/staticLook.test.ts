@@ -47,6 +47,8 @@ it('reserves row borders and keeps selection styling independent of row focus', 
         expect(focus.background).toBe('rgba(255, 255, 255, 0.12)');
         expect(focus['border-left-color']).toBe('#00a4dc');
     }
+    expect(declarations('.emby-checkbox-label')['padding-left']).toBe('0.5em');
+    expect(declarations('.checkboxOutline').left).toBe('0.5em');
     expect(declarations('.mdl-radio__button:checked + .mdl-radio__circles .mdl-radio__inner-circle').transform).toBe('scale(1)');
     expect(declarations('.emby-checkbox:checked + span + .checkboxOutline > .checkboxIcon-checked').display).toBe('flex');
 });
@@ -56,11 +58,14 @@ it('makes slider focus visible with a static thumb ring', () => {
 });
 
 it('separates heading hierarchy from muted metadata', () => {
-    for (const selector of ['.itemName', '.formDialogHeaderTitle', '.dialogContentTitle', '.dialog h2', 'h2.sectionTitle']) {
+    for (const selector of ['h1.itemName', '.formDialogHeaderTitle', '.dialogContentTitle', '.dialog h2', 'h2.sectionTitle']) {
         expect(declarations(selector).color).toBe('#fff');
         expect(declarations(selector)['font-weight']).toBe('600');
     }
-    expect(declarations('.itemName')['font-size']).toBe('1.8em');
+    expect(declarations('h1.itemName')['font-size']).toBe('1.8em');
+    expect(declarations('.itemName')['font-size']).toBeUndefined();
+    expect(declarations('h3')['font-size']).toBe('1.17em');
+    expect(declarations('h3')['font-weight']).toBe('400');
     expect(declarations('h2.sectionTitle')['font-size']).toBe('1.3em');
 });
 

@@ -7,7 +7,7 @@
     width: 100%;
     margin: 0;
     padding: 0;
-    padding-left: 2.4em;
+    padding-left: 0.5em;
     align-items: center;
     height: 2.35em;
     cursor: pointer;
@@ -15,7 +15,7 @@
 }
 
 .checkboxFieldDescription {
-    padding-left: 2.4em;
+    padding-left: 2.9em;
 }
 
 .checkboxContainer {
@@ -47,7 +47,7 @@
 .checkboxOutline {
     position: absolute;
     top: 3px;
-    left: 0;
+    left: 0.5em;
     box-sizing: border-box;
     width: 1.83em;
     height: 1.83em;
@@ -88,6 +88,7 @@
 .checkboxLabel {
     position: relative;
     margin: 0;
+    margin-left: 2.4em;
 }
 
 .checkboxList > .emby-checkbox-label {
@@ -122,4 +123,14 @@
 .emby-checkbox-label.input-focused {
     background: rgba(255, 255, 255, 0.12);
     border-left-color: #00a4dc;
+}
+
+@keyframes repaintChrome {
+    from {
+        margin: 0;
+    }
+
+    to {
+        margin: 0;
+    }
 }

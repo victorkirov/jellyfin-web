@@ -1,10 +1,14 @@
 import { afterEach, expect, it, vi } from 'vitest';
 vi.mock('webcomponents.js/webcomponents-lite', () => ({}));
-vi.mock('../../scripts/browser', () => ({ default: {} }));
+const { browser } = vi.hoisted(() => ({ browser: { web0s: false } }));
+vi.mock('../../scripts/browser', () => ({ default: browser }));
 
 type Checkbox = HTMLInputElement & { attachedCallback(): void; detachedCallback(): void };
 afterEach(() => {
     document.body.innerHTML = '';
+    browser.web0s = false;
+    vi.clearAllTimers();
+    vi.useRealTimers();
 });
 
 it('upgrades once and toggles on Enter with a bubbling change, then detaches', async () => {
@@ -44,4 +48,34 @@ it('upgrades once and toggles on Enter with a bubbling change, then detaches', a
     expect(checkbox.parentElement!.classList.contains('input-focused')).toBe(true);
     checkbox.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 13 }));
     expect(change).toHaveBeenCalledTimes(3);
+});
+
+it('repaints webOS checkbox changes and removes repaint listeners on detach', async () => {
+    vi.useFakeTimers();
+    browser.web0s = true;
+    vi.resetModules();
+    let prototype: object = {};
+    Object.defineProperty(document, 'registerElement', { configurable: true, value: (_name: string, options: { prototype: object }) => {
+        prototype = options.prototype;
+    } });
+    await import('./emby-checkbox');
+    document.body.innerHTML = '<label><input type="checkbox"><span>Show titles</span></label>';
+    const checkbox = document.querySelector('input') as Checkbox;
+    const label = checkbox.parentElement!;
+    Object.setPrototypeOf(checkbox, prototype);
+    checkbox.attachedCallback();
+    vi.advanceTimersByTime(520);
+    checkbox.checked = true;
+    for (const event of ['change', 'click', 'focus', 'blur']) {
+        checkbox.dispatchEvent(new Event(event));
+        expect(label.style.webkitAnimationName).toBe('repaintChrome');
+        expect(label.style.webkitAnimationDuration).toBe('10ms');
+        vi.advanceTimersByTime(20);
+        expect(label.style.webkitAnimationName).toBe('');
+    }
+    checkbox.detachedCallback();
+    for (const event of ['change', 'click', 'focus', 'blur']) {
+        checkbox.dispatchEvent(new Event(event));
+        expect(label.style.webkitAnimationName).toBe('');
+    }
 });

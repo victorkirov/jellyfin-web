@@ -19,7 +19,9 @@ it.each([
 it('keeps UI styles free of animation and transition declarations', () => {
     const violations: string[] = [];
     const allowed = [
-        'src/components/loading/loading.scss'
+        'src/components/loading/loading.scss',
+        // Functional webOS checkbox repaint workaround, not visual motion.
+        'src/elements/emby-checkbox/emby-checkbox.scss'
     ];
     for (const path of fg.sync('src/**/*.scss', { ignore: allowed })) {
         const source = readFileSync(resolve(path), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
