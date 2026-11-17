@@ -1,3 +1,9 @@
+import { getNextUpQuery } from 'apps/legacy/features/libraries/api/useNextUp';
+import createTabControllerCache from '../tabControllerCache';
+import { getLatestMediaQuery } from 'apps/legacy/features/libraries/api/useLatestMedia';
+import ServerConnections from 'lib/jellyfin-apiclient/ServerConnections';
+import { queryClient } from 'utils/query/queryClient';
+import { userQueryKey } from 'utils/query/queryKeys';
 import autoFocuser from 'components/autoFocuser';
 import cardBuilder from 'components/cardbuilder/cardBuilder';
 import { getBackdropShape } from 'components/cardbuilder/utils/shape';
@@ -91,7 +97,7 @@ function loadSuggestionsTab(view, params, tabContent) {
     console.debug('loadSuggestionsTab');
     loadResume(tabContent, userId, parentId);
     loadLatest(tabContent, userId, parentId);
-    loadNextUp(tabContent, userId, parentId);
+    loadNextUp(tabContent, userId);
 }
 
 function loadResume(view, userId, parentId) {
@@ -140,15 +146,16 @@ function loadResume(view, userId, parentId) {
 
 function loadLatest(view, userId, parentId) {
     const options = {
-        userId: userId,
-        IncludeItemTypes: 'Episode',
-        Limit: 30,
-        Fields: 'PrimaryImageAspectRatio',
-        ParentId: parentId,
-        ImageTypeLimit: 1,
-        EnableImageTypes: 'Primary,Backdrop,Thumb'
+        userId,
+        includeItemTypes: ['Episode'],
+        limit: 30,
+        fields: ['PrimaryImageAspectRatio'],
+        parentId,
+        imageTypeLimit: 1,
+        enableImageTypes: ['Primary', 'Backdrop', 'Thumb']
     };
-    ApiClient.getLatestItems(options).then(function (items) {
+    const api = ServerConnections.getApi(ApiClient.serverId());
+    queryClient.fetchQuery(getLatestMediaQuery(api, options)).then(function (items) {
         const section = view.querySelector('#latestItemsSection');
         const allowBottomPadding = !enableScrollX();
         const container = section.querySelector('#latestEpisodesItems');
@@ -177,18 +184,18 @@ function loadLatest(view, userId, parentId) {
     });
 }
 
-function loadNextUp(view, userId, parentId) {
+function loadNextUp(view, userId) {
     const query = {
-        userId: userId,
-        Limit: 24,
-        Fields: 'PrimaryImageAspectRatio,DateCreated,MediaSourceCount',
-        ParentId: parentId,
-        ImageTypeLimit: 1,
-        EnableImageTypes: 'Primary,Backdrop,Thumb',
-        EnableTotalRecordCount: false
+        userId,
+        limit: 24,
+        fields: ['PrimaryImageAspectRatio', 'DateCreated', 'MediaSourceCount'],
+        parentId: libraryMenu.getTopParentId(),
+        imageTypeLimit: 1,
+        enableImageTypes: ['Primary', 'Backdrop', 'Thumb'],
+        enableTotalRecordCount: false
     };
-    query.ParentId = libraryMenu.getTopParentId();
-    ApiClient.getNextUpEpisodes(query).then(function (result) {
+    const api = ServerConnections.getApi(ApiClient.serverId());
+    queryClient.fetchQuery(getNextUpQuery(api, query)).then(function (result) {
         if (result.Items.length) {
             view.querySelector('.noNextUpItems').classList.add('hide');
         } else {
@@ -223,12 +230,12 @@ function enableScrollX() {
 
 export default function (view, params) {
     function onBeforeTabChange(e) {
-        preLoadTab(view, parseInt(e.detail.selectedTabIndex, 10));
+        tabs.preload(parseInt(e.detail.selectedTabIndex, 10));
     }
 
     function onTabChange(e) {
-        const newIndex = parseInt(e.detail.selectedTabIndex, 10);
-        loadTab(view, newIndex);
+        currentTabIndex = parseInt(e.detail.selectedTabIndex, 10);
+        tabs.render(currentTabIndex);
     }
 
     function getTabContainers() {
@@ -239,16 +246,18 @@ export default function (view, params) {
         mainTabsManager.setTabs(view, currentTabIndex, getTabs, getTabContainers, onBeforeTabChange, onTabChange);
     }
 
-    function getTabController(page, index, callback) {
+    const tabs = createTabControllerCache(index => {
+        const tabContent = view.querySelector(".pageTabContent[data-index='" + index + "']");
+        if (index === suggestionsTabIndex) {
+            this.tabContent = tabContent;
+            return Promise.resolve(this);
+        }
+
         let depends;
 
         switch (index) {
             case 0:
                 depends = 'tvshows';
-                break;
-
-            case 1:
-                depends = 'tvrecommended';
                 break;
 
             case 2:
@@ -268,66 +277,27 @@ export default function (view, params) {
                 break;
         }
 
-        import(`../shows/${depends}`).then(({ default: ControllerFactory }) => {
-            let tabContent;
-
-            if (index === 1) {
-                tabContent = view.querySelector(".pageTabContent[data-index='" + index + "']");
-                self.tabContent = tabContent;
-            }
-
-            let controller = tabControllers[index];
-
-            if (!controller) {
-                tabContent = view.querySelector(".pageTabContent[data-index='" + index + "']");
-
-                if (index === 1) {
-                    controller = self;
-                } else {
-                    controller = new ControllerFactory(view, params, tabContent);
-                }
-
-                tabControllers[index] = controller;
-
-                if (controller.initTab) {
-                    controller.initTab();
-                }
-            }
-
-            callback(controller);
+        return import(`../shows/${depends}.js`).then(({ default: ControllerFactory }) => {
+            return new ControllerFactory(view, params, tabContent);
         });
-    }
-
-    function preLoadTab(page, index) {
-        getTabController(page, index, function (controller) {
-            if (renderedTabs.indexOf(index) == -1 && controller.preRender) {
-                controller.preRender();
-            }
-        });
-    }
-
-    function loadTab(page, index) {
-        currentTabIndex = index;
-        getTabController(page, index, function (controller) {
-            if (renderedTabs.indexOf(index) == -1) {
-                renderedTabs.push(index);
-                controller.renderTab();
-            }
-        });
-    }
+    });
 
     function onPlaybackStop(e, stopInfo) {
         const state = stopInfo.state;
 
         if (state.NowPlayingItem && state.NowPlayingItem.MediaType == 'Video') {
-            renderedTabs = [];
+            const api = ServerConnections.getApi(ApiClient.serverId());
+            ['LatestMedia', 'NextUp'].forEach(family => {
+                queryClient.invalidateQueries({ queryKey: userQueryKey(api, ApiClient.getCurrentUserId(), family) });
+            });
+            tabs.reset();
             mainTabsManager.getTabsElement().triggerTabChange();
         }
     }
 
     function onUserDataChanged({ Data }) {
         if (Data?.UserId == ApiClient.getCurrentUserId()) {
-            renderedTabs = [];
+            tabs.reset();
         }
     }
 
@@ -352,8 +322,6 @@ export default function (view, params) {
         loadSuggestionsTab(view, params, tabContent);
     };
 
-    const tabControllers = [];
-    let renderedTabs = [];
     view.addEventListener('viewshow', function () {
         initTabs();
         if (!view.getAttribute('data-title')) {
@@ -375,17 +343,13 @@ export default function (view, params) {
         inputManager.on(window, onInputCommand);
     });
     view.addEventListener('viewbeforehide', function () {
+        tabs.pause();
         inputManager.off(window, onInputCommand);
         Events.off(playbackManager, 'playbackstop', onPlaybackStop);
         self._unsubscribeUserData?.();
         self._unsubscribeUserData = null;
     });
     view.addEventListener('viewdestroy', function () {
-        tabControllers.forEach(function (t) {
-            if (t.destroy) {
-                t.destroy();
-            }
-        });
+        tabs.destroy();
     });
 }
-

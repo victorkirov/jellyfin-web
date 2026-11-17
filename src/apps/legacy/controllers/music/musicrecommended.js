@@ -1,3 +1,7 @@
+import createTabControllerCache from '../tabControllerCache';
+import { getLatestMediaQuery } from 'apps/legacy/features/libraries/api/useLatestMedia';
+import ServerConnections from 'lib/jellyfin-apiclient/ServerConnections';
+import { queryClient } from 'utils/query/queryClient';
 import cardBuilder from 'components/cardbuilder/cardBuilder';
 import { getSquareShape } from 'components/cardbuilder/utils/shape';
 import imageLoader from 'components/images/imageLoader';
@@ -46,15 +50,16 @@ function loadLatest(page, parentId) {
     loading.show();
     const userId = ApiClient.getCurrentUserId();
     const options = {
-        IncludeItemTypes: 'Audio',
-        Limit: enableScrollX() ? 3 * itemsPerRow() : 2 * itemsPerRow(),
-        Fields: 'PrimaryImageAspectRatio',
-        ParentId: parentId,
-        ImageTypeLimit: 1,
-        EnableImageTypes: 'Primary,Backdrop,Banner,Thumb',
-        EnableTotalRecordCount: false
+        userId,
+        includeItemTypes: ['Audio'],
+        limit: enableScrollX() ? 3 * itemsPerRow() : 2 * itemsPerRow(),
+        fields: ['PrimaryImageAspectRatio'],
+        parentId,
+        imageTypeLimit: 1,
+        enableImageTypes: ['Primary', 'Backdrop', 'Banner', 'Thumb']
     };
-    ApiClient.getJSON(ApiClient.getUrl('Users/' + userId + '/Items/Latest', options)).then(function (items) {
+    const api = ServerConnections.getApi(ApiClient.serverId());
+    queryClient.fetchQuery(getLatestMediaQuery(api, options)).then(function (items) {
         const elem = page.querySelector('#recentlyAddedSongs');
         elem.innerHTML = cardBuilder.getCardsHtml({
             items: items,
@@ -243,11 +248,12 @@ export default function (view, params) {
     }
 
     function onBeforeTabChange(e) {
-        preLoadTab(view, parseInt(e.detail.selectedTabIndex, 10));
+        tabs.preload(parseInt(e.detail.selectedTabIndex, 10));
     }
 
     function onTabChange(e) {
-        loadTab(view, parseInt(e.detail.selectedTabIndex, 10));
+        currentTabIndex = parseInt(e.detail.selectedTabIndex, 10);
+        tabs.render(currentTabIndex);
     }
 
     function getTabContainers() {
@@ -266,16 +272,18 @@ export default function (view, params) {
         }
     }
 
-    const getTabController = (page, index, callback) => {
+    const tabs = createTabControllerCache(index => {
+        const tabContent = view.querySelector(".pageTabContent[data-index='" + index + "']");
+        if (index === suggestionsTabIndex) {
+            this.tabContent = tabContent;
+            return Promise.resolve(this);
+        }
+
         let depends;
 
         switch (index) {
             case 0:
                 depends = 'musicalbums';
-                break;
-
-            case 1:
-                depends = 'musicrecommended';
                 break;
 
             case 2:
@@ -296,54 +304,12 @@ export default function (view, params) {
                 break;
         }
 
-        import(`../music/${depends}`).then(({ default: ControllerFactory }) => {
-            let tabContent;
-
-            if (index == 1) {
-                tabContent = view.querySelector(".pageTabContent[data-index='" + index + "']");
-                this.tabContent = tabContent;
-            }
-
-            let controller = tabControllers[index];
-
-            if (!controller) {
-                tabContent = view.querySelector(".pageTabContent[data-index='" + index + "']");
-
-                if (index === 1) {
-                    controller = this;
-                } else {
-                    controller = new ControllerFactory(view, params, tabContent, {
-                        mode: getMode(index)
-                    });
-                }
-
-                tabControllers[index] = controller;
-                if (controller.initTab) {
-                    controller.initTab();
-                }
-            }
-
-            callback(controller);
+        return import(`../music/${depends}.js`).then(({ default: ControllerFactory }) => {
+            return new ControllerFactory(view, params, tabContent, {
+                mode: getMode(index)
+            });
         });
-    };
-
-    function preLoadTab(page, index) {
-        getTabController(page, index, function (controller) {
-            if (renderedTabs.indexOf(index) == -1 && controller.preRender) {
-                controller.preRender();
-            }
-        });
-    }
-
-    function loadTab(page, index) {
-        currentTabIndex = index;
-        getTabController(page, index, function (controller) {
-            if (renderedTabs.indexOf(index) == -1) {
-                renderedTabs.push(index);
-                controller.renderTab();
-            }
-        });
-    }
+    });
 
     function onInputCommand(e) {
         if (e.detail.command === 'search') {
@@ -368,8 +334,6 @@ export default function (view, params) {
         reload();
     };
 
-    const tabControllers = [];
-    const renderedTabs = [];
     view.addEventListener('viewshow', function () {
         initTabs();
         if (!view.getAttribute('data-title')) {
@@ -389,13 +353,10 @@ export default function (view, params) {
         inputManager.on(window, onInputCommand);
     });
     view.addEventListener('viewbeforehide', function () {
+        tabs.pause();
         inputManager.off(window, onInputCommand);
     });
     view.addEventListener('viewdestroy', function () {
-        tabControllers.forEach(function (t) {
-            if (t.destroy) {
-                t.destroy();
-            }
-        });
+        tabs.destroy();
     });
 }

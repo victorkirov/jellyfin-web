@@ -1,3 +1,8 @@
+import createTabControllerCache from '../tabControllerCache';
+import { getLatestMediaQuery } from 'apps/legacy/features/libraries/api/useLatestMedia';
+import ServerConnections from 'lib/jellyfin-apiclient/ServerConnections';
+import { queryClient } from 'utils/query/queryClient';
+import { userQueryKey } from 'utils/query/queryKeys';
 import escapeHtml from 'escape-html';
 
 import cardBuilder from 'components/cardbuilder/cardBuilder';
@@ -26,15 +31,16 @@ function enableScrollX() {
 
 function loadLatest(page, userId, parentId) {
     const options = {
-        IncludeItemTypes: 'Movie',
-        Limit: 18,
-        Fields: 'PrimaryImageAspectRatio,MediaSourceCount',
-        ParentId: parentId,
-        ImageTypeLimit: 1,
-        EnableImageTypes: 'Primary,Backdrop,Banner,Thumb',
-        EnableTotalRecordCount: false
+        userId,
+        includeItemTypes: ['Movie'],
+        limit: 18,
+        fields: ['PrimaryImageAspectRatio', 'MediaSourceCount'],
+        parentId,
+        imageTypeLimit: 1,
+        enableImageTypes: ['Primary', 'Backdrop', 'Banner', 'Thumb']
     };
-    ApiClient.getJSON(ApiClient.getUrl('Users/' + userId + '/Items/Latest', options)).then(function (items) {
+    const api = ServerConnections.getApi(ApiClient.serverId());
+    queryClient.fetchQuery(getLatestMediaQuery(api, options)).then(function (items) {
         const allowBottomPadding = !enableScrollX();
         const container = page.querySelector('#recentlyAddedItems');
         cardBuilder.buildCards(items, {
@@ -262,12 +268,12 @@ function getDefaultTabIndex(folderId) {
 
 export default function (view, params) {
     function onBeforeTabChange(e) {
-        preLoadTab(view, parseInt(e.detail.selectedTabIndex, 10));
+        tabs.preload(parseInt(e.detail.selectedTabIndex, 10));
     }
 
     function onTabChange(e) {
-        const newIndex = parseInt(e.detail.selectedTabIndex, 10);
-        loadTab(view, newIndex);
+        currentTabIndex = parseInt(e.detail.selectedTabIndex, 10);
+        tabs.render(currentTabIndex);
     }
 
     function getTabContainers() {
@@ -278,14 +284,16 @@ export default function (view, params) {
         mainTabsManager.setTabs(view, currentTabIndex, getTabs, getTabContainers, onBeforeTabChange, onTabChange);
     }
 
-    const getTabController = (page, index, callback) => {
+    const tabs = createTabControllerCache(index => {
+        const tabContent = view.querySelector(".pageTabContent[data-index='" + index + "']");
+        if (index === suggestionsTabIndex) {
+            this.tabContent = tabContent;
+            return Promise.resolve(this);
+        }
+
         let depends = 'movies';
 
         switch (index) {
-            case 1:
-                depends = 'moviesrecommended.js';
-                break;
-
             case 3:
                 depends = 'moviecollections';
                 break;
@@ -295,63 +303,23 @@ export default function (view, params) {
                 break;
         }
 
-        import(`../movies/${depends}`).then(({ default: ControllerFactory }) => {
-            let tabContent;
-
-            if (index === suggestionsTabIndex) {
-                tabContent = view.querySelector(".pageTabContent[data-index='" + index + "']");
-                this.tabContent = tabContent;
+        return import(`../movies/${depends}.js`).then(({ default: ControllerFactory }) => {
+            if (index === 0 || index === 2) {
+                return new ControllerFactory(view, params, tabContent, {
+                    mode: index ? 'favorites' : 'movies'
+                });
             }
-
-            let controller = tabControllers[index];
-
-            if (!controller) {
-                tabContent = view.querySelector(".pageTabContent[data-index='" + index + "']");
-
-                if (index === suggestionsTabIndex) {
-                    controller = this;
-                } else if (index == 0 || index == 2) {
-                    controller = new ControllerFactory(view, params, tabContent, {
-                        mode: index ? 'favorites' : 'movies'
-                    });
-                } else {
-                    controller = new ControllerFactory(view, params, tabContent);
-                }
-
-                tabControllers[index] = controller;
-
-                if (controller.initTab) {
-                    controller.initTab();
-                }
-            }
-
-            callback(controller);
+            return new ControllerFactory(view, params, tabContent);
         });
-    };
-
-    function preLoadTab(page, index) {
-        getTabController(page, index, function (controller) {
-            if (renderedTabs.indexOf(index) == -1 && controller.preRender) {
-                controller.preRender();
-            }
-        });
-    }
-
-    function loadTab(page, index) {
-        currentTabIndex = index;
-        getTabController(page, index, ((controller) => {
-            if (renderedTabs.indexOf(index) == -1) {
-                renderedTabs.push(index);
-                controller.renderTab();
-            }
-        }));
-    }
+    });
 
     function onPlaybackStop(e, stopInfo) {
         const state = stopInfo.state;
 
         if (state.NowPlayingItem && state.NowPlayingItem.MediaType == 'Video') {
-            renderedTabs = [];
+            const api = ServerConnections.getApi(ApiClient.serverId());
+            queryClient.invalidateQueries({ queryKey: userQueryKey(api, ApiClient.getCurrentUserId(), 'LatestMedia') });
+            tabs.reset();
             mainTabsManager.getTabsElement().triggerTabChange();
         }
     }
@@ -376,8 +344,6 @@ export default function (view, params) {
         loadSuggestionsTab(view, params, tabContent);
     };
 
-    const tabControllers = [];
-    let renderedTabs = [];
     view.addEventListener('viewshow', function () {
         initTabs();
         if (!view.getAttribute('data-title')) {
@@ -398,14 +364,11 @@ export default function (view, params) {
         inputManager.on(window, onInputCommand);
     });
     view.addEventListener('viewbeforehide', function () {
+        tabs.pause();
         inputManager.off(window, onInputCommand);
         Events.off(playbackManager, 'playbackstop', onPlaybackStop);
     });
     view.addEventListener('viewdestroy', function () {
-        tabControllers.forEach(function (tabController) {
-            if (tabController.destroy) {
-                tabController.destroy();
-            }
-        });
+        tabs.destroy();
     });
 }
