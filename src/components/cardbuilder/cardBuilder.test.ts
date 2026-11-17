@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { compile } from 'sass';
-import { getCardsHtml } from './cardBuilder';
+import { getCardsHtml, onUserDataChanged, onTimerCreated, onTimerCancelled, onSeriesTimerCancelled } from './cardBuilder';
 
 vi.mock('scripts/browser', () => ({ default: {} }));
 vi.mock('scripts/datetime', () => ({ default: { toLocaleString: (value: number) => String(value) } }));
@@ -169,5 +169,54 @@ it('keeps movie-only year slots compact after rendering a mixed batch with the s
         expect(computed.minHeight).toBe('1.25em');
         expect(computed.maxHeight).not.toBe('2.5em');
         expect(computed.lineHeight).toBe('1.25');
+    });
+});
+
+describe('card markup characterisation', () => {
+    const items = [
+        { Id: 'movie', ServerId: 'server', Name: '<Movie & title>', Type: 'Movie', ProductionYear: 2000 },
+        { Id: 'episode', ServerId: 'server', Name: 'An episode', Type: 'Episode', SeriesName: 'Series & name', SeriesId: 'series' },
+        { Id: 'photo', ServerId: 'server', Name: 'Photo', Type: 'Photo', MediaType: 'Photo' },
+        { Id: 'album', ServerId: 'server', Name: 'Album', Type: 'MusicAlbum', AlbumArtist: 'Artist' }
+    ];
+    it.each([
+        { showTitle: true, showParentTitle: true, showYear: true, lines: 2 },
+        { showTitle: false, showParentTitleOrTitle: true, overlayText: false },
+        { showTitle: 'auto', overlayText: true },
+        { showTitle: false, overlayText: true },
+        { showTitle: true, cardLayout: true, textLines: () => ['<em>custom</em>', ''] }
+    ])('preserves exact caption and card markup for %j', options => {
+        const html = getCardsHtml(items, { shape: 'square', width: 200, disableIndicators: true, ...options });
+        expect(html).toMatchSnapshot();
+    });
+});
+
+describe('card indicator updates', () => {
+    it('updates played and unplayed indicators through the public facade', () => {
+        document.body.innerHTML = getCardsHtml([{
+            Id: 'series', ServerId: 'server', Name: 'Series', Type: 'Series'
+        }], { shape: 'square', width: 200, disableIndicators: true });
+        onUserDataChanged({ Key: 'series', ItemId: 'series', Played: true, UnplayedItemCount: 3 });
+        const card = document.querySelector('.card')!;
+        expect(card.querySelector('.playedIndicator')).not.toBeNull();
+        expect(card.querySelector('.countIndicator')?.textContent).toBe('3');
+        expect(card.querySelectorAll('.cardIndicators')).toHaveLength(1);
+        onUserDataChanged({ Key: 'series', ItemId: 'series', Played: false, UnplayedItemCount: 0 });
+        expect(card.querySelector('.playedIndicator')).toBeNull();
+        expect(card.querySelector('.countIndicator')).toBeNull();
+    });
+
+    it('creates and removes recording indicators without duplicate DOM', () => {
+        document.body.innerHTML = '<button class="card" data-id="program" data-seriestimerid="series"><div class="cardImageContainer"></div></button>';
+        onTimerCreated('program', 'timer', document.body);
+        onTimerCreated('program', 'timer', document.body);
+        expect(document.querySelectorAll('.timerIndicator')).toHaveLength(1);
+        onTimerCancelled('timer', document.body);
+        expect(document.querySelector('.timerIndicator')).toBeNull();
+        expect(document.querySelector('[data-timerid]')).toBeNull();
+        onTimerCreated('program', 'second-timer', document.body);
+        onSeriesTimerCancelled('series', document.body);
+        expect(document.querySelector('.timerIndicator')).toBeNull();
+        expect(document.querySelector('[data-seriestimerid]')).toBeNull();
     });
 });
