@@ -5,7 +5,7 @@ import { AlphaPicker } from './alphaPicker';
 vi.mock('../../scripts/browser', () => ({ default: { tv: true } }));
 vi.mock('../../scripts/inputManager', () => ({ default: { on: vi.fn(), off: vi.fn() } }));
 vi.mock('../loading/loading.ts', () => ({ hide: vi.fn() }));
-vi.mock('RootAppRouter', async () => {
+vi.mock('lib/navigationHistory', async () => {
     const { createMemoryHistory } = await import('history');
     return { history: createMemoryHistory() };
 });

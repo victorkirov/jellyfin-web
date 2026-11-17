@@ -4,7 +4,7 @@ import { AlphaPicker } from './alphaPicker';
 vi.mock('../../scripts/browser', () => ({ default: { tv: true } }));
 vi.mock('../../scripts/inputManager', () => ({ default: { on: vi.fn(), off: vi.fn() } }));
 vi.mock('../loading/loading.ts', () => ({ hide: vi.fn() }));
-vi.mock('RootAppRouter', async () => {
+vi.mock('lib/navigationHistory', async () => {
     const { createMemoryHistory } = await import('history');
     return { history: createMemoryHistory() };
 });
@@ -98,7 +98,7 @@ describe('Library jump dialog', () => {
 
     it('closes through Back and restores the trigger without changing the filter', async () => {
         const { element, picker } = createPicker();
-        const { history } = await import('RootAppRouter');
+        const { history } = await import('lib/navigationHistory');
         const changed = vi.fn();
         element.addEventListener('alphavaluechanged', changed);
         document.querySelector<HTMLButtonElement>('[data-value="Z"]')!.focus();
