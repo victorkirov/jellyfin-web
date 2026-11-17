@@ -14,7 +14,7 @@ const AlphaPickerComponent: FunctionComponent<AlphaPickerProps> = ({ onAlphaPick
 
     useEffect(() => {
         setAlphaPicker(new AlphaPicker({
-            element: element.current,
+            element: element.current!,
             mode: 'keyboard'
         }));
 

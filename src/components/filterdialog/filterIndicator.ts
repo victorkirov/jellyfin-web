@@ -1,6 +1,7 @@
+type FilterQuery = Record<string, unknown>;
 import './filterIndicator.scss';
 
-export function getFilterStatus(query) {
+export function getFilterStatus(query: FilterQuery) {
     return Boolean(
         query.Filters
             || query.IsFavorite
@@ -25,7 +26,7 @@ export function getFilterStatus(query) {
     );
 }
 
-export function setFilterStatus(page, query) {
+export function setFilterStatus(page: HTMLElement, query: FilterQuery) {
     const hasFilters = getFilterStatus(query);
 
     const btnFilterWrapper = page.querySelector('.btnFilter-wrapper');
