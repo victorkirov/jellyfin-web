@@ -6,7 +6,7 @@ import { toBoolean } from '../../utils/string.ts';
 import { hide } from '../loading/loading.ts';
 import dom from '../../utils/dom';
 
-import { history } from 'RootAppRouter';
+import { history } from 'lib/navigationHistory';
 
 import './dialoghelper.scss';
 import '../../styles/scrollstyles.scss';

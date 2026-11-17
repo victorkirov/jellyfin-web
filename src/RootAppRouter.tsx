@@ -11,7 +11,7 @@ import AppHeader from 'components/AppHeader';
 import Backdrop from 'components/Backdrop';
 import ColorSchemeSync from 'components/ColorSchemeSync';
 import BangRedirect from 'components/router/BangRedirect';
-import { createRouterHistory } from 'components/router/routerHistory';
+import { attachRouter } from 'lib/navigationHistory';
 import { getTheme } from 'themes';
 import { useDocumentColorScheme } from 'themes/useDocumentColorScheme';
 
@@ -28,7 +28,7 @@ const router = createHashRouter([
     }
 ]);
 
-export const history = createRouterHistory(router);
+attachRouter(router);
 
 export default function RootAppRouter() {
     return <RouterProvider router={router} />;
