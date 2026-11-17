@@ -114,10 +114,6 @@ export function logout() {
     });
 }
 
-export function getPluginUrl(name) {
-    return 'configurationpage?name=' + encodeURIComponent(name);
-}
-
 /**
  * Navigate to a url.
  * @param {string} url - The url to navigate to.
@@ -205,7 +201,6 @@ const Dashboard = {
     alert,
     capabilities,
     confirm,
-    getPluginUrl,
     getCurrentUser,
     getCurrentUserId,
     logout,

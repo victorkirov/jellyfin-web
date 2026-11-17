@@ -1,32 +1,8 @@
-import { importModule } from '@uupaa/dynamic-import-polyfill';
 import './viewManager/viewContainer.scss';
-import Dashboard from '../utils/dashboard';
 
 const getMainAnimatedPages = () => {
     return document.querySelector('.mainAnimatedPages');
 };
-
-function setControllerClass(view, options) {
-    if (options.controllerFactory) {
-        return Promise.resolve();
-    }
-
-    let controllerUrl = view.getAttribute('data-controller');
-
-    if (controllerUrl) {
-        if (controllerUrl.indexOf('__plugin/') === 0) {
-            controllerUrl = controllerUrl.substring('__plugin/'.length);
-        }
-
-        controllerUrl = Dashboard.getPluginUrl(controllerUrl);
-        const apiUrl = ApiClient.getUrl('/web/' + controllerUrl);
-        return importModule(apiUrl).then((ControllerFactory) => {
-            options.controllerFactory = ControllerFactory;
-        });
-    }
-
-    return Promise.resolve();
-}
 
 export function loadView(options) {
     if (!options.cancel) {
@@ -84,7 +60,7 @@ export function loadView(options) {
 
         allPages[pageIndex] = view;
 
-        return setControllerClass(view, options)
+        return Promise.resolve()
         // Timeout for polyfilled CustomElements (webOS 1.2)
             .then(() => new Promise((resolve) => setTimeout(resolve, 0)))
             .then(() => {
@@ -153,7 +129,7 @@ export function tryRestoreView(options) {
 
             const selected = selectedPageIndex;
             const previousAnimatable = selected === -1 ? null : allPages[selected];
-            return setControllerClass(view, options).then(() => {
+            return Promise.resolve().then(() => {
                 if (onBeforeChange) {
                     onBeforeChange(view, true, options);
                 }
