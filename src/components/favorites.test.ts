@@ -5,11 +5,21 @@ import { loadSections } from './favoriteitems';
 
 const mocks = vi.hoisted(() => ({
     getItems: vi.fn(), getArtists: vi.fn(), getPeople: vi.fn(), getCardsHtml: vi.fn<(...args: unknown[]) => string>(() => '<button>Card</button>'),
+    cardOptions: vi.fn<(section: unknown) => object | undefined>(),
     hide: vi.fn(), route: vi.fn((_route: string, params: { itemTypes: string }) => '#/list?itemTypes=' + params.itemTypes)
 }));
 vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: { currentApiClient: () => window.ApiClient } }));
 vi.mock('components/cardbuilder/cardBuilder', () => ({ default: { getCardsHtml: mocks.getCardsHtml } }));
 vi.mock('components/router/appRouter', () => ({ appRouter: { getRouteUrl: mocks.route } }));
+vi.mock('./favoriteSectionCatalog', async importOriginal => {
+    const actual = await importOriginal<typeof import('./favoriteSectionCatalog')>();
+    return {
+        ...actual,
+        getFavoriteCardOptions: (section: import('./favoriteSectionCatalog').FavoriteSection) => (
+            mocks.cardOptions(section) || actual.getFavoriteCardOptions(section)
+        )
+    };
+});
 vi.mock('components/itemscontainer/emby-itemscontainer', () => ({}));
 vi.mock('elements/emby-scroller/emby-scroller', () => ({}));
 vi.mock('lib/layoutManager', () => ({ default: { tv: true } }));
@@ -27,6 +37,7 @@ type Row = HTMLElement & {
 
 beforeEach(() => {
     vi.clearAllMocks();
+    mocks.cardOptions.mockReset();
     mocks.getItems.mockResolvedValue({ Items: [{ Id: 'item' }] });
     mocks.getArtists.mockResolvedValue({ Items: [{ Id: 'artist' }] });
     window.ApiClient = {
@@ -68,4 +79,33 @@ it('keeps empty preview sections empty and single-section previews unlimited', a
     expect(mocks.getItems.mock.calls[0][1]).not.toHaveProperty('ParentId');
     expect(page.querySelector('.sectionfavoriteMovies')?.innerHTML).toBe('');
     expect(mocks.getCardsHtml).not.toHaveBeenCalled();
+});
+
+it('keeps all seven preview identities and requests on the shared catalog', async () => {
+    const page = document.createElement('main');
+    page.innerHTML = '<div class="favoriteSections"></div>';
+    loadSections(page, 'user');
+    await vi.waitFor(() => expect(mocks.hide).toHaveBeenCalled());
+    expect(Array.from(page.querySelectorAll('h2'), heading => heading.textContent))
+        .toEqual(['Movies', 'Shows', 'Episodes', 'Videos', 'Artists', 'Albums', 'Songs']);
+    expect(mocks.getItems.mock.calls.map(call => call[1].IncludeItemTypes))
+        .toEqual(['Movie', 'Series', 'Episode', 'Video,MusicVideo', 'MusicAlbum', 'Audio']);
+    expect(mocks.getCardsHtml.mock.calls.every(call => !Object.prototype.hasOwnProperty.call(call[1], 'leadingButtons'))).toBe(true);
+});
+
+it('uses shared card-option changes in both preview and full-page callers', async () => {
+    mocks.cardOptions.mockReturnValue({ cardCssClass: 'shared-option' });
+    const view = document.createElement('main');
+    view.innerHTML = '<div class="sections"></div><div class="favoriteSections"></div>';
+    const tab = new FavoritesTab(view, {});
+    view.querySelectorAll<Row>('.itemsContainer')[10].getItemsHtml([{ Id: 'artist' }]);
+    loadSections(view, 'user', 'music-library', ['favoriteArtists']);
+    await vi.waitFor(() => expect(mocks.hide).toHaveBeenCalled());
+    expect(mocks.getCardsHtml.mock.calls).toHaveLength(2);
+    for (const args of mocks.getCardsHtml.mock.calls) {
+        const options = args.length === 1 ? args[0] : args[1];
+        expect(options).toHaveProperty('cardCssClass', 'shared-option');
+    }
+    expect(mocks.cardOptions).toHaveBeenCalledTimes(2);
+    tab.destroy();
 });

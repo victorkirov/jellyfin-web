@@ -8,7 +8,7 @@ import cardBuilder from 'components/cardbuilder/cardBuilder';
 import type { ApiClient } from 'jellyfin-apiclient';
 import type { ItemDto } from 'types/base/models/item-dto';
 import type { BaseItemDtoQueryResult } from '@jellyfin/sdk/lib/generated-client/models/base-item-dto-query-result';
-import { getFullFavoriteSections, type FavoriteSection } from 'components/favoriteSectionCatalog';
+import { getFullFavoriteSections, getFavoriteCardOptions, type FavoriteSection } from 'components/favoriteSectionCatalog';
 import focusManager from 'lib/focusManager';
 import layoutManager from 'lib/layoutManager';
 import { appRouter } from 'components/router/appRouter';
@@ -18,10 +18,6 @@ import { ServerConnections } from 'lib/jellyfin-apiclient';
 
 import 'components/itemscontainer/emby-itemscontainer';
 import 'elements/emby-scroller/emby-scroller';
-
-function enableScrollX() {
-    return true;
-}
 
 function getFetchDataFn(section: FavoriteSection) {
     return function (this: FavoritesTab) {
@@ -81,9 +77,6 @@ function getRouteUrl(section: FavoriteSection, serverId: string) {
 
 function getItemsHtmlFn(section: FavoriteSection) {
     return function (this: FavoritesTab, items: ItemDto[]) {
-        // NOTE: Why is card layout always disabled?
-        // let cardLayout = appHost.preferVisualCards && section.autoCardLayout && section.showTitle;
-        const cardLayout = false;
         const serverId = this.apiClient!.serverId();
         const leadingButtons = layoutManager.tv ? [{
             name: globalize.translate('All'),
@@ -107,20 +100,8 @@ function getItemsHtmlFn(section: FavoriteSection) {
 
         return cardBuilder.getCardsHtml({
             items: items,
-            preferThumb: section.preferThumb,
-            shape: section.shape,
-            centerText: section.centerText && !cardLayout,
-            overlayText: section.overlayText !== false,
-            showTitle: section.showTitle,
+            ...getFavoriteCardOptions(section),
             showYear: section.showYear,
-            showParentTitle: section.showParentTitle,
-            scalable: true,
-            coverImage: section.coverImage,
-            overlayPlayButton: section.overlayPlayButton,
-            overlayMoreButton: section.overlayMoreButton && !cardLayout,
-            action: section.action,
-            allowBottomPadding: !enableScrollX(),
-            cardLayout: cardLayout,
             leadingButtons: leadingButtons,
             lines: lines
         });

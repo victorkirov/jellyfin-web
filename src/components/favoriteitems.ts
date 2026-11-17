@@ -1,5 +1,5 @@
 import type { BaseItemDtoQueryResult } from '@jellyfin/sdk/lib/generated-client/models/base-item-dto-query-result';
-import { getPreviewFavoriteSections, type FavoriteSection } from './favoriteSectionCatalog';
+import { getPreviewFavoriteSections, getFavoriteCardOptions, type FavoriteSection } from './favoriteSectionCatalog';
 import dom from 'utils/dom';
 import globalize from 'lib/globalize';
 import { getParameterByName } from 'utils/url';
@@ -84,25 +84,7 @@ function loadSection(elem: HTMLElement, userId: string, topParentId: string | un
                 html += '<div is="emby-itemscontainer" class="itemsContainer vertical-wrap padded-left padded-right">';
             }
 
-            // NOTE: Why is card layout always disabled?
-            // let cardLayout = appHost.preferVisualCards && section.autoCardLayout && section.showTitle;
-            const cardLayout = false;
-
-            html += cardBuilder.getCardsHtml(result.Items!, {
-                preferThumb: section.preferThumb,
-                shape: section.shape,
-                centerText: section.centerText && !cardLayout,
-                overlayText: section.overlayText !== false,
-                showTitle: section.showTitle,
-                showParentTitle: section.showParentTitle,
-                scalable: true,
-                coverImage: section.coverImage,
-                overlayPlayButton: section.overlayPlayButton,
-                overlayMoreButton: section.overlayMoreButton && !cardLayout,
-                action: section.action,
-                allowBottomPadding: !enableScrollX(),
-                cardLayout: cardLayout
-            });
+            html += cardBuilder.getCardsHtml(result.Items!, getFavoriteCardOptions(section));
             html += '</div>';
         }
 
