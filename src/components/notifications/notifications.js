@@ -93,6 +93,11 @@ function showNotification(options, timeoutMs, apiClient) {
 
     options.data = options.data || {};
     options.data.serverId = apiClient.serverInfo().Id;
+    if (options.actions?.some(({ action }) => action === 'cancel-install' || action === 'restart')) {
+        options.data.serverAddress = apiClient.serverAddress();
+        options.data.headers = {};
+        apiClient.setRequestHeaders(options.data.headers);
+    }
     options.icon = options.icon || NotificationIcon;
     options.badge = options.badge || NotificationIcon;
 
@@ -201,7 +206,7 @@ function showPackageInstallNotification(apiClient, installation, status) {
                     }
                 ];
 
-            notification.data.id = installation.id;
+            notification.data.id = installation.Id;
         }
 
         if (status === 'progress') {
