@@ -14,7 +14,6 @@ import 'components/itemscontainer/emby-itemscontainer';
 export default class LibraryTab {
     destroy!: () => void;
     isRefreshInterrupted!: () => boolean;
-    alphaPicker?: LibraryController['alphaPicker'];
     getCurrentViewStyle!: LibraryController['getCurrentViewStyle'];
     renderTab!: LibraryController['renderTab'];
     showFilterMenu!: LibraryController['showFilterMenu'];

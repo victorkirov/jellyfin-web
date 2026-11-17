@@ -44,3 +44,20 @@ it.each(['Science Fiction', 'constructor', 'toString'])('does not translate free
     expect(getFilterLabel({ Genres: value })).toBe('Filter: ' + value);
     expect(translate).not.toHaveBeenCalledWith(value);
 });
+
+it('uses concise rail text while preserving the full button title and accessible name', () => {
+    document.body.innerHTML = '<main class="libraryRail"><div class="btnFilter-wrapper"><button class="btnFilter" title="Filter"></button></div></main>';
+    const page = document.querySelector<HTMLElement>('main')!;
+    const button = page.querySelector<HTMLButtonElement>('button')!;
+    setFilterStatus(page, { Filters: 'IsUnPlayed' });
+    expect(page.querySelector('.filterIndicator')?.textContent).toBe('Unplayed');
+    expect(button.title).toBe('Filter: Unplayed');
+    expect(button.getAttribute('aria-label')).toBe('Filter: Unplayed');
+    setFilterStatus(page, { Genres: 'Action|Comedy' });
+    expect(page.querySelector('.filterIndicator')?.textContent).toBe('Filters: 2');
+    expect(button.title).toBe('Filters: 2');
+    expect(button.getAttribute('aria-label')).toBe('Filters: 2');
+    setFilterStatus(page, {});
+    expect(button.title).toBe('Filter');
+    expect(button.getAttribute('aria-label')).toBe('Filter');
+});

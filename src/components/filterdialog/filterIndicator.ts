@@ -21,13 +21,14 @@ export function getFilterStatus(query: FilterQuery) {
     return activeFilters(query).length > 0;
 }
 
-export function getFilterLabel(query: FilterQuery) {
+export function getFilterLabel(query: FilterQuery, compact = false) {
     const filters = activeFilters(query);
     if (!filters.length) return '';
     if (filters.length > 1) return globalize.translate('LibraryFilterCount', filters.length);
     const labels: Record<string, string> = { IsUnplayed: 'Unplayed', IsUnPlayed: 'Unplayed', IsPlayed: 'Played', IsResumable: 'HeaderContinueWatching', IsFavorite: 'Favorites' };
     const labelKey = Object.prototype.hasOwnProperty.call(labels, filters[0]) ? labels[filters[0]] : undefined;
-    return globalize.translate('LibraryFilterLabel', labelKey ? globalize.translate(labelKey) : filters[0]);
+    const value = labelKey ? globalize.translate(labelKey) : filters[0];
+    return compact ? value : globalize.translate('LibraryFilterLabel', value);
 }
 
 export function setFilterStatus(page: HTMLElement, query: FilterQuery) {
@@ -48,8 +49,11 @@ export function setFilterStatus(page: HTMLElement, query: FilterQuery) {
         }
 
         if (indicatorElem) {
-            indicatorElem.textContent = getFilterLabel(query);
-            btnFilterWrapper.querySelector('.btnFilter')?.setAttribute('aria-label', getFilterLabel(query) || globalize.translate('Filter'));
+            indicatorElem.textContent = getFilterLabel(query, Boolean(btnFilterWrapper.closest('.libraryRail')));
+            const label = getFilterLabel(query) || globalize.translate('Filter');
+            const button = btnFilterWrapper.querySelector('.btnFilter');
+            button?.setAttribute('aria-label', label);
+            button?.setAttribute('title', label);
             indicatorElem.classList.toggle('hide', !hasFilters);
         }
     }
