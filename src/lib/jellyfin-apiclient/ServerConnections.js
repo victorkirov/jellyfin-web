@@ -3,6 +3,7 @@ import { Credentials } from 'jellyfin-apiclient';
 import { appHost } from 'components/apphost';
 import appSettings from 'scripts/settings/appSettings';
 import { setUserInfo } from 'scripts/settings/userSettings';
+import { getMaxBandwidth } from 'utils/getMaxBandwidth';
 import { detectBitrate } from 'utils/bitrateTest';
 import Dashboard from 'utils/dashboard';
 import Events from 'utils/events';
@@ -14,20 +15,6 @@ const normalizeImageOptions = options => {
     if (!options.quality && (options.maxWidth || options.width || options.maxHeight || options.height || options.fillWidth || options.fillHeight)) {
         options.quality = 90;
     }
-};
-
-const getMaxBandwidth = () => {
-    if (navigator.connection) {
-        let max = navigator.connection.downlinkMax;
-        if (max && max > 0 && max < Number.POSITIVE_INFINITY) {
-            max /= 8;
-            max *= 1000000;
-            max *= 0.7;
-            return parseInt(max, 10);
-        }
-    }
-
-    return null;
 };
 
 class ServerConnections extends ConnectionManager {

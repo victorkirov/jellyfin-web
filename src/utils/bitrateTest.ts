@@ -2,6 +2,8 @@ import { Api } from '@jellyfin/sdk';
 import type { EndPointInfo } from '@jellyfin/sdk/lib/generated-client/models/end-point-info';
 import { getSystemApi } from '@jellyfin/sdk/lib/utils/api/system-api';
 
+import { getMaxBandwidth } from './getMaxBandwidth';
+
 /** Maximum bitrate (Int32) */
 const MAX_BITRATE = 2147483647;
 /** Approximate LAN bitrate */
@@ -11,30 +13,17 @@ const BITRATETEST_TIMEOUT = 5000;
 /** Bitrate cache time in milliseconds */
 const BITRATE_CACHE_DURATION = 3600000;
 
-let lastDetectedBitrate: number;
-let lastDetectedBitrateTime: number;
-let pendingBitrateDetection: Promise<number> | null = null;
+type BitrateCache = {
+    bitrate?: number;
+    detectedAt?: number;
+    pending?: Promise<number>;
+};
+const endpointBitrates = new Map<string, BitrateCache>();
 
 interface BitrateTest {
     bytes: number;
     threshold: number;
 }
-
-/** Gets a normalized maximum downlink speed (only supported on certain browsers) */
-const getMaxBandwidth = () => {
-    const connection = (navigator as unknown as { connection: { downlinkMax: number } }).connection;
-    if (connection) {
-        let max = connection.downlinkMax;
-        if (max && max > 0 && max < Number.POSITIVE_INFINITY) {
-            max /= 8;
-            max *= 1000000;
-            max *= 0.7;
-            return max;
-        }
-    }
-
-    return null;
-};
 
 /**
  * Perform a download speed test
@@ -109,10 +98,10 @@ const getDownloadSpeed = (api: Api, bytes: number) => {
  * @param bitrate The bitrate to normalize
  * @returns {number} Normalized bitrate
  */
-const normalizeReturnBitrate = (bitrate: number) => {
+const normalizeReturnBitrate = (bitrate: number, cache: BitrateCache) => {
     if (!bitrate) {
-        if (lastDetectedBitrate) {
-            return lastDetectedBitrate;
+        if (cache.bitrate) {
+            return cache.bitrate;
         }
     }
 
@@ -123,8 +112,8 @@ const normalizeReturnBitrate = (bitrate: number) => {
         result = Math.min(result, maxRate);
     }
 
-    lastDetectedBitrate = result;
-    lastDetectedBitrateTime = Date.now();
+    cache.bitrate = result;
+    cache.detectedAt = Date.now();
 
     return result;
 };
@@ -137,9 +126,9 @@ const normalizeReturnBitrate = (bitrate: number) => {
  * @param {number | undefined} currentBitrate Current bitrate
  * @returns {number} Normalized bitrate
  */
-const detectBitrateInternal = (api: Api, tests: BitrateTest[], index: number, currentBitrate: number | undefined): Promise<number> => {
+const detectBitrateInternal = (api: Api, tests: BitrateTest[], index: number, currentBitrate: number | undefined, cache: BitrateCache): Promise<number> => {
     if (index >= tests.length) {
-        return Promise.resolve(normalizeReturnBitrate(currentBitrate || 0));
+        return Promise.resolve(normalizeReturnBitrate(currentBitrate || 0, cache));
     }
 
     const test = tests[index];
@@ -148,12 +137,12 @@ const detectBitrateInternal = (api: Api, tests: BitrateTest[], index: number, cu
         // eslint-disable-next-line sonarjs/function-return-type
         (bitrate) => {
             if (bitrate < test.threshold) {
-                return normalizeReturnBitrate(bitrate);
+                return normalizeReturnBitrate(bitrate, cache);
             } else {
-                return detectBitrateInternal(api, tests, index + 1, bitrate);
+                return detectBitrateInternal(api, tests, index + 1, bitrate, cache);
             }
         },
-        () => normalizeReturnBitrate(currentBitrate || 0)
+        () => normalizeReturnBitrate(currentBitrate || 0, cache)
     );
 };
 
@@ -163,12 +152,12 @@ const detectBitrateInternal = (api: Api, tests: BitrateTest[], index: number, cu
  * @param {EndPointInfo} endpointInfo Endpoint info for special handling on local networks
  * @returns {number} Normalized bitrate
  */
-const detectBitrateWithEndpointInfo = (api: Api, endpointInfo: EndPointInfo) => {
+const detectBitrateWithEndpointInfo = (api: Api, endpointInfo: EndPointInfo, cache: BitrateCache) => {
     // On the local network the detected bitrate is raised to at least LAN_BITRATE anyway,
     // so skip downloading the test files
     if (endpointInfo.IsInNetwork) {
-        lastDetectedBitrate = LAN_BITRATE;
-        lastDetectedBitrateTime = Date.now();
+        cache.bitrate = LAN_BITRATE;
+        cache.detectedAt = Date.now();
         return Promise.resolve(LAN_BITRATE);
     }
 
@@ -189,7 +178,8 @@ const detectBitrateWithEndpointInfo = (api: Api, endpointInfo: EndPointInfo) => 
             }
         ],
         0,
-        undefined
+        undefined,
+        cache
     ).then(result => {
         const bitrateInMbps = (result / 1048576).toFixed(2);
         console.debug(`[bitratetest] bitrate detected as ${bitrateInMbps} Mbps`);
@@ -203,25 +193,28 @@ const detectBitrateWithEndpointInfo = (api: Api, endpointInfo: EndPointInfo) => 
  * @param {boolean} force Ignore the cached bitrate and force a re-detection
  * @returns {number} The detected bitrate
  */
-export const detectBitrate = (api: Api, force: boolean) => {
-    if (!force
-        && lastDetectedBitrate
-        && Date.now() - (lastDetectedBitrateTime || 0) <= BITRATE_CACHE_DURATION) {
-        return Promise.resolve(lastDetectedBitrate);
+export const detectBitrate = (api: Api, force = false): Promise<number> => {
+    let cache = endpointBitrates.get(api.basePath);
+    if (!cache) {
+        cache = {};
+        endpointBitrates.set(api.basePath, cache);
+    }
+    const endpointCache = cache;
+    if (!force && endpointCache.bitrate
+        && Date.now() - (endpointCache.detectedAt || 0) <= BITRATE_CACHE_DURATION) {
+        return Promise.resolve(endpointCache.bitrate);
     }
 
-    if (pendingBitrateDetection) {
-        return pendingBitrateDetection;
-    }
+    if (endpointCache.pending) return endpointCache.pending;
 
-    pendingBitrateDetection = getSystemApi(api)
+    endpointCache.pending = getSystemApi(api)
         .getEndpointInfo()
         .then(
-            (response) => detectBitrateWithEndpointInfo(api, response.data),
-            () => detectBitrateWithEndpointInfo(api, {})
+            (response) => detectBitrateWithEndpointInfo(api, response.data, endpointCache),
+            () => detectBitrateWithEndpointInfo(api, {}, endpointCache)
         ).finally(() => {
-            pendingBitrateDetection = null;
+            endpointCache.pending = undefined;
         });
 
-    return pendingBitrateDetection;
+    return endpointCache.pending;
 };
