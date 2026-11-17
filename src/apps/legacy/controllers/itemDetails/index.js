@@ -169,6 +169,41 @@ function renderTrackSelections(page, instance, item, forceReload) {
     }
 }
 
+function getTrackLabel(stream, mediaSource) {
+    const parts = [];
+    const resolution = stream.Type === 'Video' ? mediaInfo.getResolutionText(stream) : null;
+    if (resolution) parts.push(resolution);
+    const language = stream.LocalizedLanguage || stream.Language;
+    if (language) parts.push(language);
+    if (stream.Codec) parts.push(stream.Codec.toUpperCase());
+    if (stream.Type === 'Video' && stream.VideoRangeType && stream.VideoRangeType !== 'SDR') {
+        parts.push(stream.VideoRangeType);
+    }
+    if (stream.ChannelLayout) {
+        parts.push(stream.ChannelLayout);
+    } else if (stream.Channels) {
+        parts.push(stream.Channels + ' ' + globalize.translate('MediaInfoChannels'));
+    }
+    if (stream.IsDefault) parts.push(globalize.translate('Default'));
+    if (stream.IsForced) parts.push(globalize.translate('LabelIsForced'));
+    if (stream.IsHearingImpaired) parts.push(globalize.translate('HearingImpairedShort'));
+    if (stream.IsExternal) parts.push(stream.LocalizedExternal || globalize.translate('MediaInfoExternal'));
+
+    if (!parts.length) {
+        parts.push(globalize.translate(stream.Type === 'Subtitle' ? 'Subtitles' : stream.Type)
+            + (stream.Index == null ? '' : ' ' + (stream.Index + 1)));
+    }
+
+    // DisplayTitle may contain a release name. Only a short, distinct custom Title
+    // supplements the structured fields; never infer track properties from filenames.
+    const title = stream.Title?.trim();
+    if (title && title.length <= 60 && title !== mediaSource.Name
+        && !parts.some(part => part.toLowerCase() === title.toLowerCase())) {
+        parts.push(title);
+    }
+    return parts.join(' · ');
+}
+
 function renderVideoSelections(page, mediaSources) {
     const mediaSource = getSelectedMediaSource(page, mediaSources);
 
@@ -181,18 +216,7 @@ function renderVideoSelections(page, mediaSources) {
     const selectedId = tracks.length ? tracks[0].Index : -1;
     select.innerHTML = tracks.map(function (v) {
         const selected = v.Index === selectedId ? ' selected' : '';
-        const titleParts = [];
-        const resolutionText = mediaInfo.getResolutionText(v);
-
-        if (resolutionText) {
-            titleParts.push(resolutionText);
-        }
-
-        if (v.Codec) {
-            titleParts.push(v.Codec.toUpperCase());
-        }
-
-        return `<option value="${v.Index}" ${selected}>${escapeHtml(v.DisplayTitle || titleParts.join(' '))}</option>`;
+        return `<option value="${v.Index}" ${selected}>${escapeHtml(getTrackLabel(v, mediaSource))}</option>`;
     }).join('');
     select.setAttribute('disabled', 'disabled');
 
@@ -215,7 +239,7 @@ function renderAudioSelections(page, mediaSources) {
     const selectedId = mediaSource.DefaultAudioStreamIndex;
     select.innerHTML = tracks.map(function (v) {
         const selected = v.Index === selectedId ? ' selected' : '';
-        return `<option value="${v.Index}" ${selected}>${escapeHtml(v.DisplayTitle)}</option>`;
+        return `<option value="${v.Index}" ${selected}>${escapeHtml(getTrackLabel(v, mediaSource))}</option>`;
     }).join('');
 
     if (tracks.length > 1) {
@@ -245,7 +269,7 @@ function renderSubtitleSelections(page, mediaSources) {
     let selected = selectedId === -1 ? ' selected' : '';
     select.innerHTML = '<option value="-1">' + globalize.translate('Off') + '</option>' + tracks.map(function (v) {
         selected = v.Index === selectedId ? ' selected' : '';
-        return `<option value="${v.Index}" ${selected}>${escapeHtml(v.DisplayTitle)}</option>`;
+        return `<option value="${v.Index}" ${selected}>${escapeHtml(getTrackLabel(v, mediaSource))}</option>`;
     }).join('');
 
     if (tracks.length > 0) {
