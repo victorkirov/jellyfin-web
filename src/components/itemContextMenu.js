@@ -6,7 +6,6 @@ import { ServerConnections } from 'lib/jellyfin-apiclient';
 
 import browser from '../scripts/browser';
 import { copy } from '../scripts/clipboard';
-import dom from '../utils/dom';
 import globalize from '../lib/globalize';
 import actionsheet from './actionSheet/actionSheet';
 import { appHost } from './apphost';
@@ -104,18 +103,6 @@ export async function getCommands(options) {
             id: 'instantmix',
             icon: 'explore'
         });
-    }
-
-    if (!browser.tv) {
-        // Multiselect is currrently only ran on long clicks of card components
-        // This disables Select on any context menu not originating from a card i.e songs
-        if (options.positionTo && (dom.parentWithClass(options.positionTo, 'card') !== null)) {
-            commands.push({
-                name:  globalize.translate('Select'),
-                id: 'multiSelect',
-                icon: 'library_add_check'
-            });
-        }
     }
 
     if (appHost.supports(AppFeature.FileDownload)) {
@@ -291,12 +278,6 @@ function executeCommand(item, id, options) {
             case 'moremediainfo':
                 import('./itemMediaInfo/itemMediaInfo').then((itemMediaInfo) => {
                     itemMediaInfo.show(itemId, serverId).then(getResolveFunction(resolve, id), getResolveFunction(resolve, id));
-                });
-                break;
-            case 'multiSelect':
-                import('./multiSelect/multiSelect').then(({ startMultiSelect }) => {
-                    const card = dom.parentWithClass(options.positionTo, 'card');
-                    startMultiSelect(card);
                 });
                 break;
             case 'open':

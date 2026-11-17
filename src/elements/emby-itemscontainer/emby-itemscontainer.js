@@ -16,12 +16,6 @@ const ItemsContainerPrototype = Object.create(HTMLDivElement.prototype);
 
 function onClick(e) {
     const itemsContainer = this;
-    const multiSelect = itemsContainer.multiSelect;
-
-    if (multiSelect?.onContainerClick.call(itemsContainer, e) === false) {
-        return;
-    }
-
     itemShortcuts.onClick.call(itemsContainer, e);
 }
 
@@ -52,30 +46,6 @@ function getShortcutOptions() {
         click: false
     };
 }
-
-ItemsContainerPrototype.enableMultiSelect = function (enabled) {
-    const current = this.multiSelect;
-
-    if (!enabled) {
-        if (current) {
-            current.destroy();
-            this.multiSelect = null;
-        }
-        return;
-    }
-
-    if (current) {
-        return;
-    }
-
-    const self = this;
-    import('../../components/multiSelect/multiSelect').then(({ default: MultiSelect }) => {
-        self.multiSelect = new MultiSelect({
-            container: self,
-            bindOnClick: false
-        });
-    });
-};
 
 function onDrop(evt) {
     const el = evt.item;
@@ -281,10 +251,6 @@ ItemsContainerPrototype.attachedCallback = function () {
         this.addEventListener('contextmenu', onContextMenu);
     }
 
-    if (layoutManager.desktop || layoutManager.mobile && this.getAttribute('data-multiselect') !== 'false') {
-        this.enableMultiSelect(true);
-    }
-
     if (layoutManager.tv) {
         this.classList.add('itemsContainer-tv');
     }
@@ -312,7 +278,6 @@ ItemsContainerPrototype.attachedCallback = function () {
 ItemsContainerPrototype.detachedCallback = function () {
     clearRefreshInterval(this);
 
-    this.enableMultiSelect(false);
     this.enableDragReordering(false);
     this.removeEventListener('click', onClick);
     this.removeEventListener('contextmenu', onContextMenu);

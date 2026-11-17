@@ -8,7 +8,6 @@ import '../../elements/emby-checkbox/emby-checkbox';
 import '../../elements/emby-collapse/emby-collapse';
 import './style.scss';
 import template from './filterdialog.template.html';
-import { stopMultiSelect } from '../../components/multiSelect/multiSelect';
 import { getFilterStatus } from 'components/filterdialog/filterIndicator';
 
 function merge(resultItems, queryItems, delimiter) {
@@ -116,8 +115,6 @@ function updateFilterControls(context, options) {
      * @param instance {FilterDialog} An instance of FilterDialog
      */
 function triggerChange(instance) {
-    stopMultiSelect();
-
     const hasFilters = getFilterStatus(instance.options.query);
     if (hasFilters) {
         enableByClass(document, 'resetFilters');
