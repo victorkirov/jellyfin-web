@@ -1,28 +1,4 @@
 <form style="margin: 0 auto;">
-    <div class="verticalSection verticalSection-extrabottompadding">
-        <h2 class="sectionTitle">
-            ${HeaderAudioSettings}
-        </h2>
-
-        <div class="selectContainer">
-            <select is="emby-select" id="selectAllowedAudioChannels" label="${LabelAllowedAudioChannels}">
-                <option value="-1">${Auto}</option>
-                <option value="1">${LabelSelectMono}</option>
-                <option value="2">${LabelSelectStereo}</option>
-                <option value="6">5.1 ${LabelSelectAudioChannels}</option>
-                <option value="8">7.1 ${LabelSelectAudioChannels}</option>
-            </select>
-        </div>
-
-        <div class="checkboxContainer checkboxContainer-withDescription">
-            <label>
-                <input type="checkbox" is="emby-checkbox" class="chkDisableVbrAudioEncoding" />
-                <span>${LabelDisableVbrAudioEncoding}</span>
-            </label>
-            <div class="fieldDescription checkboxFieldDescription">${DisableVbrAudioEncodingHelp}</div>
-        </div>
-    </div>
-
     <div class="qualitySections hide">
         <div class="verticalSection verticalSection-extrabottompadding videoQualitySection hide">
             <h2 class="sectionTitle">
@@ -72,16 +48,25 @@
 
     <div class="verticalSection verticalSection-extrabottompadding">
         <h2 class="sectionTitle">
-            ${TabAdvanced}
+            ${HeaderAudioSettings}
         </h2>
 
-        <div class="checkboxContainer checkboxContainer-withDescription">
-            <label>
-                <input type="checkbox" is="emby-checkbox" class="chkPreferFmp4HlsContainer" />
-                <span>${PreferFmp4HlsContainer}</span>
-            </label>
-            <div class="fieldDescription checkboxFieldDescription">${PreferFmp4HlsContainerHelp}</div>
+        <div class="selectContainer">
+            <select is="emby-select" id="selectAllowedAudioChannels" label="${LabelAllowedAudioChannels}">
+                <option value="-1">${Auto}</option>
+                <option value="1">${LabelSelectMono}</option>
+                <option value="2">${LabelSelectStereo}</option>
+                <option value="6">5.1 ${LabelSelectAudioChannels}</option>
+                <option value="8">7.1 ${LabelSelectAudioChannels}</option>
+            </select>
         </div>
+
+    </div>
+
+    <div class="verticalSection verticalSection-extrabottompadding">
+        <h2 class="sectionTitle">
+            ${HeaderPlayback}
+        </h2>
 
         <div class="checkboxContainer checkboxContainer-withDescription cinemaModeOptions">
             <label>
@@ -117,95 +102,119 @@
         <div class="mediaSegmentActionContainer"></div>
     </div>
 
-    <div class="verticalSection verticalSection-extrabottompadding">
-        <h2 class="sectionTitle">
-            ${HeaderVideoAdvanced}
-        </h2>
+    <div class="emby-collapse verticalSection verticalSection-extrabottompadding">
+        <button is="emby-button" type="button" class="emby-collapsible-button iconRight btnSettingsAdvanced" aria-expanded="false" aria-controls="playbackSettingsAdvanced">
+            <h3 class="emby-collapsible-title">${TabAdvanced}</h3>
+            <span class="material-icons emby-collapse-expandIcon expand_more" aria-hidden="true"></span>
+        </button>
+        <div id="playbackSettingsAdvanced" class="settingsAdvanced hide">
+            <div class="verticalSection verticalSection-extrabottompadding">
+                <h2 class="sectionTitle">
+                    ${HeaderVideoAdvanced}
+                </h2>
 
-        <div class="checkboxContainer checkboxContainer-withDescription fldEnableDts">
-            <label>
-                <input type="checkbox" is="emby-checkbox" class="chkEnableDts" />
-                <span>${EnableDts}</span>
-            </label>
-            <div class="fieldDescription checkboxFieldDescription">${EnableDtsHelp}</div>
-        </div>
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label>
+                        <input type="checkbox" is="emby-checkbox" class="chkPreferFmp4HlsContainer" />
+                        <span>${PreferFmp4HlsContainer}</span>
+                    </label>
+                    <div class="fieldDescription checkboxFieldDescription">${PreferFmp4HlsContainerHelp}</div>
+                </div>
 
-        <div class="checkboxContainer checkboxContainer-withDescription fldEnableTrueHd">
-            <label>
-                <input type="checkbox" is="emby-checkbox" class="chkEnableTrueHd" />
-                <span>${EnableTrueHd}</span>
-            </label>
-            <div class="fieldDescription checkboxFieldDescription">${EnableTrueHdHelp}</div>
-        </div>
+                <div class="checkboxContainer checkboxContainer-withDescription fldEnableDts">
+                    <label>
+                        <input type="checkbox" is="emby-checkbox" class="chkEnableDts" />
+                        <span>${EnableDts}</span>
+                    </label>
+                    <div class="fieldDescription checkboxFieldDescription">${EnableDtsHelp}</div>
+                </div>
 
-        <div class="checkboxContainer checkboxContainer-withDescription fldEnableHi10p hide">
-             <label>
-                 <input type="checkbox" is="emby-checkbox" class="chkEnableHi10p" />
-                 <span>${EnableHi10p}</span>
-             </label>
-             <div class="fieldDescription checkboxFieldDescription">${EnableHi10pHelp}</div>
-        </div>
+                <div class="checkboxContainer checkboxContainer-withDescription fldEnableTrueHd">
+                    <label>
+                        <input type="checkbox" is="emby-checkbox" class="chkEnableTrueHd" />
+                        <span>${EnableTrueHd}</span>
+                    </label>
+                    <div class="fieldDescription checkboxFieldDescription">${EnableTrueHdHelp}</div>
+                </div>
 
-        <div class="checkboxContainer checkboxContainer-withDescription fldLimitSegmentLength hide">
-            <label>
-                <input type="checkbox" is="emby-checkbox" class="chkLimitSegmentLength" />
-                <span>${LimitSegmentLength}</span>
-            </label>
-            <div class="fieldDescription checkboxFieldDescription">${LimitSegmentLengthHelp}</div>
-        </div>
+                <div class="checkboxContainer checkboxContainer-withDescription fldEnableHi10p hide">
+                     <label>
+                         <input type="checkbox" is="emby-checkbox" class="chkEnableHi10p" />
+                         <span>${EnableHi10p}</span>
+                     </label>
+                     <div class="fieldDescription checkboxFieldDescription">${EnableHi10pHelp}</div>
+                </div>
 
-        <div class="selectContainer">
-            <select is="emby-select" id="selectPreferredTranscodeVideoCodec" label="${LabelSelectPreferredTranscodeVideoCodec}">
-                <option value="">${Auto}</option>
-                <option value="h264">H264</option>
-                <option value="hevc">HEVC</option>
-                <option value="av1">AV1</option>
-            </select>
-            <div class="fieldDescription">${SelectPreferredTranscodeVideoCodecHelp}</div>
-        </div>
+                <div class="checkboxContainer checkboxContainer-withDescription fldLimitSegmentLength hide">
+                    <label>
+                        <input type="checkbox" is="emby-checkbox" class="chkLimitSegmentLength" />
+                        <span>${LimitSegmentLength}</span>
+                    </label>
+                    <div class="fieldDescription checkboxFieldDescription">${LimitSegmentLengthHelp}</div>
+                </div>
 
-        <div class="selectContainer">
-            <select is="emby-select" id="selectPreferredTranscodeVideoAudioCodec" label="${LabelSelectPreferredTranscodeVideoAudioCodec}">
-                <option value="">${Auto}</option>
-                <option value="aac">AAC</option>
-                <option value="ac3">AC3</option>
-                <option value="alac">ALAC</option>
-                <option value="dts">DTS</option>
-                <option value="flac">FLAC</option>
-                <option value="opus">Opus</option>
-            </select>
-            <div class="fieldDescription">${SelectPreferredTranscodeVideoAudioCodecHelp}</div>
-        </div>
-    </div>
+                <div class="selectContainer">
+                    <select is="emby-select" id="selectPreferredTranscodeVideoCodec" label="${LabelSelectPreferredTranscodeVideoCodec}">
+                        <option value="">${Auto}</option>
+                        <option value="h264">H264</option>
+                        <option value="hevc">HEVC</option>
+                        <option value="av1">AV1</option>
+                    </select>
+                    <div class="fieldDescription">${SelectPreferredTranscodeVideoCodecHelp}</div>
+                </div>
 
-    <div class="verticalSection verticalSection-extrabottompadding">
-        <h2 class="sectionTitle">
-            ${HeaderAudioAdvanced}
-        </h2>
+                <div class="selectContainer">
+                    <select is="emby-select" id="selectPreferredTranscodeVideoAudioCodec" label="${LabelSelectPreferredTranscodeVideoAudioCodec}">
+                        <option value="">${Auto}</option>
+                        <option value="aac">AAC</option>
+                        <option value="ac3">AC3</option>
+                        <option value="alac">ALAC</option>
+                        <option value="dts">DTS</option>
+                        <option value="flac">FLAC</option>
+                        <option value="opus">Opus</option>
+                    </select>
+                    <div class="fieldDescription">${SelectPreferredTranscodeVideoAudioCodecHelp}</div>
+                </div>
+            </div>
 
-        <div class="selectContainer fldAudioNormalization">
-            <select is="emby-select" id="selectAudioNormalization" label="${LabelSelectAudioNormalization}">
-                <option value="Off">${Off}</option>
-                <option value="TrackGain">${LabelTrackGain}</option>
-                <option value="AlbumGain">${LabelAlbumGain}</option>
-            </select>
-            <div class="fieldDescription">${SelectAudioNormalizationHelp}</div>
-        </div>
+            <div class="verticalSection verticalSection-extrabottompadding">
+                <h2 class="sectionTitle">
+                    ${HeaderAudioAdvanced}
+                </h2>
 
-        <div class="checkboxContainer checkboxContainer-withDescription">
-            <label>
-                <input type="checkbox" is="emby-checkbox" class="chkAlwaysRemuxFlac" />
-                <span>${LabelAlwaysRemuxFlacAudioFiles}</span>
-            </label>
-            <div class="fieldDescription checkboxFieldDescription">${AlwaysRemuxFlacAudioFilesHelp}</div>
-        </div>
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label>
+                        <input type="checkbox" is="emby-checkbox" class="chkDisableVbrAudioEncoding" />
+                        <span>${LabelDisableVbrAudioEncoding}</span>
+                    </label>
+                    <div class="fieldDescription checkboxFieldDescription">${DisableVbrAudioEncodingHelp}</div>
+                </div>
 
-        <div class="checkboxContainer checkboxContainer-withDescription">
-            <label>
-                <input type="checkbox" is="emby-checkbox" class="chkAlwaysRemuxMp3" />
-                <span>${LabelAlwaysRemuxMp3AudioFiles}</span>
-            </label>
-            <div class="fieldDescription checkboxFieldDescription">${AlwaysRemuxMp3AudioFilesHelp}</div>
+                <div class="selectContainer fldAudioNormalization">
+                    <select is="emby-select" id="selectAudioNormalization" label="${LabelSelectAudioNormalization}">
+                        <option value="Off">${Off}</option>
+                        <option value="TrackGain">${LabelTrackGain}</option>
+                        <option value="AlbumGain">${LabelAlbumGain}</option>
+                    </select>
+                    <div class="fieldDescription">${SelectAudioNormalizationHelp}</div>
+                </div>
+
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label>
+                        <input type="checkbox" is="emby-checkbox" class="chkAlwaysRemuxFlac" />
+                        <span>${LabelAlwaysRemuxFlacAudioFiles}</span>
+                    </label>
+                    <div class="fieldDescription checkboxFieldDescription">${AlwaysRemuxFlacAudioFilesHelp}</div>
+                </div>
+
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label>
+                        <input type="checkbox" is="emby-checkbox" class="chkAlwaysRemuxMp3" />
+                        <span>${LabelAlwaysRemuxMp3AudioFiles}</span>
+                    </label>
+                    <div class="fieldDescription checkboxFieldDescription">${AlwaysRemuxMp3AudioFilesHelp}</div>
+                </div>
+            </div>
         </div>
     </div>
 

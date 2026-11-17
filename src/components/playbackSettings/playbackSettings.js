@@ -22,6 +22,7 @@ import template from './playbackSettings.template.html';
 
 import '../../elements/emby-select/emby-select';
 import '../../elements/emby-checkbox/emby-checkbox';
+import '../../elements/emby-collapse/emby-collapse.scss';
 
 function populateMediaSegments(container, userSettings) {
     const selectedValues = {};
@@ -285,6 +286,15 @@ function onSubmit(e) {
 
 function embed(options, self) {
     options.element.innerHTML = globalize.translateHtml(template, 'core');
+
+    const advancedButton = options.element.querySelector('.btnSettingsAdvanced');
+    advancedButton.addEventListener('click', () => {
+        const content = options.element.querySelector('.settingsAdvanced');
+        const expanded = content.classList.contains('hide');
+        content.classList.toggle('hide', !expanded);
+        advancedButton.setAttribute('aria-expanded', expanded.toString());
+        advancedButton.querySelector('.emby-collapse-expandIcon').classList.toggle('emby-collapse-expandIconExpanded', expanded);
+    });
 
     options.element.querySelector('form').addEventListener('submit', onSubmit.bind(self));
 

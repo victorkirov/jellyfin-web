@@ -1,45 +1,4 @@
 <form style="margin:0 auto;">
-    <div class="verticalSection">
-        <h2 class="sectionTitle">
-            ${Subtitles}
-        </h2>
-
-        <div class="selectContainer fldBurnIn hide">
-            <select is="emby-select" id="selectSubtitleBurnIn" label="${LabelBurnSubtitles}">
-                <option value="">${Auto}</option>
-                <option value="onlyimageformats">${OnlyImageFormats}</option>
-                <option value="allcomplexformats">${AllComplexFormats}</option>
-                <option value="all">${All}</option>
-            </select>
-            <div class="fieldDescription">${BurnSubtitlesHelp}</div>
-        </div>
-
-        <div class="checkboxContainer checkboxContainer-withDescription fldRenderPgs hide">
-            <label>
-                <input is="emby-checkbox" type="checkbox" id="chkSubtitleRenderPgs" />
-                <span>${RenderPgsSubtitle}</span>
-            </label>
-            <div class="fieldDescription checkboxFieldDescription">${RenderPgsSubtitleHelp}</div>
-        </div>
-
-        <div class="selectContainer fldBitmapSubtitleAspectMode hide">
-            <select is="emby-select" id="selectBitmapSubtitleAspectMode" label="${LabelBitmapSubtitleAspectMode}">
-                <option value="stretch">${BitmapSubtitleAspectModeStretch}</option>
-                <option value="contain">${BitmapSubtitleAspectModeContain}</option>
-                <option value="cover">${BitmapSubtitleAspectModeCover}</option>
-            </select>
-            <div class="fieldDescription">${BitmapSubtitleAspectModeHelp}</div>
-        </div>
-    </div>
-
-    <div class="checkboxContainer checkboxContainer-withDescription">
-        <label>
-            <input is="emby-checkbox" type="checkbox" id="chkAlwaysBurnInSubtitleWhenTranscoding" />
-            <span>${AlwaysBurnInSubtitleWhenTranscoding}</span>
-        </label>
-        <div class="fieldDescription checkboxFieldDescription">${AlwaysBurnInSubtitleWhenTranscodingHelp}</div>
-    </div>
-
     <div class="verticalSection subtitleAppearanceSection hide">
         <h2 class="sectionTitle">
             ${HeaderSubtitleAppearance}
@@ -64,7 +23,6 @@
                 </div>
             </div>
             <div class="fieldDescription">${SubtitleAppearanceSettingsDisclaimer}</div>
-            <div class="fieldDescription">${SubtitleAppearanceSettingsAlsoPassedToCastDevices}</div>
         </div>
 
         <div class="selectContainer">
@@ -153,6 +111,55 @@
                 <input is="emby-checkbox" type="checkbox" class="chkPreview" />
                 <span>${Preview}</span>
             </label>
+        </div>
+    </div>
+
+    <div class="emby-collapse verticalSection verticalSection-extrabottompadding">
+        <button is="emby-button" type="button" class="emby-collapsible-button iconRight btnSettingsAdvanced" aria-expanded="false" aria-controls="subtitleSettingsAdvanced">
+            <h3 class="emby-collapsible-title">${TabAdvanced}</h3>
+            <span class="material-icons emby-collapse-expandIcon expand_more" aria-hidden="true"></span>
+        </button>
+        <div id="subtitleSettingsAdvanced" class="settingsAdvanced hide">
+            <div class="verticalSection">
+                <h2 class="sectionTitle">
+                    ${Subtitles}
+                </h2>
+
+                <div class="selectContainer fldBurnIn hide">
+                    <select is="emby-select" id="selectSubtitleBurnIn" label="${LabelBurnSubtitles}">
+                        <option value="">${Auto}</option>
+                        <option value="onlyimageformats">${OnlyImageFormats}</option>
+                        <option value="allcomplexformats">${AllComplexFormats}</option>
+                        <option value="all">${All}</option>
+                    </select>
+                    <div class="fieldDescription">${BurnSubtitlesHelp}</div>
+                </div>
+
+                <div class="checkboxContainer checkboxContainer-withDescription fldRenderPgs hide">
+                    <label>
+                        <input is="emby-checkbox" type="checkbox" id="chkSubtitleRenderPgs" />
+                        <span>${RenderPgsSubtitle}</span>
+                    </label>
+                    <div class="fieldDescription checkboxFieldDescription">${RenderPgsSubtitleHelp}</div>
+                </div>
+
+                <div class="selectContainer fldBitmapSubtitleAspectMode hide">
+                    <select is="emby-select" id="selectBitmapSubtitleAspectMode" label="${LabelBitmapSubtitleAspectMode}">
+                        <option value="stretch">${BitmapSubtitleAspectModeStretch}</option>
+                        <option value="contain">${BitmapSubtitleAspectModeContain}</option>
+                        <option value="cover">${BitmapSubtitleAspectModeCover}</option>
+                    </select>
+                    <div class="fieldDescription">${BitmapSubtitleAspectModeHelp}</div>
+                </div>
+            </div>
+
+            <div class="checkboxContainer checkboxContainer-withDescription">
+                <label>
+                    <input is="emby-checkbox" type="checkbox" id="chkAlwaysBurnInSubtitleWhenTranscoding" />
+                    <span>${AlwaysBurnInSubtitleWhenTranscoding}</span>
+                </label>
+                <div class="fieldDescription checkboxFieldDescription">${AlwaysBurnInSubtitleWhenTranscodingHelp}</div>
+            </div>
         </div>
     </div>
 
