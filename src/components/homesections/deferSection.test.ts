@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { deferSection } from './deferSection';
 
-let intersect: (entries: Partial<IntersectionObserverEntry>[]) => void;
+let intersect: (entries: (Partial<IntersectionObserverEntry> & Pick<IntersectionObserverEntry, 'target'>)[]) => void;
 const disconnect = vi.fn();
 const observe = vi.fn();
+const unobserve = vi.fn();
 const autoFocus = vi.fn();
 const getFocusableElements = vi.fn();
 const focus = vi.fn();
@@ -17,6 +18,7 @@ beforeEach(() => {
     vi.stubGlobal('IntersectionObserver', class {
         constructor(callback: typeof intersect) { intersect = callback; }
         observe = observe;
+        unobserve = unobserve;
         disconnect = disconnect;
     });
     document.body.innerHTML = '<main><section class="hide"><h2 id="title">Latest media</h2></section></main>';
@@ -37,9 +39,9 @@ describe('Deferred sections', () => {
         expect(target.style.minHeight).toBe('15em');
         expect(document.querySelectorAll('#title')).toHaveLength(1);
         expect(observe).toHaveBeenCalledWith(target);
-        intersect([{ isIntersecting: false }]);
+        intersect([{ target, isIntersecting: false }]);
         expect(load).not.toHaveBeenCalled();
-        intersect([{ isIntersecting: true }, { isIntersecting: true }]);
+        intersect([{ target, isIntersecting: true }, { target, isIntersecting: true }]);
         await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(1));
         await vi.waitFor(() => expect(target.isConnected).toBe(false));
         destroy();
@@ -68,7 +70,7 @@ describe('Deferred sections', () => {
         const destroy = deferSection(section, load);
         const target = document.querySelector<HTMLElement>('.focusable')!;
         destroy();
-        intersect([{ isIntersecting: true }]);
+        intersect([{ target, isIntersecting: true }]);
         target.dispatchEvent(new FocusEvent('focusin'));
         await Promise.resolve();
         expect(load).not.toHaveBeenCalled();
@@ -79,7 +81,8 @@ describe('Deferred sections', () => {
     it('does not start a queued request after destruction', async () => {
         const load = vi.fn();
         const destroy = deferSection(document.querySelector('section')!, load);
-        intersect([{ isIntersecting: true }]);
+        const target = document.querySelector<HTMLElement>('.focusable')!;
+        intersect([{ target, isIntersecting: true }]);
         destroy();
         await Promise.resolve();
         expect(load).not.toHaveBeenCalled();
