@@ -9,7 +9,7 @@ function activeFilters(query: FilterQuery) {
     for (const key of filterKeys) {
         const value = query[key];
         if (value) {
-            if (typeof value === 'string') filters.push(...value.split(',').filter(Boolean));
+            if (typeof value === 'string') filters.push(...value.split(/[,|]/).filter(Boolean));
             else filters.push(key);
         }
     }
@@ -26,7 +26,8 @@ export function getFilterLabel(query: FilterQuery) {
     if (!filters.length) return '';
     if (filters.length > 1) return globalize.translate('LibraryFilterCount', filters.length);
     const labels: Record<string, string> = { IsUnplayed: 'Unplayed', IsUnPlayed: 'Unplayed', IsPlayed: 'Played', IsResumable: 'HeaderContinueWatching', IsFavorite: 'Favorites' };
-    return globalize.translate('LibraryFilterLabel', globalize.translate(labels[filters[0]] || filters[0]));
+    const labelKey = Object.prototype.hasOwnProperty.call(labels, filters[0]) ? labels[filters[0]] : undefined;
+    return globalize.translate('LibraryFilterLabel', labelKey ? globalize.translate(labelKey) : filters[0]);
 }
 
 export function setFilterStatus(page: HTMLElement, query: FilterQuery) {

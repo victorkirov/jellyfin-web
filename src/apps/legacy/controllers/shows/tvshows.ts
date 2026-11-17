@@ -1,5 +1,5 @@
 import { getShowItemsHtml, getShowSortOptions } from './showItems';
-import { focusLibraryContent } from '../libraryRail';
+import { focusLibraryRefresh, isLibraryDialogFocused } from '../libraryRail';
 import type { LibraryPageData } from '../libraryControllerTypes';
 import { bindLibraryPaging, getLibraryLayout, libraryLayouts, supportedLibraryLayout } from '../libraryPaging';
 import loading from 'components/loading/loading';
@@ -95,12 +95,9 @@ export default class LibraryTab {
                 itemsContainer.innerHTML = html;
                 imageLoader.lazyChildren(itemsContainer);
                 userSettings.saveQuerySettings(getSavedQueryKey(), query);
-                if (tabContent.querySelector('.libraryRail')) {
-                    focusLibraryContent(tabContent);
-                    return;
-                }
+                if (focusLibraryRefresh(tabContent)) return;
                 void import('components/autoFocuser').then(({ default: autoFocuser }) => {
-                    if (request === requestId && active) autoFocuser.autoFocus(page);
+                    if (request === requestId && active && !isLibraryDialogFocused()) autoFocuser.autoFocus(page);
                 });
             }).finally(() => {
                 if (request === requestId) {

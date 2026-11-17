@@ -130,10 +130,10 @@ EmbyTabs.focus = function () {
     const selectedTab = this.querySelector('.' + activeButtonClass);
     const lastFocused = this.querySelector('.lastFocused');
 
-    if (lastFocused) {
-        focusManager.focus(lastFocused);
-    } else if (selectedTab) {
+    if (selectedTab) {
         focusManager.focus(selectedTab);
+    } else if (lastFocused) {
+        focusManager.focus(lastFocused);
     } else {
         focusManager.autoFocus(this);
     }

@@ -17,10 +17,13 @@
     left: 0;
     width: 100%;
     line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .libraryRail .btnFilterWithIndicator .btnFilter {
-    padding-bottom: 1.3em;
+    padding-bottom: 0.8em;
 }
 
 

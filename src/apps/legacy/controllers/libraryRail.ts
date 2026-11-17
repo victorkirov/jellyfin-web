@@ -2,6 +2,7 @@ import focusManager from 'lib/focusManager';
 import inputManager from 'scripts/inputManager';
 import './libraryRail.scss';
 
+const letterFocus = new WeakSet<HTMLElement>();
 const pagingFocus = new WeakMap<HTMLElement, string>();
 
 export function rememberLibraryPaging(view: HTMLElement, control: Element) {
@@ -14,7 +15,20 @@ export function forgetLibraryPaging(view: HTMLElement) {
     pagingFocus.delete(view);
 }
 
+export function isLibraryDialogFocused() {
+    return Boolean(document.activeElement?.closest('.dialog.opened'));
+}
+
+export function focusLibraryRefresh(view: HTMLElement) {
+    const letterChanged = letterFocus.delete(view);
+    if (isLibraryDialogFocused()) return true;
+    if (!letterChanged && !pagingFocus.has(view)) return false;
+    focusLibraryContent(view);
+    return true;
+}
+
 export function focusLibraryContent(view: HTMLElement) {
+    if (isLibraryDialogFocused()) return;
     const railControl = pagingFocus.get(view);
     const rail = view.querySelector<HTMLElement>('.libraryRail');
     const target = railControl && rail?.querySelector<HTMLElement>(railControl + ':not(:disabled)');
@@ -51,7 +65,7 @@ export function bindLibraryRail(view: HTMLElement) {
     }
     function tabDown(event: Event) {
         const tab = Array.from(view.querySelectorAll<HTMLElement>('.pageTabContent')).find(element => element.offsetParent !== null);
-        if (!tab) return;
+        if (!tab?.querySelector('.libraryRail')) return;
         event.preventDefault();
         returnToGrid(tab, memory(tab).firstRow);
     }
@@ -81,6 +95,10 @@ export function bindLibraryRail(view: HTMLElement) {
             focusManager.focus(target);
         }
     };
+    view.addEventListener('alphavaluechanged', event => {
+        const tab = (event.target as HTMLElement).closest<HTMLElement>('.pageTabContent');
+        if (tab?.querySelector('.libraryRail')) letterFocus.add(tab);
+    }, true);
     view.addEventListener('alphavalueconfirmed', event => {
         const target = event.target as HTMLElement;
         const tab = target.closest<HTMLElement>('.pageTabContent');
@@ -96,7 +114,10 @@ export function bindLibraryRail(view: HTMLElement) {
     view.addEventListener('viewshow', () => setListening(true));
     view.addEventListener('viewbeforehide', () => {
         setListening(false);
-        for (const tab of view.querySelectorAll<HTMLElement>('.pageTabContent')) forgetLibraryPaging(tab);
+        for (const tab of view.querySelectorAll<HTMLElement>('.pageTabContent')) {
+            forgetLibraryPaging(tab);
+            letterFocus.delete(tab);
+        }
     });
     view.addEventListener('viewdestroy', () => setListening(false));
 }

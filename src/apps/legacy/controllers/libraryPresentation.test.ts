@@ -65,3 +65,20 @@ it('keeps grid artwork margins stable when details loads the shared scroller sty
     }
     document.documentElement.removeAttribute('dir');
 });
+
+it('omits Jump from the series-sorted Episodes library', () => {
+    const root = document.createElement('main');
+    root.innerHTML = readFileSync('src/apps/legacy/controllers/shows/tvrecommended.html', 'utf8');
+    expect(root.querySelector('#episodesTab .alphaPicker')).toBeNull();
+});
+
+it('keeps rail filter labels on one line with ellipsis', () => {
+    const style = document.createElement('style');
+    style.textContent = compile('src/components/filterdialog/filterIndicator.scss').css;
+    document.head.appendChild(style);
+    document.body.innerHTML = '<div class="libraryRail"><div class="btnFilterWithIndicator"><span class="filterIndicator">Filter: Science Fiction</span></div></div>';
+    const label = getComputedStyle(document.querySelector('.filterIndicator')!);
+    expect(label.whiteSpace).toBe('nowrap');
+    expect(label.overflow).toBe('hidden');
+    expect(label.textOverflow).toBe('ellipsis');
+});

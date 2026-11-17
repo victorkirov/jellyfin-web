@@ -1,4 +1,4 @@
-import { focusLibraryContent } from '../libraryRail';
+import { focusLibraryRefresh, isLibraryDialogFocused } from '../libraryRail';
 import { getMovieItemsHtml, getMovieSortOptions } from './movieItems';
 import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client';
 import type { LibraryQuery } from '../libraryControllerTypes';
@@ -84,13 +84,10 @@ export default class LibraryTab {
             tabContent.querySelector('.btnPlayAll')?.classList.toggle('hide', result.TotalRecordCount < 1);
             tabContent.querySelector('.btnShuffle')?.classList.toggle('hide', result.TotalRecordCount < 1);
 
-            if (tabContent.querySelector('.libraryRail')) {
-                focusLibraryContent(tabContent);
-                return;
-            }
+            if (focusLibraryRefresh(tabContent)) return;
             const request = requestId;
             void import('components/autoFocuser').then(({ default: autoFocuser }) => {
-                if (request === requestId && active && itemsContainer) autoFocuser.autoFocus(tabContent);
+                if (request === requestId && active && itemsContainer && !isLibraryDialogFocused()) autoFocuser.autoFocus(tabContent);
             });
         };
 

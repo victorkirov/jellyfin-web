@@ -40,5 +40,11 @@ it('preserves selected-tab events and overflow classes without panel animation',
     vi.advanceTimersByTime(120);
     expect(change).toHaveBeenCalledOnce();
     expect(tabs.selectedIndex()).toBe(1);
+    const buttons = tabs.querySelectorAll('button');
+    buttons[0].classList.add('lastFocused');
+    const { default: focusManager } = await import('../../lib/focusManager');
+    vi.mocked(focusManager.focus).mockClear();
+    tabs.focus();
+    expect(focusManager.focus).toHaveBeenLastCalledWith(buttons[1]);
     tabs.detachedCallback();
 });

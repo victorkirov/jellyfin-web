@@ -184,6 +184,14 @@ describe('approved library focus walks', () => {
         key('right');
         expect(document.activeElement).toBe(jump);
     });
+    it.each(['Movies', 'TV'])('leaves Down from %s Suggestions to spatial navigation when resume is hidden', () => {
+        const { tab, activeTab } = setup(false, 0);
+        activeTab.textContent = 'Suggestions';
+        tab.innerHTML = '<div class="hide" id="resumableSection"><div class="itemsContainer" id="resumableItems"></div></div><div class="itemsContainer"><a href="#" class="card">Latest title</a></div>';
+        activeTab.focus();
+        expect(key('down')).toBe(false);
+    });
+
     it('registers once per showing and unregisters once across hide and destroy', () => {
         const on = vi.spyOn(inputManager, 'on');
         const off = vi.spyOn(inputManager, 'off');
