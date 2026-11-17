@@ -5,7 +5,10 @@ const mocks = vi.hoisted(() => ({ getCurrentUser: vi.fn(), block: vi.fn(), unblo
 vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: { currentApiClient: () => ({ getCurrentUser: mocks.getCurrentUser }) } }));
 vi.mock('scripts/screensavermanager', () => ({ default: { block: mocks.block, unblock: mocks.unblock } }));
 vi.mock('scripts/settings/userSettings', () => ({ slideshowInterval: () => 7 }));
-vi.mock('components/slideshow/slideshow', () => ({ default: function(options: unknown) { mocks.slideshow(options); return { show: mocks.show }; } }));
+vi.mock('components/slideshow/slideshow', () => ({ default: function(options: unknown) {
+    mocks.slideshow(options);
+    return { show: mocks.show };
+} }));
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -23,4 +26,45 @@ describe('photo playback', () => {
         options.onClose();
         expect(mocks.unblock).toHaveBeenCalledOnce();
     });
+});
+
+it('propagates current-user failure so the playback caller can release loading', async () => {
+    const failure = new Error('User unavailable');
+    mocks.getCurrentUser.mockRejectedValueOnce(failure);
+    const settled = vi.fn();
+    const releaseLoading = vi.fn();
+    void new PhotoPlayer().play({}).then(settled, error => {
+        settled(error);
+        releaseLoading();
+    });
+    await vi.dynamicImportSettled();
+    expect(settled).toHaveBeenCalledWith(failure);
+    expect(releaseLoading).toHaveBeenCalledOnce();
+    expect(mocks.block).not.toHaveBeenCalled();
+});
+
+it('releases the screensaver and rejects when showing the slideshow fails', async () => {
+    const failure = new Error('Show failed');
+    mocks.show.mockImplementationOnce(() => {
+        throw failure;
+    });
+    const settled = vi.fn();
+    void new PhotoPlayer().play({}).then(settled, settled);
+    await vi.dynamicImportSettled();
+    expect(settled).toHaveBeenCalledWith(failure);
+    expect(mocks.unblock).toHaveBeenCalledOnce();
+});
+
+it('propagates slideshow import failure', async () => {
+    vi.resetModules();
+    const failure = new Error('Chunk unavailable');
+    vi.doMock('components/slideshow/slideshow', () => {
+        throw failure;
+    });
+    const { default: Player } = await import('./plugin');
+    const settled = vi.fn();
+    void new Player().play({}).then(settled, settled);
+    await vi.dynamicImportSettled();
+    expect(settled).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('mocking a module') }));
+    expect(mocks.block).not.toHaveBeenCalled();
 });
