@@ -177,6 +177,21 @@ function updateValues(isValueSet) {
     const range = this;
     const value = range.value;
 
+    const width = range.offsetWidth;
+    if (!supportsValueSetOverride && !width && !range.offsetHeight) {
+        range.lastRenderedValue = null;
+        cancelAnimationFrame(range.updateValuesFrame);
+        return;
+    }
+
+    const markerInfo = range.getMarkerInfo ? range.getMarkerInfo() : range.markerInfo;
+    if (range.lastRenderedValue === value && range.lastRenderedMin === range.min
+        && range.lastRenderedMax === range.max && range.lastRenderedWidth === width
+        && isEqual(range.markerInfo, markerInfo)) {
+        cancelAnimationFrame(range.updateValuesFrame);
+        return;
+    }
+
     // put this on a callback. Doing it within the event sometimes causes the slider to get hung up and not respond
     // Keep only one per slider frame request
     cancelAnimationFrame(range.updateValuesFrame);
@@ -191,8 +206,13 @@ function updateValues(isValueSet) {
         }
 
         if (range.markerContainerElement) {
-            updateMarkers(range, value);
+            updateMarkers(range, value, markerInfo);
         }
+
+        range.lastRenderedValue = value;
+        range.lastRenderedMin = range.min;
+        range.lastRenderedMax = range.max;
+        range.lastRenderedWidth = width;
     });
 }
 
@@ -230,49 +250,41 @@ function updateBubble(range, percent, value, bubble) {
     });
 }
 
-function setMarker(range, valueMarker, marker, valueProgress) {
-    requestAnimationFrame(function () {
-        const bubbleTrackRect = range.sliderBubbleTrack.getBoundingClientRect();
-        const markerRect = marker.getBoundingClientRect();
+function updateMarkers(range, currentValue, markerInfo) {
+    if (!isEqual(range.markerInfo, markerInfo)) {
+        range.markerInfo = markerInfo;
 
-        if (!bubbleTrackRect.width || !markerRect.width) {
-            // width is not set, most probably because the OSD is currently hidden
-            return;
-        }
-
-        marker.style.left = `calc(${valueMarker}% - ${markerRect.width / 2}px)`;
-
-        if (valueProgress >= valueMarker) {
-            marker.classList.remove('unwatched');
-            marker.classList.add('watched');
-        } else {
-            marker.classList.add('unwatched');
-            marker.classList.remove('watched');
-        }
-    });
-}
-
-function updateMarkers(range, currentValue) {
-    if (range.getMarkerInfo) {
-        const newMarkerInfo = range.getMarkerInfo();
-
-        if (!range.markerInfo || !isEqual(range.markerInfo, newMarkerInfo)) {
-            range.markerInfo = newMarkerInfo;
-
-            let markersHtml = '';
-            range.markerInfo.forEach(() => {
-                markersHtml += '<span class="sliderMarker" aria-hidden="true"></span>';
-            });
-            range.markerContainerElement.innerHTML = markersHtml;
-
-            range.markerElements = range.markerContainerElement.querySelectorAll('.sliderMarker');
-        }
+        let markersHtml = '';
+        range.markerInfo.forEach(() => {
+            markersHtml += '<span class="sliderMarker" aria-hidden="true"></span>';
+        });
+        range.markerContainerElement.innerHTML = markersHtml;
+        range.markerElements = range.markerContainerElement.querySelectorAll('.sliderMarker');
     }
 
     if (range.markerInfo?.length && range.markerElements?.length) {
+        const trackWidth = range.sliderBubbleTrack.getBoundingClientRect().width;
+        if (!trackWidth) {
+            return;
+        }
+
+        // Measure all markers before changing their styles.
+        const markerWidths = Array.from(range.markerElements, marker => marker.getBoundingClientRect().width);
         for (let i = 0, length = range.markerElements.length; i < length; i++) {
-            if (range.markerInfo.length > i) {
-                setMarker(range, mapFractionToValue(range, range.markerInfo[i].progress), range.markerElements[i], currentValue);
+            if (range.markerInfo.length > i && markerWidths[i]) {
+                const marker = range.markerElements[i];
+                const valueMarker = mapFractionToValue(range, range.markerInfo[i].progress);
+                const left = `calc(${valueMarker}% - ${markerWidths[i] / 2}px)`;
+                if (marker.style.left !== left) {
+                    marker.style.left = left;
+                }
+
+                const watched = currentValue >= valueMarker;
+                if (marker.classList.contains('watched') !== watched
+                    || marker.classList.contains('unwatched') === watched) {
+                    marker.classList.toggle('watched', watched);
+                    marker.classList.toggle('unwatched', !watched);
+                }
             }
         }
     }
@@ -639,6 +651,7 @@ function startInterval(range) {
 }
 
 EmbySliderPrototype.detachedCallback = function () {
+    cancelAnimationFrame(this.updateValuesFrame);
     const interval = this.interval;
     if (interval) {
         clearInterval(interval);
