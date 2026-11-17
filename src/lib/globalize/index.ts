@@ -1,7 +1,6 @@
 import isEmpty from 'lodash-es/isEmpty';
 
 import { EventType } from 'constants/eventType';
-import { currentSettings as userSettings } from 'scripts/settings/userSettings';
 import Events from 'utils/events';
 
 import { defaultModule, ensureTranslations, FALLBACK_CULTURE, getDictionary, loadStringsForLocale, normalizeLocaleName, register, type TranslationOptions } from './dictionaries';
@@ -14,6 +13,14 @@ const Direction = {
 };
 
 const RTL_LANGS = ['ar', 'fa', 'ur', 'he'];
+
+type LocaleSettings = { language(): string | null | undefined; dateTimeLocale(): string | null | undefined };
+let localeSettings: LocaleSettings | undefined;
+
+export function configureLocalization(settings: LocaleSettings) {
+    localeSettings = settings;
+    updateCurrentCulture();
+}
 
 let currentCulture: string;
 let currentDateTimeCulture: string | undefined;
@@ -38,7 +45,7 @@ export function getCurrentDateTimeLocale() {
     return currentDateTimeCulture;
 }
 
-export function getDefaultLanguage() {
+export function getDefaultLanguage(): string {
     const culture = document.documentElement.getAttribute('data-culture');
     if (culture) {
         return culture;
@@ -47,8 +54,9 @@ export function getDefaultLanguage() {
     if (navigator.language) {
         return navigator.language;
     }
-    if ((navigator as Navigator & { userLanguage?: string }).userLanguage) {
-        return (navigator as Navigator & { userLanguage: string }).userLanguage;
+    const userLanguage = (navigator as Navigator & { userLanguage?: string }).userLanguage;
+    if (userLanguage) {
+        return userLanguage;
     }
     if (navigator.languages?.length) {
         return navigator.languages[0];
@@ -92,7 +100,7 @@ export function updateCurrentCulture() {
     const lastCulture = currentCulture;
     let culture;
     try {
-        culture = userSettings.language();
+        culture = localeSettings?.language();
     } catch {
         console.error('no language set in user settings');
     }
@@ -109,7 +117,7 @@ export function updateCurrentCulture() {
 
     let dateTimeCulture;
     try {
-        dateTimeCulture = userSettings.dateTimeLocale();
+        dateTimeCulture = localeSettings?.dateTimeLocale();
     } catch {
         console.error('no date format set in user settings');
     }
@@ -155,10 +163,12 @@ function translateKeyFromModule(key: string, module?: string) {
     return key;
 }
 
-export function translate(key: string, ...values: Array<{ toLocaleString(locales?: string): string }>) {
+type TranslationValue = { toLocaleString(locales?: string): string };
+
+export function translate(key: string, ...values: TranslationValue[]) {
     let val = translateKey(key);
     for (let i = 1; i <= values.length; i++) {
-        let value: { toLocaleString(locales?: string): string } = values[i - 1];
+        let value = values[i - 1];
         if (typeof value === 'number' && typeof Intl !== 'undefined' && Intl.NumberFormat) {
             numberFormatter = numberFormatter || new Intl.NumberFormat(currentCulture);
             value = numberFormatter.format(value);
@@ -204,12 +214,6 @@ export function loadStrings(options: string | TranslationOptions) {
 }
 
 updateCurrentCulture();
-
-Events.on(userSettings, 'change', function (e, name) {
-    if (name === 'language' || name === 'datetimelocale') {
-        updateCurrentCulture();
-    }
-});
 
 export default {
     translate,

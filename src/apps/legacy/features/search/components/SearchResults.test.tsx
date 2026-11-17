@@ -5,13 +5,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collection-type';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const translation = vi.hoisted(() => vi.fn((key: string) => key));
 const mocks = vi.hoisted(() => ({ items: vi.fn(), artists: vi.fn(), people: vi.fn(), studios: vi.fn() }));
 vi.mock('hooks/useApi', () => ({ useApi: () => ({ api: { basePath: 'mock' }, user: { Id: 'user' } }) }));
 vi.mock('@jellyfin/sdk/lib/utils/api/library-api', () => ({ getLibraryApi: () => ({ getItems: mocks.items }) }));
 vi.mock('@jellyfin/sdk/lib/utils/api/artist-api', () => ({ getArtistApi: () => ({ getArtists: mocks.artists }) }));
 vi.mock('@jellyfin/sdk/lib/utils/api/person-api', () => ({ getPersonApi: () => ({ getPersons: mocks.people }) }));
 vi.mock('@jellyfin/sdk/lib/utils/api/studio-api', () => ({ getStudioApi: () => ({ getStudios: mocks.studios }) }));
-vi.mock('lib/globalize', () => ({ default: { translate: (key: string) => key } }));
+vi.mock('lib/globalize', () => ({ default: { translate: translation } }));
 vi.mock('components/loading/LoadingComponent', () => ({ default: () => <div>Loading</div> }));
 vi.mock('elements/emby-button/Button', () => ({ default: ({ title, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{title}</button> }));
 vi.mock('lib/focusManager', () => ({ default: { autoFocus: (el: HTMLElement) => el.querySelector<HTMLElement>('button,a'), focus: (el: HTMLElement) => el.focus() } }));
@@ -24,6 +25,7 @@ let container: HTMLDivElement;
 let client: QueryClient;
 const empty = { data: { Items: [] } };
 beforeEach(() => {
+    translation.mockClear();
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     Object.values(mocks).forEach(mock => {
         mock.mockReset().mockResolvedValue(empty);
@@ -39,9 +41,9 @@ afterEach(() => {
     container.remove();
     vi.unstubAllGlobals();
 });
-async function mount(collectionType?: CollectionType) {
+async function mount(collectionType?: CollectionType, query: string | null = 'retained query') {
     await act(async () => root.render(<QueryClientProvider client={client}><MemoryRouter>
-        <input id='searchTextInput' /><SearchResults query='retained query' collectionType={collectionType} />
+        <input id='searchTextInput' /><SearchResults query={query ?? undefined} collectionType={collectionType} />
     </MemoryRouter></QueryClientProvider>));
     await vi.waitFor(async () => {
         await act(async () => { /* Flush query notifications. */ });
@@ -50,6 +52,10 @@ async function mount(collectionType?: CollectionType) {
 }
 
 describe('search request states with real aggregate queries', () => {
+    it('uses an empty interpolation value for a missing query', async () => {
+        await mount(undefined, null);
+        expect(translation).toHaveBeenCalledWith('SearchResultsEmpty', '');
+    });
     it('reports successful emptiness separately', async () => {
         await mount();
         expect(container.textContent).toContain('SearchResultsEmpty');

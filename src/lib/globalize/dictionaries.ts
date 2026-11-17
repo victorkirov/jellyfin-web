@@ -88,7 +88,7 @@ function loadTranslation(translations: Translation[], lang: string) {
 
     return new Promise<Dictionary | undefined>(function (resolve) {
         if (!filtered.length) {
-            resolve();
+            resolve(undefined);
             return;
         }
 

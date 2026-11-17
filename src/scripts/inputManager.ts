@@ -1,11 +1,14 @@
 import focusManager from 'lib/focusManager';
 import dom from 'utils/dom';
 
-import { dispatchCommand } from './inputCommandActions';
-
 export type CommandSource = Element | Window;
 export type CommandOptions = { sourceElement?: Element | null; [key: string]: unknown };
+type CommandDispatcher = (commandName: string, options?: CommandOptions) => void;
+let commandDispatcher: CommandDispatcher | undefined;
 
+export function setCommandDispatcher(dispatcher: CommandDispatcher) {
+    commandDispatcher = dispatcher;
+}
 
 let lastInputTime = new Date().getTime();
 
@@ -78,7 +81,27 @@ export function handleCommand(commandName: string, options?: CommandOptions) {
         }
     }
 
-    dispatchCommand(commandName, sourceElement, options);
+    switch (commandName) {
+        case 'up':
+            focusManager.moveUp(sourceElement);
+            break;
+        case 'down':
+            focusManager.moveDown(sourceElement);
+            break;
+        case 'left':
+            focusManager.moveLeft(sourceElement);
+            break;
+        case 'right':
+            focusManager.moveRight(sourceElement);
+            break;
+        case 'select':
+            select(sourceElement as HTMLElement);
+            break;
+        case 'unknown':
+            break;
+        default:
+            commandDispatcher?.(commandName, options);
+    }
 }
 
 dom.addEventListener(document, 'click', notify, {

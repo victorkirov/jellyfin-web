@@ -12,6 +12,7 @@ vi.mock('components/playback/playbackmanager', () => ({ playbackManager: service
 vi.mock('components/apphost', () => ({ appHost: services.host }));
 
 import { handleCommand, on, off } from './inputManager';
+import './applicationInput';
 
 describe('remote command dispatch', () => {
     beforeEach(() => {

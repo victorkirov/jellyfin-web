@@ -1,7 +1,9 @@
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import React from 'react';
 
+import 'scripts/localizationSettings';
 import 'scripts/configureServerConnections';
+import 'scripts/applicationInput';
 
 import QueryClientEventHandler from 'components/QueryClientEventHandler';
 import { ApiProvider } from 'hooks/useApi';
