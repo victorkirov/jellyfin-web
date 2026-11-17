@@ -1,7 +1,7 @@
-import type { HomeSettings } from './homeLifecycle';
 import type { ApiClient } from 'jellyfin-apiclient';
 import type { UserDto } from '@jellyfin/sdk/lib/generated-client/models/user-dto';
 import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client/models/base-item-dto';
+import type { HomeSettings } from './homeLifecycle';
 import { HomeSectionType } from 'constants/homeSectionType';
 import { loadRecordings } from './sections/activeRecordings';
 import { loadLibraryButtons } from './sections/libraryButtons';

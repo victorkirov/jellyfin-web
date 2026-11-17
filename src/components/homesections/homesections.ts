@@ -53,13 +53,14 @@ function getAllSectionsToShow(userSettings: HomeSettings) {
     return sections;
 }
 
-export function loadSections(elem: HomeContainer, apiClient: ApiClient, user: UserDto, userSettings: HomeSettings) {
+export function loadSections(elem: HomeContainer, apiClient: ApiClient, user: UserDto, userSettings: HomeSettings, isActive: () => boolean = () => true) {
     const api = ServerConnections.getApi(apiClient.serverId());
     const userId = user.Id || apiClient.getCurrentUserId();
     return queryClient
         .fetchQuery(getUserViewsQuery(api, { userId }))
         .then(result => result.Items || [])
         .then(function (userViews) {
+            if (!isActive()) return;
             let html = '';
 
             if (userViews.length) {
@@ -77,10 +78,7 @@ export function loadSections(elem: HomeContainer, apiClient: ApiClient, user: Us
                         loadSection(elem, apiClient, user, userSettings, userViews, section, index)
                     ));
 
-                return Promise.all(promises)
-                    // Timeout for polyfilled CustomElements (webOS 1.2)
-                    .then(() => new Promise<void>((resolve) => setTimeout(resolve, 0)))
-                    .then(() => resume(elem, { refresh: true }));
+                return Promise.all(promises).then(() => undefined);
             } else {
                 const noLibDescription = globalize.translate('AskAdminToCreateLibrary');
 

@@ -119,3 +119,56 @@ describe('Deferred sections', () => {
         destroy();
     });
 });
+
+it('keeps a failed row focusable and retries when focus returns', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const load = vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValue(undefined);
+    const destroy = deferSection(document.querySelector<HTMLElement>('section')!, load);
+    const target = document.querySelector<HTMLElement>('.focusable')!;
+    target.focus();
+    await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(1));
+    await Promise.resolve();
+    expect(target.isConnected).toBe(true);
+    target.dispatchEvent(new FocusEvent('focusin'));
+    await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(target.isConnected).toBe(false));
+    destroy();
+});
+
+it('restores the hidden sibling section after its caller unhides it before a rejected render', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const section = document.querySelector<HTMLElement>('section')!;
+    const render = vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValue(undefined);
+    const destroy = deferSection(section, () => {
+        section.classList.remove('hide');
+        return render();
+    });
+    const placeholder = document.querySelector<HTMLElement>('.focusable')!;
+    placeholder.focus();
+    await vi.waitFor(() => expect(render).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(section.classList.contains('hide')).toBe(true));
+    const visibleHeadings = () => Array.from(document.querySelectorAll('h2')).filter(heading => !heading.closest('.hide'));
+    expect(visibleHeadings()).toHaveLength(1);
+    expect(placeholder.isConnected).toBe(true);
+    expect(document.activeElement).toBe(placeholder);
+    placeholder.dispatchEvent(new FocusEvent('focusin'));
+    await vi.waitFor(() => expect(render).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(placeholder.isConnected).toBe(false));
+    expect(section.classList.contains('hide')).toBe(false);
+    expect(visibleHeadings()).toHaveLength(1);
+    destroy();
+});
+
+it('preserves an originally visible section after its render fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const section = document.querySelector<HTMLElement>('section')!;
+    section.classList.remove('hide');
+    const load = vi.fn().mockRejectedValue(new Error('offline'));
+    const destroy = deferSection(section, load);
+    section.dispatchEvent(new FocusEvent('focusin'));
+    await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(1));
+    await Promise.resolve();
+    expect(section.classList.contains('hide')).toBe(false);
+    expect(document.querySelector('.focusable')).toBeNull();
+    destroy();
+});

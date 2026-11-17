@@ -51,13 +51,16 @@ export function deferSection(section: HTMLElement, load: () => unknown) {
         loader.destroy();
         Promise.resolve().then(() => {
             if (!destroyed) return load();
-        }).catch(error => {
-            console.error('[DeferredSection] failed to load section', error);
         }).then(() => {
             if (!destroyed) {
                 target.removeEventListener('focusin', start);
                 removePlaceholder();
             }
+        }).catch(error => {
+            console.error('[DeferredSection] failed to load section', error);
+            // Callers may unhide the real section before rendering rejects.
+            if (placeholder) section.classList.add('hide');
+            started = false;
         });
     }
 

@@ -154,3 +154,16 @@ describe('TV home section preferences', () => {
         expect(document.activeElement).toBe(library);
     });
 });
+
+it('does not compose or resume sections after a pending views lookup is invalidated', async () => {
+    let finish!: (result: { Items: { Id: string }[] }) => void;
+    emptyLibraries.fetchQuery.mockReturnValueOnce(new Promise(resolve => {
+        finish = resolve;
+    }));
+    const container = document.createElement('main');
+    const pending = loadSections(container, { serverId: () => 'server' } as ApiClient, { Id: 'user' }, { get: () => 'none' } as unknown as HomeSettings, () => false);
+    finish({ Items: [{ Id: 'movies' }] });
+    await pending;
+    expect(container.innerHTML).toBe('');
+    expect(loadLibraryButtons).not.toHaveBeenCalled();
+});
