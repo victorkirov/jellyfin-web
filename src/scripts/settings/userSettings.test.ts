@@ -6,8 +6,8 @@ import appSettings from './appSettings';
 import { UserSettings } from './userSettings';
 import Events from 'utils/events';
 
-vi.mock('hooks/api/useDisplayPreferences', () => ({ getDisplayPreferencesQuery: vi.fn() }));
-vi.mock('hooks/api/useUser', () => ({ getUserQuery: vi.fn() }));
+vi.mock('lib/queries/displayPreferences', () => ({ getDisplayPreferencesQuery: vi.fn() }));
+vi.mock('lib/queries/user', () => ({ getUserQuery: vi.fn() }));
 vi.mock('hooks/useUsers', () => ({ ['QUERY_KEY']: 'Users' }));
 vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: { getApi: vi.fn() } }));
 vi.mock('utils/query/queryClient', () => ({ queryClient: { fetchQuery: vi.fn(), invalidateQueries: vi.fn() } }));

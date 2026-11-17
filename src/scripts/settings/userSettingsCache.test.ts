@@ -1,7 +1,7 @@
 import { Api } from '@jellyfin/sdk';
 import type { ApiClient } from 'jellyfin-apiclient';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getDisplayPreferencesQuery } from 'hooks/api/useDisplayPreferences';
+import { getDisplayPreferencesQuery } from 'lib/queries/displayPreferences';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import { queryClient } from 'utils/query/queryClient';
 import { UserSettings } from './userSettings';

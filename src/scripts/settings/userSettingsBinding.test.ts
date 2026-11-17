@@ -4,8 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserSettings } from './userSettings';
 import { queryClient } from 'utils/query/queryClient';
 
-vi.mock('hooks/api/useDisplayPreferences', () => ({ getDisplayPreferencesQuery: () => ({ queryKey: ['display-preferences'] }) }));
-vi.mock('hooks/api/useUser', () => ({ getUserQuery: vi.fn() }));
+vi.mock('lib/queries/displayPreferences', () => ({ getDisplayPreferencesQuery: () => ({ queryKey: ['display-preferences'] }) }));
+vi.mock('lib/queries/user', () => ({ getUserQuery: vi.fn() }));
 vi.mock('hooks/useUsers', () => ({ ['QUERY_KEY']: 'Users' }));
 vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: { getApi: vi.fn() } }));
 vi.mock('utils/query/queryClient', () => ({ queryClient: { fetchQuery: vi.fn(), invalidateQueries: vi.fn(), setQueryData: vi.fn() } }));
