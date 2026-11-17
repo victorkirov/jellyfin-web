@@ -15,9 +15,18 @@ const DISPLAY_PREFERENCES_ID = 'usersettings';
 const CLIENT_ID = 'emby';
 
 function onSaveTimeout() {
-    const self = this;
-    self.saveTimeout = null;
-    self.currentApiClient.updateDisplayPreferences(DISPLAY_PREFERENCES_ID, self.displayPrefs, self.currentUserId, CLIENT_ID);
+    this.saveTimeout = null;
+    const apiClient = this.currentApiClient;
+    const userId = this.currentUserId;
+    const displayPrefs = Object.assign({}, this.displayPrefs, {
+        CustomPrefs: Object.assign({}, this.displayPrefs.CustomPrefs)
+    });
+    Promise.resolve()
+        .then(() => apiClient.updateDisplayPreferences(DISPLAY_PREFERENCES_ID, displayPrefs, userId, CLIENT_ID))
+        .catch(error => {
+            // The local copy remains available; another change can retry the save.
+            Events.trigger(this, 'saveerror', [error]);
+        });
 }
 
 function saveServerPreferences(instance) {
@@ -38,6 +47,18 @@ const allowedFilterSettings = [
     'IsFavorite', 'IsMissing', 'IsUnaired', 'ParentIndexNumber',
     'SeriesStatus', 'Years'
 ];
+
+function readJsonSetting(value, defaults = {}) {
+    try {
+        const parsed = JSON.parse(value);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            return Object.assign({}, defaults, parsed);
+        }
+    } catch {
+        // Invalid stored settings use the same defaults as missing settings.
+    }
+    return Object.assign({}, defaults);
+}
 
 function filterQuerySettings(query, allowedItems) {
     return Object.keys(query)
@@ -90,43 +111,48 @@ export class UserSettings {
             });
     }
 
-    // FIXME: 'appSettings.set' doesn't return any value
-    /**
-     * Set value of setting.
-     * @param {string} name - Name of setting.
-     * @param {mixed} value - Value of setting.
-     * @param {boolean} [enableOnServer] - Flag to save preferences on server.
-     */
+    // Compatibility wrappers retain the existing default display-preference path.
     set(name, value, enableOnServer) {
-        const userId = this.currentUserId;
-        const currentValue = this.get(name, enableOnServer);
-        const result = appSettings.set(name, value, userId);
+        return enableOnServer === false ?
+            this.setLocalSetting(name, value) :
+            this.setDisplayPreference(name, value);
+    }
 
-        if (enableOnServer !== false && this.displayPrefs) {
-            this.displayPrefs.CustomPrefs[name] = value == null ? value : value.toString();
-            saveServerPreferences(this);
-        }
+    get(name, enableOnServer) {
+        return enableOnServer === false ?
+            this.getLocalSetting(name) :
+            this.getDisplayPreference(name);
+    }
 
+    getLocalSetting(name) {
+        return appSettings.get(name, this.currentUserId);
+    }
+
+    setLocalSetting(name, value) {
+        const currentValue = this.getLocalSetting(name);
+        const result = appSettings.set(name, value, this.currentUserId);
         if (currentValue !== value) {
             Events.trigger(this, 'change', [name]);
         }
-
         return result;
     }
 
-    /**
-     * Get value of setting.
-     * @param {string} name - Name of setting.
-     * @param {boolean} [enableOnServer] - Flag to return preferences from server (cached).
-     * @return {string | null} Value of setting.
-     */
-    get(name, enableOnServer) {
-        const userId = this.currentUserId;
-        if (enableOnServer !== false && this.displayPrefs) {
-            return this.displayPrefs.CustomPrefs[name];
-        }
+    getDisplayPreference(name) {
+        return this.displayPrefs ? this.displayPrefs.CustomPrefs[name] : this.getLocalSetting(name);
+    }
 
-        return appSettings.get(name, userId);
+    setDisplayPreference(name, value) {
+        const currentValue = this.getDisplayPreference(name);
+        // Display preferences keep their legacy local backup and server serialization.
+        const result = appSettings.set(name, value, this.currentUserId);
+        if (this.displayPrefs) {
+            this.displayPrefs.CustomPrefs[name] = value == null ? value : value.toString();
+            saveServerPreferences(this);
+        }
+        if (currentValue !== value) {
+            Events.trigger(this, 'change', [name]);
+        }
+        return result;
     }
 
     /**
@@ -225,7 +251,7 @@ export class UserSettings {
      */
     enableNextVideoInfoOverlay(val) {
         if (val !== undefined) {
-            return this.set('enableNextVideoInfoOverlay', val.toString());
+            return this.setLocalSetting('enableNextVideoInfoOverlay', val.toString());
         }
 
         return toBoolean(this.get('enableNextVideoInfoOverlay', false), true);
@@ -238,7 +264,7 @@ export class UserSettings {
      */
     enableVideoRemainingTime(val) {
         if (val !== undefined) {
-            return this.set('enableVideoRemainingTime', val.toString());
+            return this.setLocalSetting('enableVideoRemainingTime', val.toString());
         }
 
         return toBoolean(this.get('enableVideoRemainingTime', false), true);
@@ -594,15 +620,8 @@ export class UserSettings {
      * @return {Query} Query.
      */
     loadQuerySettings(key, query) {
-        let sortSettings = this.get(key);
-        let filterSettings = this.get(key + filterSettingsPostfix, false);
-
-        if (sortSettings) {
-            sortSettings = filterQuerySettings(JSON.parse(sortSettings), allowedSortSettings);
-        }
-        if (filterSettings) {
-            filterSettings = filterQuerySettings(JSON.parse(filterSettings), allowedFilterSettings);
-        }
+        const sortSettings = filterQuerySettings(readJsonSetting(this.get(key)), allowedSortSettings);
+        const filterSettings = filterQuerySettings(readJsonSetting(this.get(key + filterSettingsPostfix, false)), allowedFilterSettings);
 
         return Object.assign(query, sortSettings, filterSettings);
     }
@@ -645,13 +664,13 @@ export class UserSettings {
      */
     getSubtitleAppearanceSettings(key) {
         key = key || 'localplayersubtitleappearance3';
-        return Object.assign(defaultSubtitleAppearanceSettings, JSON.parse(this.get(key, false) || '{}'));
+        return readJsonSetting(this.get(key, false), defaultSubtitleAppearanceSettings);
     }
 
     /**
      * Set subtitle appearance settings.
      * @param {Object} value - Subtitle appearance settings.
-     * @param {string|undefined} key - Settings key.
+     * @param {string|undefined} [key] - Settings key.
      */
     setSubtitleAppearanceSettings(value, key) {
         key = key || 'localplayersubtitleappearance3';

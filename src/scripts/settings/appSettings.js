@@ -3,6 +3,9 @@ import Events from '../../utils/events.ts';
 import { toBoolean } from '../../utils/string.ts';
 
 class AppSettings {
+    // Denied/quota-limited storage keeps failed writes available for this session.
+    #storageFallback = new Map();
+
     #getKey(name, userId) {
         if (userId) {
             name = userId + '-' + name;
@@ -240,15 +243,34 @@ class AppSettings {
 
     set(name, value, userId) {
         const currentValue = this.get(name, userId);
-        localStorage.setItem(this.#getKey(name, userId), value);
+        const key = this.#getKey(name, userId);
+        let persisted = true;
+        try {
+            localStorage.setItem(key, value);
+            this.#storageFallback.delete(key);
+        } catch {
+            persisted = false;
+            this.#storageFallback.set(key, String(value));
+            Events.trigger(this, 'storageerror', [name, 'write']);
+        }
 
         if (currentValue !== value) {
             Events.trigger(this, 'change', [name]);
         }
+        return persisted;
     }
 
     get(name, userId) {
-        return localStorage.getItem(this.#getKey(name, userId));
+        const key = this.#getKey(name, userId);
+        if (this.#storageFallback.has(key)) {
+            return this.#storageFallback.get(key);
+        }
+        try {
+            return localStorage.getItem(key);
+        } catch {
+            Events.trigger(this, 'storageerror', [name, 'read']);
+            return null;
+        }
     }
 }
 
