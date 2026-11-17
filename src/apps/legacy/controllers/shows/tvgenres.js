@@ -156,7 +156,7 @@ export default function (view, params, tabContent) {
                 if (enableScrollX()) {
                     let scrollXClass = 'scrollX hiddenScrollX';
                     if (layoutManager.tv) {
-                        scrollXClass += 'smoothScrollX padded-top-focusscale padded-bottom-focusscale';
+                        scrollXClass += ' smoothScrollX padded-top-focusscale padded-bottom-focusscale';
                     }
                     html += '<div is="emby-itemscontainer" class="itemsContainer ' + scrollXClass + ' lazy padded-left padded-right" data-id="' + item.Id + '">';
                 } else {
