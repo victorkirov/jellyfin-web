@@ -75,8 +75,9 @@ function setTitle(button: StateButton, isFavorite?: boolean) {
     button.title = globalize.translate(isFavorite ? 'Favorited' : 'Favorite');
 
     const text = button.querySelector<HTMLElement>('.button-text');
-    if (text) {
+    if (text && text.textContent !== button.title) {
         text.textContent = button.title;
+        button.dispatchEvent(new CustomEvent('detailactionlabelchange', { bubbles: true }));
     }
 }
 

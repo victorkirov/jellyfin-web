@@ -68,8 +68,9 @@ function setTitle(button: StateButton, played?: boolean) {
     button.title = globalize.translate(played ? 'Played' : 'MarkPlayed');
 
     const text = button.querySelector<HTMLElement>('.button-text');
-    if (text) {
+    if (text && text.textContent !== button.title) {
         text.textContent = button.title;
+        button.dispatchEvent(new CustomEvent('detailactionlabelchange', { bubbles: true }));
     }
 }
 

@@ -42,7 +42,7 @@ export function setPeopleHeader(page: DetailsPage, item: ItemDto) {
     }
 }
 
-export function renderNextUp(page: DetailsPage, item: ItemDto, user: UserDto, onNextUp?: NextUpCallback) {
+export function renderNextUp(page: DetailsPage, item: ItemDto, user: UserDto, onNextUp?: NextUpCallback, isCurrent: () => boolean = () => true) {
     const section = getElement(page, '.nextUpSection');
 
     if (item.Type != 'Series') {
@@ -55,6 +55,7 @@ export function renderNextUp(page: DetailsPage, item: ItemDto, user: UserDto, on
         UserId: user.Id,
         Fields: 'MediaSourceCount'
     }).then(function (result) {
+        if (!isCurrent()) return;
         onNextUp?.(result.Items?.[0]);
         if (result.Items!.length) {
             section.classList.remove('hide');
@@ -74,6 +75,11 @@ export function renderNextUp(page: DetailsPage, item: ItemDto, user: UserDto, on
         const itemsContainer = getElement(section, '.nextUpItems');
         itemsContainer.innerHTML = html;
         imageLoader.lazyChildren(itemsContainer);
+    }).catch(error => {
+        if (!isCurrent()) return;
+        section.classList.add('hide');
+        onNextUp?.(undefined);
+        console.error('failed to load Next Up', error);
     });
 }
 

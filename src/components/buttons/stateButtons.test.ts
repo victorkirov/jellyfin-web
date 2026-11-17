@@ -100,3 +100,18 @@ describe('state button identity, labels and updates', () => {
         expect(mocks.unsubscribe).toHaveBeenCalled();
     });
 });
+
+it.each(['playstate', 'rating'] as const)('notifies the details bar only when a visible %s label changes', kind => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const button = makeButton(kind);
+    container.appendChild(button);
+    const labelChanged = vi.fn();
+    container.addEventListener('detailactionlabelchange', labelChanged);
+    button.setItem(item);
+    expect(labelChanged).toHaveBeenCalledTimes(1);
+    button.setItem(item);
+    expect(labelChanged).toHaveBeenCalledTimes(1);
+    button.setItem({ ...item, UserData: { Key: 'item', Played: true, IsFavorite: true } });
+    expect(labelChanged).toHaveBeenCalledTimes(2);
+});

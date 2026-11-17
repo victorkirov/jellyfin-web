@@ -1,8 +1,9 @@
+import { requestActionBarLayout } from './actionBarLayout';
 import { bindActionFocus } from './actionFocus';
 import focusManager from 'lib/focusManager';
 import { appRouter } from 'components/router/appRouter';
 import { reloadFromItem, setInitialCollapsibleState } from './page';
-import { clearDeferredDetails, renderCast, renderGuestCast } from './relatedSections';
+import { clearDeferredDetails, renderCast, renderGuestCast, renderNextUp } from './relatedSections';
 import { renderDetails } from './metadata';
 import { renderBackdrop } from './artwork';
 import { getContextMenuOptions, reloadPlayButtons, reloadUserDataButtons, setTrailerButtonVisibility } from './actions';
@@ -104,16 +105,28 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
         return (params.serverId ? ServerConnections.getApiClient(params.serverId)! : ServerConnections.currentApiClient())!;
     }
 
+    function refreshNextUp() {
+        const item = currentItem;
+        if (item?.Type !== 'Series') return;
+        const request = ++nextUpRequest;
+        nextUpEpisode = undefined;
+        reloadPlayButtons(view, item);
+        requestActionBarLayout(view);
+        renderNextUp(view, item, { Id: getApiClient().getCurrentUserId() }, episode => {
+            // Only advertise an episode identity verified by the latest Next Up response.
+            nextUpEpisode = episode?.Type === 'Episode' && episode.SeriesId === item.Id
+                && episode.Id && episode.ParentIndexNumber != null && episode.IndexNumber != null ? episode : undefined;
+            nextUpItemId = nextUpEpisode?.Id || undefined;
+            reloadPlayButtons(view, currentItem!, nextUpEpisode);
+            requestActionBarLayout(view);
+        }, () => request === nextUpRequest && currentItem?.Id === item.Id);
+    }
+
     function renderItem(item: ItemDto, user: UserDto) {
         currentItem = item;
         nextUpEpisode = undefined;
-        reloadFromItem(self, view, params, item, user, episode => {
-            if (currentItem !== item) return;
-            // Only advertise an episode identity verified by the existing Next Up response.
-            nextUpEpisode = episode?.Type === 'Episode' && episode.SeriesId === item.Id
-                && episode.Id && episode.ParentIndexNumber != null && episode.IndexNumber != null ? episode : undefined;
-            reloadPlayButtons(view, currentItem, nextUpEpisode);
-        });
+        nextUpItemId = undefined;
+        reloadFromItem(self, view, params, item, user, refreshNextUp);
     }
 
     function reload() {
@@ -123,6 +136,8 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
         getElement(view, '.detailLogo').classList.add('hide');
         currentItem = null;
         nextUpEpisode = undefined;
+        nextUpItemId = undefined;
+        nextUpRequest++;
         unmount(self);
         clearDeferredDetails(view);
 
@@ -222,6 +237,7 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
         if (!currentItem) return;
         renderTrackSelections(view, self, currentItem!);
         setTrailerButtonVisibility(view, currentItem!);
+        requestActionBarLayout(view);
     }
 
     function onUserDataChanged({ Data }: UserDataChangedMessage) {
@@ -233,26 +249,36 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
         // would apply another version's progress to the displayed item.
         const changes = Data.UserDataList ?? [];
         const userData = changes.find(update => update.ItemId === currentItem!.Id);
-        const nextUpChanged = nextUpEpisode && changes.some(update => update.ItemId === nextUpEpisode!.Id);
+        const nextUpChanged = nextUpItemId && changes.some(update => update.ItemId === nextUpItemId);
 
         if (userData || nextUpChanged) {
-            if (userData) currentItem = { ...currentItem, UserData: userData };
-            // Generic series playback resolves the live Next Up instead of using stale data.
-            nextUpEpisode = undefined;
-            reloadPlayButtons(view, currentItem);
+            const previous = currentItem.UserData;
+            const playbackChanged = userData && (
+                (userData.Played !== undefined && !!userData.Played !== !!previous?.Played)
+                || (userData.PlaybackPositionTicks !== undefined && (userData.PlaybackPositionTicks || 0) !== (previous?.PlaybackPositionTicks || 0))
+                || (userData.UnplayedItemCount !== undefined && userData.UnplayedItemCount !== previous?.UnplayedItemCount)
+            );
+            if (userData) currentItem = { ...currentItem, UserData: { ...previous, ...userData } };
+            if (currentItem.Type === 'Series' && (playbackChanged || nextUpChanged)) refreshNextUp();
+            else reloadPlayButtons(view, currentItem, nextUpEpisode);
             reloadUserDataButtons(view, currentItem);
+            requestActionBarLayout(view);
             autoFocus(view);
         }
     }
 
     let currentItem: ItemDto | null | undefined;
     let nextUpEpisode: ItemDto | undefined;
+    let nextUpItemId: string | undefined;
+    let nextUpRequest = 0;
 
     function init() {
         const apiClient = getApiClient();
 
         self._unmount = [];
         const unbindActionFocus = bindActionFocus(view);
+        const onActionLabelChange = () => requestActionBarLayout(view);
+        view.addEventListener('detailactionlabelchange', onActionLabelChange);
         bindAll(view, '.btnRetry', 'click', reload);
         bindAll(view, '.btnDetailsBack', 'click', () => {
             void appRouter.back();
@@ -298,6 +324,7 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
             itemShortcuts.on(getElement(view, '.nameContainer'));
         });
         view.addEventListener('viewbeforehide', function () {
+            nextUpRequest++;
             itemShortcuts.off(getElement(view, '.nameContainer'));
             self._unsubscribeUserData?.();
             self._unsubscribeUserData = null;
@@ -306,6 +333,8 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
         });
         view.addEventListener('viewdestroy', function () {
             unbindActionFocus();
+            view.removeEventListener('detailactionlabelchange', onActionLabelChange);
+            nextUpRequest++;
             unmount(self);
             clearDeferredDetails(view);
 
@@ -342,6 +371,8 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
             if (sameItem) {
                 reloadPlayButtons(view, currentItem, nextUpEpisode);
                 reloadUserDataButtons(view, currentItem);
+                if (currentItem.Type === 'Series') refreshNextUp();
+                requestActionBarLayout(view);
                 return;
             }
             renderItem(versionItem, user);

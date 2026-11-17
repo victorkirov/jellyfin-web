@@ -6,6 +6,7 @@ import { type ItemDto, type TrackSelect, type StateButton, getElement } from './
 import { type Api } from '@jellyfin/sdk';
 import ItemDetails from './index';
 import focusManager from 'lib/focusManager';
+import cardBuilder from 'components/cardbuilder/cardBuilder';
 import type { UserDataChangedMessage } from '@jellyfin/sdk/lib/generated-client';
 
 const { apiClient, playbackManager, fixture, hideLoading, getListViewHtml, getSdkItem, api, getCommands, showMenu, goBack } = vi.hoisted(() => {
@@ -369,6 +370,18 @@ describe('Details failed reload recovery', () => {
     });
 });
 
+async function openResumableSeries() {
+    fixture.item = { Id: 'series', Type: 'Series', IsFolder: true, UserData: { Key: 'series', Played: false, PlaybackPositionTicks: 0, UnplayedItemCount: 5 } };
+    const episode: ItemDto = { Id: 'next', SeriesId: 'series', Type: 'Episode', ParentIndexNumber: 14, IndexNumber: 8, UserData: { Key: 'next', PlaybackPositionTicks: 7200000000 } };
+    apiClient.getNextUpEpisodes.mockResolvedValue({ Items: [episode] });
+    const page = getElement(document, '#itemDetailPage');
+    expect(new ItemDetails(page, { id: 'series' })).toBeDefined();
+    page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+    await vi.waitFor(() => expect(getElement(page, '.btnPlay').title).toBe('Resume from 12:00 · S14:E8'));
+    const listener = apiClient.subscribe.mock.calls[apiClient.subscribe.mock.calls.length - 1][1];
+    return { page, episode, listener };
+}
+
 describe('Details action eligibility and resolved series target', () => {
     it.each(['Series', 'Season'] as const)('keeps generic Play on unresolved %s and retains folder actions', async Type => {
         fixture.item = { Id: 'folder', Type, IsFolder: true };
@@ -396,34 +409,51 @@ describe('Details action eligibility and resolved series target', () => {
         expect(playbackManager.play).toHaveBeenCalledWith(expect.objectContaining({ items: [episode], startPositionTicks: ticks }));
         expect(apiClient.getNextUpEpisodes).toHaveBeenCalledTimes(1);
         page.dispatchEvent(new CustomEvent('viewshow', { detail: { isRestored: true } }));
-        await vi.waitFor(() => expect(getElement(page, '.btnPlay').title).toBe('Play'));
-        // A previously resolved episode may have been completed while the view was hidden.
+        await vi.waitFor(() => expect(apiClient.getNextUpEpisodes).toHaveBeenCalledTimes(2));
+        await vi.waitFor(() => expect(getElement(page, '.btnPlay').title).toBe(label));
         getElement(page, '.btnPlay').click();
-        expect(playbackManager.play).toHaveBeenLastCalledWith(expect.objectContaining({ items: [fixture.item] }));
+        expect(playbackManager.play).toHaveBeenLastCalledWith(expect.objectContaining({ items: [episode], startPositionTicks: ticks }));
     });
 
-    it.each([
-        ['series', 'user', 'Play'],
-        ['next', 'user', 'Play'],
-        ['other', 'user', 'Resume from 12:00 · S14:E8'],
-        ['next', 'another-user', 'Resume from 12:00 · S14:E8']
-    ])('invalidates a resolved target only for relevant user-data changes: %s / %s', async (itemId, userId, label) => {
-        fixture.item = { Id: 'series', Type: 'Series', IsFolder: true };
-        const episode: ItemDto = { Id: 'next', SeriesId: 'series', Type: 'Episode', ParentIndexNumber: 14, IndexNumber: 8, UserData: { Key: 'next', PlaybackPositionTicks: 7200000000 } };
-        apiClient.getNextUpEpisodes.mockResolvedValue({ Items: [episode] });
-        const page = getElement(document, '#itemDetailPage');
-        expect(new ItemDetails(page, { id: 'series' })).toBeDefined();
-        page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
-        await vi.waitFor(() => expect(getElement(page, '.btnPlay').title).toBe('Resume from 12:00 · S14:E8'));
-        const listener = apiClient.subscribe.mock.calls[apiClient.subscribe.mock.calls.length - 1][1];
-        listener({ Data: { UserId: userId, UserDataList: [{ ItemId: itemId, Key: itemId, Played: true }] } });
-        expect(getElement(page, '.btnPlay').title).toBe(label);
+    it.each([{ IsFavorite: true }, { Likes: true }, { Played: false }, { PlaybackPositionTicks: 0 }, { UnplayedItemCount: 5 }])('keeps the resume target for non-playback or unchanged series data: %j', async change => {
+        const { page, episode, listener } = await openResumableSeries();
+        listener({ Data: { UserId: 'user', UserDataList: [{ ItemId: 'series', Key: 'series', ...change }] } });
+        expect(getElement(page, '.btnPlay').title).toBe('Resume from 12:00 · S14:E8');
         getElement(page, '.btnPlay').click();
-        expect(playbackManager.play).toHaveBeenLastCalledWith(expect.objectContaining({ items: [label === 'Play' ? expect.objectContaining({ Id: 'series' }) : episode] }));
+        expect(playbackManager.play).toHaveBeenLastCalledWith(expect.objectContaining({ items: [episode], startPositionTicks: 7200000000 }));
         expect(apiClient.getNextUpEpisodes).toHaveBeenCalledTimes(1);
     });
 
-    it('does not rebind a stale pending Next Up response after the series changes', async () => {
+    it.each([
+        ['series', { Played: true }],
+        ['series', { PlaybackPositionTicks: 10000000 }],
+        ['series', { UnplayedItemCount: 4 }],
+        ['next', { IsFavorite: true }]
+    ] as const)('re-resolves the live target for playback-relevant changes: %s / %j', async (itemId, change) => {
+        const { page, listener } = await openResumableSeries();
+        const episode: ItemDto = { Id: 'new', SeriesId: 'series', Type: 'Episode', ParentIndexNumber: 14, IndexNumber: 9 };
+        apiClient.getNextUpEpisodes.mockResolvedValueOnce({ Items: [episode] });
+        listener({ Data: { UserId: 'user', UserDataList: [{ ItemId: itemId, Key: 'series', ...change }] } });
+        const pendingLabel = 'PlaybackPositionTicks' in change ? 'Resume from 0:01' : 'Play';
+        expect(getElement(page, '.btnPlay').title).toBe(pendingLabel);
+        expect(getElement(page, '.btnPlay').classList.contains('hide')).toBe(false);
+        getElement(page, '.btnPlay').click();
+        expect(playbackManager.play).toHaveBeenLastCalledWith(expect.objectContaining({ items: [expect.objectContaining({ Id: 'series' })] }));
+        await vi.waitFor(() => expect(getElement(page, '.btnPlay').title).toBe('Play S14:E9'));
+        getElement(page, '.btnPlay').click();
+        expect(playbackManager.play).toHaveBeenLastCalledWith(expect.objectContaining({ items: [episode], startPositionTicks: 0 }));
+        expect(apiClient.getNextUpEpisodes).toHaveBeenCalledTimes(2);
+    });
+
+    it.each([['other', 'user'], ['next', 'another-user']])('ignores unrelated items and other users: %s / %s', async (itemId, userId) => {
+        const { page, listener } = await openResumableSeries();
+        listener({ Data: { UserId: userId, UserDataList: [{ ItemId: itemId, Key: itemId, Played: true }] } });
+        expect(getElement(page, '.btnPlay').title).toBe('Resume from 12:00 · S14:E8');
+        expect(apiClient.getNextUpEpisodes).toHaveBeenCalledTimes(1);
+    });
+
+    it('accepts a pending Next Up response after a Favorite-only series change', async () => {
+        const episode: ItemDto = { Id: 'next', SeriesId: 'series', Type: 'Episode', ParentIndexNumber: 14, IndexNumber: 8, UserData: { Key: 'next', PlaybackPositionTicks: 7200000000 } };
         fixture.item = { Id: 'series', Type: 'Series', IsFolder: true };
         let resolveNextUp!: (value: { Items: ItemDto[] }) => void;
         apiClient.getNextUpEpisodes.mockReturnValueOnce(new Promise(resolve => {
@@ -434,9 +464,44 @@ describe('Details action eligibility and resolved series target', () => {
         page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
         await vi.waitFor(() => expect(hideLoading).toHaveBeenCalled());
         const listener = apiClient.subscribe.mock.calls[apiClient.subscribe.mock.calls.length - 1][1];
-        listener({ Data: { UserId: 'user', UserDataList: [{ ItemId: 'series', Key: 'series', Played: true }] } });
-        resolveNextUp({ Items: [{ Id: 'old', SeriesId: 'series', Type: 'Episode', ParentIndexNumber: 1, IndexNumber: 2 }] });
+        listener({ Data: { UserId: 'user', UserDataList: [{ ItemId: 'series', Key: 'series', IsFavorite: true }] } });
+        resolveNextUp({ Items: [episode] });
+        await vi.waitFor(() => expect(getElement(page, '.btnPlay').title).toBe('Resume from 12:00 · S14:E8'));
+        getElement(page, '.btnPlay').click();
+        expect(playbackManager.play).toHaveBeenLastCalledWith(expect.objectContaining({ items: [episode], startPositionTicks: 7200000000 }));
+        expect(apiClient.getNextUpEpisodes).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(['series', 'next'])('ignores an older %s refresh response for both the target and Next Up cards', async itemId => {
+        const { page, listener } = await openResumableSeries();
+        const cards = vi.spyOn(cardBuilder, 'getCardsHtml');
+        let resolveOlder!: (value: { Items: ItemDto[] }) => void;
+        let resolveLatest!: (value: { Items: ItemDto[] }) => void;
+        apiClient.getNextUpEpisodes.mockReturnValueOnce(new Promise(resolve => {
+            resolveOlder = resolve;
+        })).mockReturnValueOnce(new Promise(resolve => {
+            resolveLatest = resolve;
+        }));
+        listener({ Data: { UserId: 'user', UserDataList: [{ ItemId: itemId, Key: 'series', Played: true }] } });
+        listener({ Data: { UserId: 'user', UserDataList: [{ ItemId: itemId, Key: 'series', Played: false }] } });
+        const latest: ItemDto = { Id: 'latest', SeriesId: 'series', Type: 'Episode', ParentIndexNumber: 14, IndexNumber: 10 };
+        resolveLatest({ Items: [latest] });
+        await vi.waitFor(() => expect(getElement(page, '.btnPlay').title).toBe('Play S14:E10'));
+        resolveOlder({ Items: [{ ...latest, Id: 'old', IndexNumber: 9 }] });
         await Promise.resolve();
+        expect(getElement(page, '.btnPlay').title).toBe('Play S14:E10');
+        expect(cards).toHaveBeenLastCalledWith(expect.objectContaining({ items: [latest] }));
+        getElement(page, '.btnPlay').click();
+        expect(playbackManager.play).toHaveBeenLastCalledWith(expect.objectContaining({ items: [latest] }));
+        expect(apiClient.getNextUpEpisodes).toHaveBeenCalledTimes(3);
+    });
+
+    it('keeps generic Play usable when a Next Up refresh fails', async () => {
+        const { page, listener } = await openResumableSeries();
+        vi.spyOn(console, 'error').mockReturnValue(undefined);
+        apiClient.getNextUpEpisodes.mockRejectedValueOnce(new Error('offline'));
+        listener({ Data: { UserId: 'user', UserDataList: [{ ItemId: 'series', Key: 'series', Played: true }] } });
+        await vi.waitFor(() => expect(console.error).toHaveBeenCalledWith('failed to load Next Up', expect.any(Error)));
         expect(getElement(page, '.btnPlay').title).toBe('Play');
         getElement(page, '.btnPlay').click();
         expect(playbackManager.play).toHaveBeenLastCalledWith(expect.objectContaining({ items: [expect.objectContaining({ Id: 'series' })] }));
