@@ -104,7 +104,8 @@ function getPeopleRoleOrTypeLabel({ Type, Role }: { Type?: string; Role?: string
         return `<span title="${roleText}">${roleText}</span>`;
     }
     if (!Role || Role.toLowerCase() === Type!.toLowerCase()) {
-        return escapeHtml(globalize.translate(Type));
+        // Item callers guard Type; role-list entries require it in their contract.
+        return escapeHtml(globalize.translate(Type!));
     }
     return escapeHtml(globalize.translate(Role));
 }
@@ -451,7 +452,9 @@ function getItemCountsHtml(options: CardRenderOptions, item: CardItem) {
         appendItemCount(counts, item.SongCount, 'ValueOneSong', 'ValueSongCount');
         appendItemCount(counts, item.MusicVideoCount, 'ValueOneMusicVideo', 'ValueMusicVideoCount');
     } else if (item.Type === 'Series') {
-        counts.push(item.RecursiveItemCount === 1 ? globalize.translate('ValueOneEpisode') : globalize.translate('ValueEpisodeCount', item.RecursiveItemCount));
+        // Preserve the legacy localization error for absent counts instead of substituting zero.
+        const count = item.RecursiveItemCount!;
+        counts.push(count === 1 ? globalize.translate('ValueOneEpisode') : globalize.translate('ValueEpisodeCount', count));
     }
     return counts.join(', ');
 }
