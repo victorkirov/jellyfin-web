@@ -1,12 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { lazyChildren, focus, autoFocus, registerElement, sortable, apiAjax } = vi.hoisted(() => ({
+const { lazyChildren, focus, autoFocus, registerElement, sortable, apiAjax, subscribe, onUserDataChanged, onTimerCreated, onTimerCancelled, onSeriesTimerCancelled, eventOn } = vi.hoisted(() => ({
     lazyChildren: vi.fn(),
     focus: vi.fn(),
     autoFocus: vi.fn(),
     registerElement: vi.fn(),
     sortable: vi.fn(),
-    apiAjax: vi.fn()
+    apiAjax: vi.fn(),
+    subscribe: vi.fn<(types: string[], handler: (message: object) => void) => () => void>().mockReturnValue(vi.fn()),
+    onUserDataChanged: vi.fn(),
+    onTimerCreated: vi.fn(),
+    onTimerCancelled: vi.fn(),
+    onSeriesTimerCancelled: vi.fn(),
+    eventOn: vi.fn()
 }));
 
 vi.mock('webcomponents.js/webcomponents-lite', () => ({}));
@@ -21,12 +27,20 @@ vi.mock('../../utils/dom', () => ({ default: {} }));
 vi.mock('../../components/loading/loading', () => ({ default: { show: vi.fn(), hide: vi.fn() } }));
 vi.mock('../../components/focusManager', () => ({ default: { focus, autoFocus } }));
 vi.mock('lib/jellyfin-apiclient', () => ({
-    ServerConnections: { getApiClient: () => ({ ajax: apiAjax, getUrl: (path: string) => path }) }
+    ServerConnections: {
+        getApiClient: () => ({ ajax: apiAjax, getUrl: (path: string) => path }),
+        currentApiClient: () => ({ subscribe })
+    }
+}));
+
+vi.mock('../../components/cardbuilder/cardBuilder', () => ({
+    onUserDataChanged, onTimerCreated, onTimerCancelled, onSeriesTimerCancelled
 }));
 
 beforeEach(async () => {
     vi.resetModules();
     vi.clearAllMocks();
+    vi.stubGlobal('Events', { on: eventOn, off: vi.fn() });
     Object.defineProperty(document, 'registerElement', { configurable: true, value: registerElement });
     await import('./emby-itemscontainer');
 });
@@ -97,5 +111,128 @@ describe('item container refreshes', () => {
         container.getItemsHtml.mockReturnValue('');
         await prototype.refreshItems.call(container);
         expect(container.innerHTML).toBe('');
+    });
+});
+
+describe('paused item container notifications', () => {
+    it('queues in-place updates and applies them on resume without refetching', async () => {
+        const { container, prototype } = createContainer();
+        prototype.attachedCallback.call(container);
+        prototype.pause.call(container);
+        const querySelectorAll = vi.spyOn(container, 'querySelectorAll');
+        for (const index of [0, 1, 3, 4]) {
+            subscribe.mock.calls[index][1]({ Data: { UserDataList: [{ ItemId: 'one' }], Id: 'timer', ProgramId: 'one' } });
+        }
+        await vi.dynamicImportSettled();
+        expect(querySelectorAll).not.toHaveBeenCalled();
+        expect(onUserDataChanged).not.toHaveBeenCalled();
+        expect(onTimerCreated).not.toHaveBeenCalled();
+        expect(onTimerCancelled).not.toHaveBeenCalled();
+        expect(onSeriesTimerCancelled).not.toHaveBeenCalled();
+        await prototype.resume.call(container);
+        expect(container.fetchData).not.toHaveBeenCalled();
+        expect(onUserDataChanged).toHaveBeenCalledWith({ ItemId: 'one' }, container);
+        expect(onTimerCreated).toHaveBeenCalledWith('one', 'timer', container);
+        expect(onTimerCancelled).toHaveBeenCalledWith('timer', container);
+        expect(onSeriesTimerCancelled).toHaveBeenCalledWith('timer', container);
+        await prototype.resume.call(container);
+        expect(onUserDataChanged).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores notifications excluded by monitor and library-parent filters', async () => {
+        const { container, prototype } = createContainer();
+        container.setAttribute('data-parentid', 'library-one');
+        container.setAttribute('data-monitor', 'audioplayback');
+        prototype.attachedCallback.call(container);
+        prototype.pause.call(container);
+        subscribe.mock.calls[2][1]({ Data: {} });
+        subscribe.mock.calls[5][1]({ Data: { ItemsAdded: ['item'], FoldersAddedTo: ['library-two'] } });
+        eventOn.mock.calls[0][2](null, { state: { NowPlayingItem: { MediaType: 'Video' } } });
+        await prototype.resume.call(container);
+        expect(container.fetchData).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        ['videoplayback', 'Video'],
+        ['audioplayback', 'Audio']
+    ])('refreshes only monitored %s playback', async (monitor, mediaType) => {
+        const { container, prototype } = createContainer();
+        container.setAttribute('data-monitor', monitor);
+        prototype.attachedCallback.call(container);
+        prototype.pause.call(container);
+        eventOn.mock.calls[0][2](null, { state: { NowPlayingItem: { MediaType: mediaType } } });
+        expect(container.fetchData).not.toHaveBeenCalled();
+        await prototype.resume.call(container);
+        expect(container.fetchData).toHaveBeenCalledTimes(1);
+    });
+
+    it('refreshes a matching library parent on resume', async () => {
+        const { container, prototype } = createContainer();
+        container.setAttribute('data-parentid', 'library-one');
+        prototype.attachedCallback.call(container);
+        prototype.pause.call(container);
+        subscribe.mock.calls[5][1]({ Data: { ItemsAdded: ['item'], FoldersAddedTo: ['library-one'] } });
+        await prototype.resume.call(container);
+        expect(container.fetchData).toHaveBeenCalledTimes(1);
+    });
+
+    it('drops queued card updates when a monitored notification requires a refresh', async () => {
+        const { container, prototype } = createContainer();
+        container.setAttribute('data-monitor', 'markfavorite');
+        prototype.attachedCallback.call(container);
+        prototype.pause.call(container);
+        subscribe.mock.calls[0][1]({ Data: { UserDataList: [{ ItemId: 'one' }] } });
+        await prototype.resume.call(container);
+        await prototype.resume.call(container);
+        expect(container.fetchData).toHaveBeenCalledTimes(1);
+        expect(onUserDataChanged).not.toHaveBeenCalled();
+    });
+
+    it('applies queued changes to containers without a data fetcher', async () => {
+        const { container, prototype } = createContainer();
+        Object.defineProperty(container, 'fetchData', { value: null });
+        prototype.attachedCallback.call(container);
+        prototype.pause.call(container);
+        subscribe.mock.calls[0][1]({ Data: { UserDataList: [{ ItemId: 'one' }] } });
+        await prototype.resume.call(container);
+        expect(onUserDataChanged).toHaveBeenCalledTimes(1);
+    });
+
+    it('drops queued changes when the container is detached', async () => {
+        const { container, prototype } = createContainer();
+        prototype.attachedCallback.call(container);
+        prototype.pause.call(container);
+        subscribe.mock.calls[0][1]({ Data: { UserDataList: [{ ItemId: 'one' }] } });
+        prototype.detachedCallback.call(container);
+        await prototype.resume.call(container);
+        expect(onUserDataChanged).not.toHaveBeenCalled();
+    });
+
+    it('updates active containers and queues an import that completes after pause', async () => {
+        const { container, prototype } = createContainer();
+        prototype.attachedCallback.call(container);
+        const handler = subscribe.mock.calls[0][1];
+        handler({ Data: { UserDataList: [{ ItemId: 'one' }] } });
+        await vi.dynamicImportSettled();
+        expect(onUserDataChanged).toHaveBeenCalledTimes(1);
+        handler({ Data: { UserDataList: [{ ItemId: 'two' }] } });
+        prototype.pause.call(container);
+        handler({ Data: { UserDataList: [{ ItemId: 'three' }] } });
+        await vi.dynamicImportSettled();
+        expect(onUserDataChanged).toHaveBeenCalledTimes(1);
+        await prototype.resume.call(container);
+        expect(container.fetchData).not.toHaveBeenCalled();
+        expect(onUserDataChanged.mock.calls.map(([data]) => data.ItemId)).toEqual(['one', 'two', 'three']);
+    });
+
+    it('does no render work when an in-flight fetch completes after pause', async () => {
+        const { container, prototype } = createContainer();
+        const refresh = prototype.refreshItems.call(container);
+        prototype.pause.call(container);
+        await refresh;
+        expect(container.getItemsHtml).not.toHaveBeenCalled();
+        expect(lazyChildren).not.toHaveBeenCalled();
+        await prototype.resume.call(container);
+        expect(container.getItemsHtml).toHaveBeenCalledTimes(1);
     });
 });
