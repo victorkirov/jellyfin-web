@@ -10,13 +10,16 @@ function isBefore(first: Element, second: Element) {
 }
 
 describe('Details viewing choices', () => {
-    it('puts Next Up and seasons before synopsis, tags and extended metadata', () => {
+    it('puts the synopsis before tracks, with viewing choices before secondary metadata', () => {
         const actions = document.querySelector('.mainDetailButtons')!;
         const nextUp = document.querySelector('.nextUpSection')!;
         const seasons = document.querySelector('#listChildrenCollapsible')!;
+        expect(isBefore(actions, document.querySelector('.overview')!)).toBe(true);
+        expect(isBefore(document.querySelector('.overview')!, document.querySelector('.trackSelections')!)).toBe(true);
+        expect(isBefore(document.querySelector('.overview-controls')!, document.querySelector('.tagline')!)).toBe(true);
         expect(isBefore(actions, nextUp)).toBe(true);
         expect(isBefore(nextUp, seasons)).toBe(true);
-        for (const selector of ['.overview', '.itemTags', '.itemDetailsGroup', '.itemGenres']) {
+        for (const selector of ['.itemTags', '.itemDetailsGroup', '.itemGenres']) {
             expect(isBefore(seasons, document.querySelector(selector)!)).toBe(true);
         }
     });

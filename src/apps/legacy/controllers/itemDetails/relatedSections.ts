@@ -6,7 +6,7 @@ import { ItemAction } from 'constants/itemAction';
 import { deferSection } from 'components/homesections/deferSection';
 import { getLibraryApi } from '@jellyfin/sdk/lib/utils/api/library-api';
 import { ItemFields } from '@jellyfin/sdk/lib/generated-client/models/item-fields';
-import { type DetailCardOptions, type DetailListOptions, type DetailsPage, type DetailPerson, getElement } from './types';
+import { type DetailCardOptions, type DetailListOptions, type DetailsPage, type DetailPerson, type NextUpCallback, getElement } from './types';
 import escapeHtml from 'escape-html';
 
 import cardBuilder from 'components/cardbuilder/cardBuilder';
@@ -42,7 +42,7 @@ export function setPeopleHeader(page: DetailsPage, item: ItemDto) {
     }
 }
 
-export function renderNextUp(page: DetailsPage, item: ItemDto, user: UserDto) {
+export function renderNextUp(page: DetailsPage, item: ItemDto, user: UserDto, onNextUp?: NextUpCallback) {
     const section = getElement(page, '.nextUpSection');
 
     if (item.Type != 'Series') {
@@ -55,6 +55,7 @@ export function renderNextUp(page: DetailsPage, item: ItemDto, user: UserDto) {
         UserId: user.Id,
         Fields: 'MediaSourceCount'
     }).then(function (result) {
+        onNextUp?.(result.Items?.[0]);
         if (result.Items!.length) {
             section.classList.remove('hide');
         } else {

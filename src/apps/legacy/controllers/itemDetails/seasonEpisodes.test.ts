@@ -57,6 +57,7 @@ describe('Compact season episodes', () => {
         expect(rows.every(row => row.classList.contains('listItem-episode'))).toBe(true);
         expect(rows[0].querySelector('.listItemBodyText bdi')!.textContent).toBe('1-2. Episode title 1');
         expect(rows[0].textContent).toContain('30');
+        expect(rows.every(row => !row.querySelector('.endsAt'))).toBe(true);
         expect(rows[0].querySelector('.playedIndicator')).not.toBeNull();
         expect(rows[1].querySelector('.listItemProgressBar')).not.toBeNull();
         expect(rows[1].dataset.positionticks).toBe('9000000000');

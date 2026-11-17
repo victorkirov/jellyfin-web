@@ -39,7 +39,8 @@ function getRowBody(item: ItemDto, options: CardOptions, context: RowContext, sa
         html += mediaInfo.getPrimaryMediaInfoHtml(item, {
             episodeTitle: false,
             originalAirDate: false,
-            subtitles: false
+            subtitles: false,
+            endsAt: item.Type === 'Episode' ? false : undefined
 
         });
         html += '</div>';

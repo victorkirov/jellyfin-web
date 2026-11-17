@@ -22,7 +22,7 @@ export function getContextMenuOptions(item: ItemDto, user: UserDto, button: HTML
     };
 }
 
-export function reloadPlayButtons(page: DetailsPage, item: ItemDto) {
+export function reloadPlayButtons(page: DetailsPage, item: ItemDto, nextUpEpisode?: ItemDto) {
     let canPlay = false;
 
     if (item.Type == 'Program') {
@@ -56,9 +56,10 @@ export function reloadPlayButtons(page: DetailsPage, item: ItemDto) {
     }
 
     const positionTicks = item.Type === 'Program' ? 0 : (item.UserData?.PlaybackPositionTicks || 0);
+    const episodeLabel = nextUpEpisode ? ' S' + nextUpEpisode.ParentIndexNumber + ':E' + nextUpEpisode.IndexNumber : '';
     const label = positionTicks > 0 ?
-        globalize.translate('ButtonResume') + ' · ' + datetime.getDisplayRunningTime(positionTicks) :
-        globalize.translate('Play');
+        globalize.translate('ResumeAt', datetime.getDisplayRunningTime(positionTicks)) :
+        globalize.translate('Play') + episodeLabel;
     for (const btnPlay of queryAll(page, '.btnPlay')) {
         btnPlay.title = label;
         getElement(btnPlay, '.detailButton-text').textContent = label;

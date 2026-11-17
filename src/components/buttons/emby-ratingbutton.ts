@@ -72,7 +72,7 @@ function setState(button: StateButton, likes?: boolean | null, isFavorite?: bool
 }
 
 function setTitle(button: StateButton, isFavorite?: boolean) {
-    button.title = isFavorite ? globalize.translate('Favorite') : globalize.translate('AddToFavorites');
+    button.title = globalize.translate(isFavorite ? 'Favorited' : 'Favorite');
 
     const text = button.querySelector<HTMLElement>('.button-text');
     if (text) {

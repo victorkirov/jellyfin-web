@@ -352,6 +352,7 @@
     "FallbackMaxStreamingBitrateHelp": "The maximum streaming bitrate is used as a fallback when ffprobe is unable to determine the source stream bitrate. This helps prevent clients from requesting an excessively high transcoding bitrate, which could cause the player to fail and overload the encoder.",
     "FastForward": "Fast-forward",
     "Favorite": "Favorite",
+    "Favorited": "Favorited",
     "Favorites": "Favorites",
     "Features": "Features",
     "FetchingData": "Fetching additional data",

@@ -386,8 +386,10 @@
 
 .mainDetailButtons {
     display: flex;
+    flex-wrap: nowrap;
     align-items: center;
-    margin: 1em 0;
+    margin: 0.8em 0 1em;
+    font-size: 1em;
 }
 
 .itemName {
@@ -607,45 +609,76 @@ div.itemDetailGalleryLink.defaultCardBackground {
 
 .detailButton {
     display: flex;
-    flex-direction: column;
+    flex: 0 0 auto;
+    flex-direction: row;
     justify-content: center;
     align-items: center;
-    margin: 0 !important;
-    padding: 0.7em 0.7em !important;
+    box-sizing: border-box;
+    height: 2.6em;
+    min-width: 2.6em;
+    margin: 0 0.4em 0 0 !important;
+    padding: 0 0.65em !important;
+    border: 0.11em solid #262626;
+    border-radius: 0.2em;
+    background: #262626;
+    color: rgba(255, 255, 255, 0.87);
+    line-height: 1;
+    white-space: nowrap;
 }
 
-@media all and (min-width: 29em) {
-    .detailButton {
-        padding-left: 0.75em !important;
-        padding-right: 0.75em !important;
-    }
-}
-
-@media all and (min-width: 32em) {
-    .detailButton {
-        padding-left: 0.8em !important;
-        padding-right: 0.8em !important;
-    }
-}
-
-@media all and (min-width: 35em) {
-    .detailButton {
-        padding-left: 0.85em !important;
-        padding-right: 0.85em !important;
-    }
+[dir="rtl"] .detailButton {
+    margin: 0 0 0 0.4em !important;
 }
 
 .detailButton-content {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     justify-content: center;
     align-items: center;
 }
 
 .detailButton-icon {
-    font-size: 1.6em !important;
+    font-size: 1.2em !important;
     width: 1em;
     height: 1em;
+}
+
+.detailButton-primary {
+    border-color: #00a4dc;
+}
+
+.detailButton-primary .detailButton-icon {
+    color: #00a4dc;
+}
+
+.detailButton-iconOnly {
+    width: 2.6em;
+    padding: 0 !important;
+}
+
+.detailButton-iconOnly .detailButton-text {
+    display: none;
+}
+
+.itemDetailPage .detailButton .playstatebutton-icon-unplayed,
+.itemDetailPage .detailButton .favorite:not(.ratingbutton-icon-withrating) {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.itemDetailPage .detailButton .playstatebutton-icon-played,
+.itemDetailPage .detailButton .ratingbutton-icon-withrating {
+    color: #00a4dc;
+}
+
+.itemDetailPage .detailButton.show-focus:focus {
+    background: #00a4dc;
+    border-color: #00a4dc;
+    color: rgba(0, 0, 0, 0.87);
+    transform: none;
+}
+
+.itemDetailPage .detailButton.show-focus:focus .detailButton-icon {
+    color: inherit;
 }
 
 .detailImageProgressContainer {
@@ -655,26 +688,18 @@ div.itemDetailGalleryLink.defaultCardBackground {
 }
 
 .detailButton-text {
-    margin-top: 0.7em;
-    font-size: 80%;
-    font-weight: 400;
+    margin: 0 0 0 0.35em;
+    font-size: 1em;
+    font-weight: 600;
+}
+
+[dir="rtl"] .detailButton-text {
+    margin: 0 0.35em 0 0;
 }
 
 @media all and (max-width: 62.5em) {
     .detailButtonHideonMobile {
         display: none !important;
-    }
-}
-
-@media all and (min-width: 100em) {
-    .mainDetailButtons {
-        font-size: 108%;
-        margin: 1.25em 0;
-    }
-
-    .layout-tv .mainDetailButtons {
-        font-size: 108%;
-        margin: 1em 0 1.25em;
     }
 }
 
@@ -696,7 +721,7 @@ div.itemDetailGalleryLink.defaultCardBackground {
 }
 
 .layout-tv .detailVerticalSection {
-    margin-bottom: 3.4em !important;
+    margin-bottom: 1.5em !important;
 }
 
 .detailPageWrapperContainer {

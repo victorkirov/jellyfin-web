@@ -59,6 +59,7 @@ vi.mock('scripts/playlistViewer', () => ({ default: { render: vi.fn() } }));
 vi.mock('scripts/browser', () => ({ default: {} }));
 vi.mock('scripts/libraryMenu', () => ({ default: { setTitle: vi.fn(), setTransparentMenu: vi.fn() } }));
 vi.mock('scripts/settings/userSettings', () => ({ enableBackdrops: () => false }));
+vi.mock('scripts/inputManager', () => ({ default: { on: vi.fn(), off: vi.fn() } }));
 vi.mock('utils/dom', () => ({ default: { getWindowSize: () => ({ innerWidth: 1280 }) } }));
 vi.mock('apps/legacy/renderComponent', () => ({ renderComponent: () => vi.fn() }));
 vi.mock('components/itemscontainer/emby-itemscontainer', () => ({}));

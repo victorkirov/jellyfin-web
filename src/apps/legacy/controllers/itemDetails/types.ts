@@ -39,3 +39,5 @@ export type DetailListOptions = import('types/cardOptions').CardOptions & {
     playFromHere?: boolean;
     showProgramDateTime?: boolean;
 };
+
+export type NextUpCallback = (episode: ItemDto | undefined) => void;

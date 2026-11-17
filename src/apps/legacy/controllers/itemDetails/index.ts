@@ -1,3 +1,6 @@
+import { bindActionFocus } from './actionFocus';
+import focusManager from 'lib/focusManager';
+import { appRouter } from 'components/router/appRouter';
 import { reloadFromItem, setInitialCollapsibleState } from './page';
 import { clearDeferredDetails, renderCast, renderGuestCast } from './relatedSections';
 import { renderDetails } from './metadata';
@@ -13,7 +16,7 @@ import { getItemQuery } from 'hooks/useItem';
 import { ItemAction } from 'constants/itemAction';
 import { playbackManager } from 'components/playback/playbackmanager';
 import { type PlaybackOptions } from 'lib/playback/types';
-import { type MediaSourceInfo, type UserDataChangedMessage } from '@jellyfin/sdk/lib/generated-client';
+import { type MediaSourceInfo, type UserDataChangedMessage, type UserDto } from '@jellyfin/sdk/lib/generated-client';
 import { type ItemDto, type DetailsPage, type DetailsController, type DetailsParams, getElement, queryAll } from './types';
 
 import itemContextMenu from 'components/itemContextMenu';
@@ -101,16 +104,39 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
         return (params.serverId ? ServerConnections.getApiClient(params.serverId)! : ServerConnections.currentApiClient())!;
     }
 
-    function reload(instance: DetailsController, page: DetailsPage, pageParams: DetailsParams) {
+    function renderItem(item: ItemDto, user: UserDto) {
+        currentItem = item;
+        nextUpEpisode = undefined;
+        reloadFromItem(self, view, params, item, user, episode => {
+            if (!currentItem || currentItem.Id !== item.Id) return;
+            // Only advertise an episode identity verified by the existing Next Up response.
+            nextUpEpisode = episode?.Type === 'Episode' && episode.SeriesId === item.Id
+                && episode.Id && episode.ParentIndexNumber != null && episode.IndexNumber != null ? episode : undefined;
+            reloadPlayButtons(view, currentItem, nextUpEpisode);
+        });
+    }
+
+    function reload() {
         loading.show();
+        getElement(view, '.detailLoadError').classList.add('hide');
+        getElement(view, '.detailPageWrapperContainer').classList.add('hide');
+        getElement(view, '.detailLogo').classList.add('hide');
+        currentItem = null;
+        nextUpEpisode = undefined;
+        unmount(self);
+        clearDeferredDetails(view);
 
         const apiClient = getApiClient();
 
-        Promise.all([getPromise(apiClient, pageParams), apiClient.getCurrentUser()]).then(([item, user]) => {
-            currentItem = item;
-            reloadFromItem(instance, page, pageParams, item, user);
+        Promise.all([getPromise(apiClient, params), apiClient.getCurrentUser()]).then(([item, user]) => {
+            getElement(view, '.detailPageWrapperContainer').classList.remove('hide');
+            renderItem(item, user);
         }).catch((error) => {
+            currentItem = null;
+            getElement(view, '.detailPageWrapperContainer').classList.add('hide');
+            getElement(view, '.detailLoadError').classList.remove('hide');
             loading.hide();
+            focusManager.focus(getElement(view, '.btnRetry'));
             console.error('failed to get item or current user: ', error);
         });
     }
@@ -137,7 +163,8 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
     }
 
     function playCurrentItem(button: HTMLElement, mode: string | null) {
-        const item = currentItem!;
+        const item = currentItem;
+        if (!item) return;
 
         if (item.Type === 'Program') {
             const apiClient = ServerConnections.getApiClient(item.ServerId)!;
@@ -149,7 +176,8 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
             return;
         }
 
-        playItem(item, mode === ItemAction.Resume ? (item.UserData?.PlaybackPositionTicks || 0) : 0);
+        const target = item.Type === 'Series' && nextUpEpisode ? nextUpEpisode : item;
+        playItem(target, mode === ItemAction.Resume ? (target.UserData?.PlaybackPositionTicks || 0) : 0);
     }
 
     function onPlayClick(event: Event) {
@@ -191,6 +219,7 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
     }
 
     function onPlayerChange() {
+        if (!currentItem) return;
         renderTrackSelections(view, self, currentItem!);
         setTrailerButtonVisibility(view, currentItem!);
     }
@@ -206,18 +235,24 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
 
         if (userData) {
             currentItem = { ...currentItem, UserData: userData };
-            reloadPlayButtons(view, currentItem);
+            reloadPlayButtons(view, currentItem, nextUpEpisode);
             reloadUserDataButtons(view, currentItem);
             autoFocus(view);
         }
     }
 
     let currentItem: ItemDto | null | undefined;
+    let nextUpEpisode: ItemDto | undefined;
 
     function init() {
         const apiClient = getApiClient();
 
         self._unmount = [];
+        const unbindActionFocus = bindActionFocus(view);
+        bindAll(view, '.btnRetry', 'click', reload);
+        bindAll(view, '.btnDetailsBack', 'click', () => {
+            void appRouter.back();
+        });
 
         bindAll(view, '.btnPlay', 'click', onPlayClick);
         bindAll(view, '.btnReplay', 'click', onPlayClick);
@@ -240,12 +275,14 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
             if ((e as CustomEvent<{ isRestored?: boolean }>).detail.isRestored) {
                 if (currentItem) {
                     libraryMenu.setTitle('');
+                    nextUpEpisode = undefined;
+                    reloadPlayButtons(view, currentItem);
                     renderTrackSelections(page, self, currentItem, true);
                     renderBackdrop(page, currentItem);
                     refreshSelectedVersion();
                 }
             } else {
-                reload(self, page, params);
+                reload();
             }
 
             self._unsubscribeUserData = apiClient.subscribe!(
@@ -264,6 +301,7 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
             libraryMenu.setTransparentMenu(false);
         });
         view.addEventListener('viewdestroy', function () {
+            unbindActionFocus();
             unmount(self);
             clearDeferredDetails(view);
 
@@ -298,11 +336,11 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
             const sameItem = versionItem.Id === currentItem!.Id;
             currentItem = versionItem;
             if (sameItem) {
-                reloadPlayButtons(view, currentItem);
+                reloadPlayButtons(view, currentItem, nextUpEpisode);
                 reloadUserDataButtons(view, currentItem);
                 return;
             }
-            reloadFromItem(self, view, params, versionItem, user);
+            renderItem(versionItem, user);
             renderVideoSelections(view, self._currentPlaybackMediaSources!);
             renderAudioSelections(view, self._currentPlaybackMediaSources!);
             renderSubtitleSelections(view, self._currentPlaybackMediaSources!);

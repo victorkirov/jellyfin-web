@@ -1,12 +1,27 @@
-.itemDetailPage .mainDetailButtons {
-    flex-wrap: wrap;
+.itemDetailPage .detailPagePrimaryContent {
+    padding-top: 0.5em;
 }
 
-.itemDetailPage .detailButton-primary .detailButton-content {
-    flex-direction: row;
+.itemDetailPage .detailOverviewGroup {
+    max-width: 38em;
+    line-height: 1.4;
+    margin-bottom: 1.5em;
 }
 
-.itemDetailPage .detailButton-primary .detailButton-text {
-    margin: 0 0.45em;
-    font-size: inherit;
+.itemDetailPage .overview,
+.itemDetailPage .overview p:first-child {
+    margin-top: 0;
+}
+
+.itemDetailPage .itemTags {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    max-height: 2.8em;
+    line-height: 1.4;
+}
+
+.itemDetailPage .detailLoadError {
+    padding: 2em 3.3%;
 }

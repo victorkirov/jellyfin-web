@@ -230,6 +230,7 @@ export function renderDetails(page: DetailsPage, instance: DetailsController, it
     renderChannelGuide(page, apiClient, item);
     renderTagline(page, item);
     renderOverview(page, item);
+    getElement(page, '.detailOverviewGroup').classList.toggle('hide', !item.Overview && !item.Taglines?.length);
     renderMiscInfo(page, item);
     reloadUserDataButtons(page, item);
     renderLyricsContainer(page, item, apiClient);
@@ -273,32 +274,9 @@ export function renderSeriesAirTime(page: DetailsPage, item: ItemDto) {
 
 export function renderTags(page: DetailsPage, item: ItemDto) {
     const itemTags = getElement(page, '.itemTags');
-    const tagElements: string[] = [];
-    let tags = item.Tags || [];
-
-    if (item.Type === 'Program') {
-        tags = [];
-    }
-
-    tags.forEach(tag => {
-        const href = appRouter.getRouteUrl('tag', {
-            tag,
-            serverId: item.ServerId
-        });
-        tagElements.push(
-            `<a href="${href}" class="button-link" is="emby-linkbutton">`
-            + escapeHtml(tag)
-            + '</a>'
-        );
-    });
-
-    if (tagElements.length) {
-        itemTags.innerHTML = globalize.translate('TagsValue', tagElements.join(', '));
-        itemTags.classList.remove('hide');
-    } else {
-        itemTags.innerHTML = '';
-        itemTags.classList.add('hide');
-    }
+    const tags = item.Type === 'Program' ? [] : (item.Tags || []);
+    itemTags.textContent = tags.length ? globalize.translate('TagsValue', tags.join(', ')) : '';
+    itemTags.classList.toggle('hide', !tags.length);
 }
 
 export function inferContext(item: ItemDto) {

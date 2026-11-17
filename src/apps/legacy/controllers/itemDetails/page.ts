@@ -14,7 +14,7 @@ import { appHost } from 'components/apphost';
 import { intervalToDuration } from 'date-fns';
 import { PersonKind } from '@jellyfin/sdk/lib/generated-client/models/person-kind';
 import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
-import { type DetailPerson, type DetailsPage, type DetailsController, type DetailsParams, getElement } from './types';
+import { type DetailPerson, type DetailsPage, type DetailsController, type DetailsParams, type NextUpCallback, getElement } from './types';
 import escapeHtml from 'escape-html';
 
 import itemContextMenu from 'components/itemContextMenu';
@@ -24,7 +24,7 @@ import globalize from 'lib/globalize';
 import datetime from 'scripts/datetime';
 import libraryMenu from 'scripts/libraryMenu';
 
-export function reloadFromItem(instance: DetailsController, page: DetailsPage, params: DetailsParams, item: ItemDto, user: UserDto) {
+export function reloadFromItem(instance: DetailsController, page: DetailsPage, params: DetailsParams, item: ItemDto, user: UserDto, onNextUp?: NextUpCallback) {
     const apiClient = ServerConnections.getApiClient(item.ServerId)!;
 
     libraryMenu.setTitle('');
@@ -49,7 +49,7 @@ export function reloadFromItem(instance: DetailsController, page: DetailsPage, p
     renderDetails(page, instance, item, apiClient, params.context);
     renderTrackSelections(page, instance, item);
 
-    setInitialCollapsibleState(page, item, apiClient, params.context, user);
+    setInitialCollapsibleState(page, item, apiClient, params.context, user, onNextUp);
     const canPlay = reloadPlayButtons(page, item);
 
     setTrailerButtonVisibility(page, item);
@@ -80,7 +80,7 @@ export function reloadFromItem(instance: DetailsController, page: DetailsPage, p
     autoFocus(page);
 }
 
-export function setInitialCollapsibleState(page: DetailsPage, item: ItemDto, apiClient: ConnectionClient, context: string | null | undefined, user: UserDto) {
+export function setInitialCollapsibleState(page: DetailsPage, item: ItemDto, apiClient: ConnectionClient, context: string | null | undefined, user: UserDto, onNextUp?: NextUpCallback) {
     getElement(page, '.collectionItems').innerHTML = '';
 
     if (item.Type == 'Playlist') {
@@ -105,7 +105,7 @@ export function setInitialCollapsibleState(page: DetailsPage, item: ItemDto, api
 
     if (item.Type == 'Series') {
         renderSeriesSchedule(page, item);
-        renderNextUp(page, item, user);
+        renderNextUp(page, item, user, onNextUp);
     } else {
         getElement(page, '.nextUpSection').classList.add('hide');
     }

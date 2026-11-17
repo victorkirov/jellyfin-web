@@ -1,4 +1,9 @@
 <div id="itemDetailPage" data-role="page" class="page libraryPage itemDetailPage noSecondaryNavPage selfBackdropPage" data-backbutton="true">
+    <div class="detailLoadError hide" role="alert">
+        <h2>Couldn't load this title</h2>
+        <button is="emby-button" type="button" class="raised btnRetry">${Retry}</button>
+        <button is="emby-button" type="button" class="raised btnDetailsBack">${ButtonBack}</button>
+    </div>
     <div class="detailLogo"></div>
 
     <div class="detailPageWrapperContainer">
@@ -21,17 +26,17 @@
                         </div>
                     </button>
 
-                    <button is="emby-button" type="button" class="button-flat btnReplay hide detailButton detailButton-primary" title="${PlayFromBeginning}" data-action="play">
+                    <button is="emby-button" type="button" class="button-flat btnReplay hide detailButton" title="${Restart}" data-action="play">
                         <div class="detailButton-content">
                             <span class="material-icons detailButton-icon replay" aria-hidden="true"></span>
-                            <span class="detailButton-text">${PlayFromBeginning}</span>
+                            <span class="detailButton-text">${Restart}</span>
                         </div>
                     </button>
 
-                    <button is="emby-button" type="button" class="button-flat btnPlayTrailer hide detailButton" title="${ButtonTrailer}">
+                    <button is="emby-button" type="button" class="button-flat btnShuffle hide detailButton" title="${Shuffle}">
                         <div class="detailButton-content">
-                            <span class="material-icons detailButton-icon theaters" aria-hidden="true"></span>
-                            <span class="detailButton-text">${ButtonTrailer}</span>
+                            <span class="material-icons detailButton-icon shuffle" aria-hidden="true"></span>
+                            <span class="detailButton-text">${Shuffle}</span>
                         </div>
                     </button>
 
@@ -42,10 +47,10 @@
                         </div>
                     </button>
 
-                    <button is="emby-button" type="button" class="button-flat btnShuffle hide detailButton" title="${Shuffle}">
+                    <button is="emby-button" type="button" class="button-flat btnPlayTrailer hide detailButton" title="${ButtonTrailer}">
                         <div class="detailButton-content">
-                            <span class="material-icons detailButton-icon shuffle" aria-hidden="true"></span>
-                            <span class="detailButton-text">${Shuffle}</span>
+                            <span class="material-icons detailButton-icon theaters" aria-hidden="true"></span>
+                            <span class="detailButton-text">${ButtonTrailer}</span>
                         </div>
                     </button>
 
@@ -63,7 +68,7 @@
                         </div>
                     </button>
 
-                    <button is="emby-button" type="button" class="button-flat btnMoreCommands hide detailButton" title="${ButtonMore}">
+                    <button is="emby-button" type="button" class="button-flat btnMoreCommands hide detailButton detailButton-iconOnly" title="${ButtonMore}">
                         <div class="detailButton-content">
                             <span class="material-icons detailButton-icon more_vert" aria-hidden="true"></span>
                             <span class="detailButton-text">${ButtonMore}</span>
@@ -74,6 +79,13 @@
 
             <div class="detailPagePrimaryContent padded-right">
                 <div class="detailSection">
+                    <div class="detailOverviewGroup">
+                        <p class="overview"></p>
+                        <div class="overview-controls">
+                            <a class="overview-expand hide" is="emby-linkbutton" href="#">${ShowMore}</a>
+                        </div>
+                        <h3 class="tagline"></h3>
+                    </div>
                     <form class="trackSelections hide focuscontainer-x">
                         <div class="selectContainer selectSourceContainer hide trackSelectionFieldContainer flex-shrink-zero">
                             <select is="emby-select" class="selectSource detailTrackSelect" label=""></select>
@@ -106,23 +118,18 @@
                             <span></span>
                         </h2>
                         <div id="childrenContent">
-                            <div is="emby-itemscontainer" class="itemsContainer padded-right" style="text-align: left;"></div>
+                            <div is="emby-itemscontainer" class="itemsContainer focuscontainer-x padded-right" style="text-align: left;"></div>
                         </div>
                     </div>
 
                     <div class="detailSectionContent">
                         <p class="itemGenres"></p>
-                        <h3 class="tagline"></h3>
-                        <p class="overview"></p>
-                        <div class="overview-controls">
-                            <a class="overview-expand hide" is="emby-linkbutton" href="#">${ShowMore}</a>
-                        </div>
                         <p id="itemBirthday"></p>
                         <p id="itemBirthLocation"></p>
                         <p id="itemDeathDate"></p>
                         <p id="seriesAirTime"></p>
 
-                        <div class="itemTags focuscontainer-x hide" style="margin: 0.7em 0; font-size: 92%;"></div>
+                        <div class="itemTags hide" style="margin: 0.7em 0; font-size: 92%;"></div>
                         <div class="itemExternalLinks focuscontainer-x hide" style="margin: 0.7em 0; font-size: 92%;"></div>
                     </div>
 
@@ -137,7 +144,7 @@
                     <span></span>
                 </h2>
                 <div>
-                    <div is="emby-itemscontainer" class="itemsContainer padded-right" style="text-align: left;"></div>
+                    <div is="emby-itemscontainer" class="itemsContainer focuscontainer-x padded-right" style="text-align: left;"></div>
                 </div>
             </div>
 
