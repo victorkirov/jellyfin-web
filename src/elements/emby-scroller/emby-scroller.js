@@ -120,7 +120,6 @@ ScrollerPrototype.attachedCallback = function () {
         horizontal: horizontal,
         mouseDragging: 1,
         mouseWheel: this.getAttribute('data-mousewheel') !== 'false',
-        touchDragging: 1,
         slidee: slider,
         scrollBy: 200,
         speed: horizontal ? 270 : 240,

@@ -250,14 +250,6 @@ export default function (view) {
         mouseManager.hideCursor();
     }
 
-    function toggleOsd() {
-        if (currentVisibleMenu === 'osd') {
-            hideOsd();
-        } else if (!currentVisibleMenu) {
-            showOsd();
-        }
-    }
-
     function startOsdHideTimer() {
         stopOsdHideTimer();
         osdHideTimeout = setTimeout(hideOsd, 3e3);
@@ -1588,7 +1580,6 @@ export default function (view) {
     let statsOverlay;
     let osdHideTimeout;
     let lastPointerMoveData;
-    const self = this;
     let currentPlayerSupportedCommands = [];
     let currentRuntimeTicks = 0;
     let lastUpdateTime = 0;
@@ -1650,16 +1641,7 @@ export default function (view) {
                 capture: true,
                 passive: true
             });
-            dom.addEventListener(window, 'touchstart', onWindowMouseDown, {
-                capture: true,
-                passive: true
-            });
-            ['touchend', 'touchcancel'].forEach((event) => {
-                dom.addEventListener(window, event, onWindowMouseUp, {
-                    capture: true,
-                    passive: true
-                });
-            });
+
             dom.addEventListener(window, 'dragend', onWindowDragEnd, {
                 capture: true,
                 passive: true
@@ -1693,16 +1675,7 @@ export default function (view) {
             capture: true,
             passive: true
         });
-        dom.removeEventListener(window, 'touchstart', onWindowMouseDown, {
-            capture: true,
-            passive: true
-        });
-        ['touchend', 'touchcancel'].forEach((event) => {
-            dom.removeEventListener(window, event, onWindowMouseUp, {
-                capture: true,
-                passive: true
-            });
-        });
+
         dom.removeEventListener(window, 'dragend', onWindowDragEnd, {
             capture: true,
             passive: true
@@ -1736,15 +1709,9 @@ export default function (view) {
         headerElement.classList.remove('hide');
     });
     view.addEventListener('viewdestroy', function () {
-        if (self.touchHelper) {
-            self.touchHelper.destroy();
-            self.touchHelper = null;
-        }
-
         destroyStats();
         destroySubtitleSync();
     });
-    let lastPointerDown = 0;
     /* eslint-disable-next-line compat/compat */
     dom.addEventListener(view, window.PointerEvent ? 'pointerdown' : 'click', function (e) {
         if (dom.parentWithClass(e.target, ['videoOsdBottom', 'upNextContainer'])) {
@@ -1753,36 +1720,23 @@ export default function (view) {
         }
 
         const pointerType = e.pointerType || 'mouse';
-        const now = new Date().getTime();
 
-        switch (pointerType) {
-            case 'touch':
-                if (now - lastPointerDown > 300) {
-                    lastPointerDown = now;
-                    toggleOsd();
-                }
-
-                break;
-
-            case 'mouse':
-                if (!e.button) {
-                    if (playPauseClickTimeout) {
-                        clearTimeout(playPauseClickTimeout);
+        if (pointerType === 'mouse') {
+            if (!e.button) {
+                if (playPauseClickTimeout) {
+                    clearTimeout(playPauseClickTimeout);
+                    playPauseClickTimeout = 0;
+                } else {
+                    playPauseClickTimeout = setTimeout(function() {
+                        playbackManager.playPause(currentPlayer);
+                        showOsd();
                         playPauseClickTimeout = 0;
-                    } else {
-                        playPauseClickTimeout = setTimeout(function() {
-                            playbackManager.playPause(currentPlayer);
-                            showOsd();
-                            playPauseClickTimeout = 0;
-                        }, 300);
-                    }
+                    }, 300);
                 }
-
-                break;
-
-            default:
-                playbackManager.playPause(currentPlayer);
-                showOsd();
+            }
+        } else {
+            playbackManager.playPause(currentPlayer);
+            showOsd();
         }
     }, {
         passive: true

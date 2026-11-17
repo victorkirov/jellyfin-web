@@ -128,7 +128,6 @@ function initScroller(tabs) {
             horizontal: 1,
             itemNav: 0,
             mouseDragging: 1,
-            touchDragging: 1,
             slidee: contentScrollSlider,
             smart: true,
             releaseSwing: true,

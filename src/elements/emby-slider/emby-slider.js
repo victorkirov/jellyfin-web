@@ -170,7 +170,7 @@ function updateValues(isValueSet) {
     }
 
     // Do not update values by 'valueset' in case of soft-implemented dragging
-    if (!!isValueSet && (!!this.keyboardDragging || !!this.touched)) {
+    if (!!isValueSet && (!!this.keyboardDragging)) {
         return;
     }
 
@@ -407,62 +407,6 @@ EmbySliderPrototype.attachedCallback = function () {
     }, {
         passive: true
     });
-
-    // HACK: iPhone/iPad do not change input by touch
-    if (browser.iOS) {
-        dom.addEventListener(this, 'touchstart', function (e) {
-            if (e.targetTouches.length !== 1) {
-                return;
-            }
-
-            this.touched = true;
-
-            const fraction = mapClientToFraction(this, e.targetTouches[0].clientX);
-            this.value = mapFractionToValue(this, fraction);
-
-            this.dispatchEvent(new Event('input', {
-                bubbles: true,
-                cancelable: false
-            }));
-
-            // Prevent 'pointermove' and 'click' after 'touch*'
-            // FIXME: Still have some 'pointermove' and 'click' that bypass 'touchstart'
-            e.preventDefault();
-        }, {
-            capture: true
-        });
-
-        dom.addEventListener(this, 'touchmove', function (e) {
-            if (!this.touched || e.targetTouches.length !== 1) {
-                return;
-            }
-
-            const fraction = mapClientToFraction(this, e.targetTouches[0].clientX);
-            this.value = mapFractionToValue(this, fraction);
-
-            this.dispatchEvent(new Event('input', {
-                bubbles: true,
-                cancelable: false
-            }));
-        }, {
-            passive: true
-        });
-
-        dom.addEventListener(this, 'touchend', function () {
-            const range = this;
-
-            setTimeout(function () {
-                range.touched = false;
-
-                range.dispatchEvent(new Event('change', {
-                    bubbles: true,
-                    cancelable: false
-                }));
-            }, 0);
-        }, {
-            passive: true
-        });
-    }
 
     if (supportsValueSetOverride) {
         this.addEventListener('valueset', updateValues.bind(this, true));

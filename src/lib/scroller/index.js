@@ -72,7 +72,6 @@ function within(number, num1, num2) {
 
 // Other global values
 const dragMouseEvents = ['mousemove', 'mouseup'];
-const dragTouchEvents = ['touchmove', 'touchend'];
 const wheelEvent = (document.implementation.hasFeature('Event.wheel', '3.0') ? 'wheel' : 'mousewheel');
 const interactiveElements = ['INPUT', 'SELECT', 'TEXTAREA'];
 
@@ -89,7 +88,6 @@ const scrollerFactory = function (frame, options) {
         // Dragging
         dragSource: null, // Selector or DOM element for catching dragging events. Default is FRAME.
         mouseDragging: 1, // Enable navigation by dragging the SLIDEE with mouse cursor.
-        touchDragging: 1, // Enable navigation by dragging the SLIDEE with touch events.
         dragThreshold: 3, // Distance in pixels before Sly recognizes dragging.
         intervactive: null, // Selector for special interactive elements.
 
@@ -100,7 +98,6 @@ const scrollerFactory = function (frame, options) {
 
     const isSmoothScrollSupported = 'scrollBehavior' in document.documentElement.style;
 
-    // native scroll is a must with touch input
     // also use native scroll when scrolling vertically in desktop mode - excluding horizontal because the mouse wheel support is choppy at the moment
     // in cases with firefox, if the smooth scroll api is supported then use that because their implementation is very good
     if (options.allowNativeScroll === false) {
@@ -417,22 +414,18 @@ const scrollerFactory = function (frame, options) {
     };
 
     function dragInitSlidee(event) {
-        const isTouch = event.type === 'touchstart';
-
-        // Ignore when already in progress, or interactive element in non-touch navivagion
-        if (dragging.init || !isTouch && isInteractive(event.target)) {
+        // Ignore when already in progress or over an interactive element
+        if (dragging.init || isInteractive(event.target)) {
             return;
         }
 
         // SLIDEE dragging conditions
-        if (!(isTouch ? o.touchDragging : o.mouseDragging && event.which < 2)) {
+        if (!(o.mouseDragging && event.which < 2)) {
             return;
         }
 
-        if (!isTouch) {
-            // prevents native image dragging in Firefox
-            event.preventDefault();
-        }
+        // prevents native image dragging in Firefox
+        event.preventDefault();
 
         // Reset dragging object
         dragging.released = 0;
@@ -440,8 +433,7 @@ const scrollerFactory = function (frame, options) {
         // Properties used in dragHandler
         dragging.init = 0;
         dragging.source = event.target;
-        dragging.touch = isTouch;
-        const pointer = isTouch ? event.touches[0] : event;
+        const pointer = event;
         dragging.initX = pointer.pageX;
         dragging.initY = pointer.pageY;
         dragging.initPos = self._pos.cur;
@@ -450,23 +442,15 @@ const scrollerFactory = function (frame, options) {
         dragging.path = 0;
         dragging.delta = 0;
         dragging.locked = 0;
-        dragging.pathToLock = isTouch ? 30 : 10;
+        dragging.pathToLock = 10;
 
         // Bind dragging events
         if (transform) {
-            if (isTouch) {
-                dragTouchEvents.forEach(function (eventName) {
-                    dom.addEventListener(document, eventName, dragHandler, {
-                        passive: true
-                    });
+            dragMouseEvents.forEach(function (eventName) {
+                dom.addEventListener(document, eventName, dragHandler, {
+                    passive: true
                 });
-            } else {
-                dragMouseEvents.forEach(function (eventName) {
-                    dom.addEventListener(document, eventName, dragHandler, {
-                        passive: true
-                    });
-                });
-            }
+            });
         }
     }
 
@@ -478,9 +462,8 @@ const scrollerFactory = function (frame, options) {
      * @return {Void}
      */
     function dragHandler(event) {
-        dragging.released = event.type === 'mouseup' || event.type === 'touchend';
-        const eventName = dragging.released ? 'changedTouches' : 'touches';
-        const pointer = dragging.touch ? event[eventName][0] : event;
+        dragging.released = event.type === 'mouseup';
+        const pointer = event;
         dragging.pathX = pointer.pageX - dragging.initX;
         dragging.pathY = pointer.pageY - dragging.initY;
         dragging.path = Math.sqrt(Math.pow(dragging.pathX, 2) + Math.pow(dragging.pathY, 2));
@@ -527,12 +510,6 @@ const scrollerFactory = function (frame, options) {
      */
     function dragEnd() {
         dragging.released = true;
-
-        dragTouchEvents.forEach(function (eventName) {
-            dom.removeEventListener(document, eventName, dragHandler, {
-                passive: true
-            });
-        });
 
         dragMouseEvents.forEach(function (eventName) {
             dom.removeEventListener(document, eventName, dragHandler, {
@@ -638,10 +615,6 @@ const scrollerFactory = function (frame, options) {
 
         dom.removeEventListener(scrollSource, wheelEvent, scrollHandler, {
             passive: false
-        });
-
-        dom.removeEventListener(dragSourceElement, 'touchstart', dragInitSlidee, {
-            passive: true
         });
 
         dom.removeEventListener(frame, 'click', onFrameClick, {
@@ -783,10 +756,6 @@ const scrollerFactory = function (frame, options) {
         initFrameResizeObserver();
 
         if (transform) {
-            dom.addEventListener(dragSourceElement, 'touchstart', dragInitSlidee, {
-                passive: true
-            });
-
             if (!o.horizontal) {
                 dom.addEventListener(frame, 'scroll', resetScroll, {
                     passive: true

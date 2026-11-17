@@ -1,6 +1,3 @@
-import dom from '../utils/dom';
-import browser from '../scripts/browser';
-import Events from '../utils/events.ts';
 import '../elements/emby-tabs/emby-tabs';
 import '../elements/emby-button/emby-button';
 
@@ -18,61 +15,6 @@ function ensureElements() {
 function onViewTabsReady() {
     this.selectedIndex(this.readySelectedIndex);
     this.readySelectedIndex = null;
-}
-
-function allowSwipe(target) {
-    function allowSwipeOn(elem) {
-        if (dom.parentWithTag(elem, 'input')) {
-            return false;
-        }
-
-        const classList = elem.classList;
-        if (classList) {
-            return !classList.contains('scrollX') && !classList.contains('animatedScrollX');
-        }
-
-        return true;
-    }
-
-    let parent = target;
-    while (parent != null) {
-        if (!allowSwipeOn(parent)) {
-            return false;
-        }
-        parent = parent.parentNode;
-    }
-
-    return true;
-}
-
-function configureSwipeTabs(view, currentElement) {
-    if (!browser.touch) {
-        return;
-    }
-
-    // implement without hammer
-    const onSwipeLeft = function (e, target) {
-        if (allowSwipe(target) && view.contains(target)) {
-            currentElement.selectNext();
-        }
-    };
-
-    const onSwipeRight = function (e, target) {
-        if (allowSwipe(target) && view.contains(target)) {
-            currentElement.selectPrevious();
-        }
-    };
-
-    import('../scripts/touchHelper').then(({ default: TouchHelper }) => {
-        const touchHelper = new TouchHelper(view.parentNode.parentNode);
-
-        Events.on(touchHelper, 'swipeleft', onSwipeLeft);
-        Events.on(touchHelper, 'swiperight', onSwipeRight);
-
-        view.addEventListener('viewdestroy', function () {
-            touchHelper.destroy();
-        });
-    });
 }
 
 export function setTabs(view, selectedIndex, getTabsFn, getTabContainersFn, onBeforeTabChange, onTabChange, setSelectedIndex) {
@@ -133,8 +75,6 @@ export function setTabs(view, selectedIndex, getTabsFn, getTabContainersFn, onBe
         tabOwnerView = view;
 
         tabsElem = tabsContainerElem.querySelector('[is="emby-tabs"]');
-
-        configureSwipeTabs(view, tabsElem);
 
         if (getTabContainersFn) {
             tabsElem.addEventListener('beforetabchange', function (e) {

@@ -233,7 +233,7 @@ export default function (view) {
         }
     }
 
-    function onWheelOrTouchMove() {
+    function onWheel() {
         autoScroll = AutoScroll.NoScroll;
     }
 
@@ -247,8 +247,7 @@ export default function (view) {
     view.addEventListener('viewshow', function () {
         Events.on(playbackManager, 'playerchange', onPlayerChange);
         autoScroll = AutoScroll.Instant;
-        document.addEventListener('wheel', onWheelOrTouchMove);
-        document.addEventListener('touchmove', onWheelOrTouchMove);
+        document.addEventListener('wheel', onWheel);
         document.addEventListener('keydown', onKeyDown);
         try {
             onLoad();
@@ -259,8 +258,7 @@ export default function (view) {
 
     view.addEventListener('viewbeforehide', function () {
         Events.off(playbackManager, 'playerchange', onPlayerChange);
-        document.removeEventListener('wheel', onWheelOrTouchMove);
-        document.removeEventListener('touchmove', onWheelOrTouchMove);
+        document.removeEventListener('wheel', onWheel);
         document.removeEventListener('keydown', onKeyDown);
         releaseCurrentPlayer();
     });
