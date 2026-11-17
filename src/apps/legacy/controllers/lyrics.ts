@@ -1,10 +1,14 @@
 import { getLyricApi } from '@jellyfin/sdk/lib/utils/api/lyric-api';
-import escapeHtml from 'escape-html';
+import 'core-js/modules/es.array.find-last-index';
+import type { LyricLine } from '@jellyfin/sdk/lib/generated-client/models/lyric-line';
+import type { PlaybackPlayer } from 'types/plugin';
+import type { PlaybackState } from 'lib/playback/types';
+import type { PlayerState } from 'types/playbackStopInfo';
+import { getLyricsHtml } from './lyricsMarkup';
 
 import { AutoScroll } from 'apps/legacy/features/lyrics/constants/autoScroll';
 import autoFocuser from 'components/autoFocuser';
 import { appRouter } from 'components/router/appRouter';
-import layoutManager from 'lib/layoutManager';
 import { playbackManager } from 'components/playback/playbackmanager';
 import scrollManager from 'lib/scrollManager';
 import focusManager from 'lib/focusManager';
@@ -12,33 +16,24 @@ import globalize from 'lib/globalize';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import keyboardNavigation from 'scripts/keyboardNavigation';
 import LibraryMenu from 'scripts/libraryMenu';
-import Events from 'utils/events';
+import Events, { type Event as PlaybackEvent } from 'utils/events';
 
 import 'styles/lyrics.scss';
 
-let currentPlayer;
-let currentItem;
+let currentPlayer: PlaybackPlayer | null | undefined;
+let currentItem: PlaybackState['NowPlayingItem'] | null;
 
-let savedLyrics;
+let savedLyrics: LyricLine[] | null | undefined;
 let isDynamicLyric = false;
 let autoScroll = AutoScroll.Instant;
 
-function lyricHtmlReducer(htmlAccumulator, lyric, index) {
-    const elem = layoutManager.tv ? 'button' : 'div';
-    const classes = [];
-    if (isDynamicLyric) classes.push('dynamicLyric');
-    if (layoutManager.tv) classes.push('listItem', 'show-focus');
-    const lyricTime = typeof lyric.Start !== 'undefined' ? `data-lyrictime="${lyric.Start}"` : '';
+// TypeScript's ES5 lib omits the core-js method already used by this controller.
+type SearchableLyrics = LyricLine[] & {
+    findLastIndex(predicate: (lyric: LyricLine) => boolean): number;
+};
 
-    htmlAccumulator += `<${elem} class="lyricsLine ${classes.join(' ')}" id="lyricPosition${index}" ${lyricTime}>
-    ${escapeHtml(lyric.Text)}
-</${elem}>`;
-
-    return htmlAccumulator;
-}
-
-function getLyricIndex(time, lyrics) {
-    return lyrics.findLastIndex(lyric => lyric.Start <= time);
+function getLyricIndex(time: number, lyrics: LyricLine[]) {
+    return (lyrics as SearchableLyrics).findLastIndex(lyric => lyric.Start! <= time);
 }
 
 function getCurrentPlayTime() {
@@ -48,25 +43,25 @@ function getCurrentPlayTime() {
     return currentTime * 10000;
 }
 
-export default function (view) {
-    function setPastLyricClassOnLine(line) {
-        const lyric = view.querySelector(`#lyricPosition${line}`);
+export default function (view: HTMLElement) {
+    function setPastLyricClassOnLine(line: number) {
+        const lyric = view.querySelector<HTMLElement>(`#lyricPosition${line}`);
         if (lyric) {
             lyric.classList.remove('futureLyric');
             lyric.classList.add('pastLyric');
         }
     }
 
-    function setFutureLyricClassOnLine(line) {
-        const lyric = view.querySelector(`#lyricPosition${line}`);
+    function setFutureLyricClassOnLine(line: number) {
+        const lyric = view.querySelector<HTMLElement>(`#lyricPosition${line}`);
         if (lyric) {
             lyric.classList.remove('pastLyric');
             lyric.classList.add('futureLyric');
         }
     }
 
-    function setCurrentLyricClassOnLine(line) {
-        const lyric = view.querySelector(`#lyricPosition${line}`);
+    function setCurrentLyricClassOnLine(line: number) {
+        const lyric = view.querySelector<HTMLElement>(`#lyricPosition${line}`);
         if (lyric) {
             lyric.classList.remove('pastLyric');
             lyric.classList.remove('futureLyric');
@@ -79,7 +74,7 @@ export default function (view) {
         }
     }
 
-    function updateAllLyricLines(currentLine, lyrics) {
+    function updateAllLyricLines(currentLine: number, lyrics: LyricLine[]) {
         for (let lyricIndex = 0; lyricIndex <= lyrics.length; lyricIndex++) {
             if (lyricIndex < currentLine) {
                 setPastLyricClassOnLine(lyricIndex);
@@ -100,27 +95,27 @@ export default function (view) {
         autoFocuser.autoFocus();
     }
 
-    function renderLyrics(lyrics) {
+    function renderLyrics(lyrics: LyricLine[]) {
         const itemsContainer = view.querySelector('.lyricsContainer');
         if (itemsContainer) {
-            const html = lyrics.reduce(lyricHtmlReducer, '');
+            const html = getLyricsHtml(lyrics, isDynamicLyric);
             itemsContainer.innerHTML = html;
         }
 
         if (isDynamicLyric) {
-            const lyricLineArray = itemsContainer.querySelectorAll('.lyricsLine');
+            const lyricLineArray = itemsContainer!.querySelectorAll<HTMLElement>('.lyricsLine');
 
             // attaches click event listener to change playtime to lyric start
             lyricLineArray.forEach(element => {
-                element.addEventListener('click', () => onLyricClick(element.getAttribute('data-lyrictime')));
+                element.addEventListener('click', () => onLyricClick(Number(element.getAttribute('data-lyrictime'))));
             });
 
             const currentIndex = getLyricIndex(getCurrentPlayTime(), lyrics);
-            updateAllLyricLines(currentIndex, savedLyrics);
+            updateAllLyricLines(currentIndex, savedLyrics!);
         }
     }
 
-    function updateLyrics(lyrics) {
+    function updateLyrics(lyrics: LyricLine[]) {
         savedLyrics = lyrics;
 
         isDynamicLyric = Object.prototype.hasOwnProperty.call(lyrics[0], 'Start');
@@ -130,14 +125,14 @@ export default function (view) {
         autoFocuser.autoFocus(view);
     }
 
-    function getLyrics(serverId, itemId) {
+    function getLyrics(serverId: string | null | undefined, itemId: string | null | undefined) {
         const api = ServerConnections.getApi(serverId);
         if (!api) {
             console.error('[Lyrics] no Api instance available for server', serverId);
             return;
         }
 
-        return getLyricApi(api).getLyrics({ itemId })
+        return getLyricApi(api).getLyrics({ itemId: itemId! })
             .then(({ data }) => {
                 if (!data.Lyrics?.length) {
                     throw new Error('No lyrics returned');
@@ -146,7 +141,7 @@ export default function (view) {
             });
     }
 
-    function bindToPlayer(player) {
+    function bindToPlayer(player: PlaybackPlayer | null | undefined) {
         if (player === currentPlayer) {
             return;
         }
@@ -175,7 +170,7 @@ export default function (view) {
         }
     }
 
-    function onLyricClick(lyricTime) {
+    function onLyricClick(lyricTime: number) {
         autoScroll = AutoScroll.Smooth;
         playbackManager.seek(lyricTime);
         if (playbackManager.paused()) {
@@ -185,21 +180,21 @@ export default function (view) {
 
     function onTimeUpdate() {
         if (isDynamicLyric) {
-            const currentIndex = getLyricIndex(getCurrentPlayTime(), savedLyrics);
-            updateAllLyricLines(currentIndex, savedLyrics);
+            const currentIndex = getLyricIndex(getCurrentPlayTime(), savedLyrics!);
+            updateAllLyricLines(currentIndex, savedLyrics!);
         }
     }
 
-    function onPlaybackStart(event, state) {
-        if (currentItem.Id !== state.NowPlayingItem.Id) {
+    function onPlaybackStart(_event: PlaybackEvent, state: Pick<PlaybackState, 'NowPlayingItem'>) {
+        if (currentItem!.Id !== state.NowPlayingItem!.Id) {
             onLoad();
         }
     }
 
-    function onPlaybackStop(_, state) {
+    function onPlaybackStop(_event: PlaybackEvent, state: Pick<PlayerState, 'NextMediaType'>) {
         // TODO: switch to appRouter.back(), with fix to navigation to /#/queue. Which is broken when it has nothing playing
         if (!state.NextMediaType) {
-            appRouter.goHome();
+            void appRouter.goHome();
         }
     }
 
@@ -223,13 +218,13 @@ export default function (view) {
             const state = playbackManager.getPlayerState(player);
             currentItem = state.NowPlayingItem;
 
-            const serverId = state.NowPlayingItem.ServerId;
-            const itemId = state.NowPlayingItem.Id;
+            const serverId = state.NowPlayingItem!.ServerId;
+            const itemId = state.NowPlayingItem!.Id;
 
-            getLyrics(serverId, itemId).then(updateLyrics).catch(renderNoLyricMessage);
+            void getLyrics(serverId, itemId)!.then(updateLyrics).catch(renderNoLyricMessage);
         } else {
             // if nothing is currently playing, no lyrics to display redirect to home
-            appRouter.goHome();
+            void appRouter.goHome();
         }
     }
 
@@ -237,7 +232,7 @@ export default function (view) {
         autoScroll = AutoScroll.NoScroll;
     }
 
-    function onKeyDown(e) {
+    function onKeyDown(e: KeyboardEvent) {
         const key = keyboardNavigation.getKeyName(e);
         if (key === 'ArrowUp' || key === 'ArrowDown') {
             autoScroll = AutoScroll.NoScroll;
@@ -252,7 +247,7 @@ export default function (view) {
         try {
             onLoad();
         } catch {
-            appRouter.goHome();
+            void appRouter.goHome();
         }
     });
 
