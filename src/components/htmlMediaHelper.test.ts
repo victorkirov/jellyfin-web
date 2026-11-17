@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import Events from '../utils/events';
-import { getBufferedRanges, onEndedInternal, seekOnPlaybackStart } from './htmlMediaHelper';
+import { getBufferedRanges, onEndedInternal, playWithPromise, seekOnPlaybackStart } from './htmlMediaHelper';
 
 vi.mock('../scripts/settings/appSettings', () => ({ default: {} }));
 
@@ -54,5 +54,36 @@ describe('HTML media boundary units', () => {
         expect(instance._currentSrc).toBeNull();
         expect(instance._currentPlayOptions).toBeNull();
         expect(element.hasAttribute('src')).toBe(false);
+    });
+});
+
+describe('Media playback promise compatibility', () => {
+    it.each(['NotAllowedError', 'AbortError'])('allows retry after %s and binds media errors', async (name) => {
+        const element = document.createElement('video');
+        vi.spyOn(element, 'play').mockRejectedValue({ name });
+        const onError = vi.fn();
+        await playWithPromise(element, onError);
+        element.dispatchEvent(new Event('error'));
+        expect(onError).toHaveBeenCalledOnce();
+    });
+
+    it('preserves decoder rejection and does not bind a successful-play listener', async () => {
+        const element = document.createElement('video');
+        const error = new Error('decode');
+        vi.spyOn(element, 'play').mockRejectedValue(error);
+        const onError = vi.fn();
+        await expect(playWithPromise(element, onError)).rejects.toBe(error);
+        element.dispatchEvent(new Event('error'));
+        expect(onError).not.toHaveBeenCalled();
+    });
+
+    it.each(['throw', 'legacy'])('rejects a %s synchronous play failure as a promise', async (mode) => {
+        const element = document.createElement('video');
+        vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        vi.spyOn(element, 'play').mockImplementation(() => {
+            if (mode === 'throw') throw new Error('sync');
+            return undefined as unknown as Promise<void>;
+        });
+        await expect(playWithPromise(element, vi.fn())).rejects.toBeUndefined();
     });
 });

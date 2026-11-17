@@ -1,39 +1,10 @@
 import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/media-source-info';
 
+import type { MediaInstance, MediaPlayOptions, WindowsMediaAdapter } from 'lib/playback/types/htmlMedia';
+import { TICKS_PER_MILLISECOND, TICKS_PER_SECOND } from 'constants/time';
+
 import appSettings from '../scripts/settings/appSettings';
 import Events from '../utils/events';
-
-
-type MediaPlayOptions = {
-    mediaSource?: MediaSourceInfo & { IsLocal?: boolean };
-    url?: string;
-    playerStartPositionTicks?: number;
-    transcodingOffsetTicks?: number;
-};
-
-type UnloadablePlayer = { unload: () => void };
-
-type MediaInstance = {
-    _mediaElement?: HTMLMediaElement;
-    destroyCustomTrack?: (element?: HTMLMediaElement) => void;
-    _castPlayer?: UnloadablePlayer | null;
-    _flvPlayer?: (UnloadablePlayer & { detachMediaElement: () => void; destroy: () => void }) | null;
-    _currentSrc?: string | null;
-    _currentTime?: number | null;
-    _currentPlayOptions?: MediaPlayOptions | null;
-};
-
-// Keep the dormant UWP adapter typed without requiring Windows globals on TV.
-type WindowsMediaAdapter = {
-    Storage: { StorageFile: { getFileFromPathAsync: (path?: string) => Promise<unknown> } };
-    Media: {
-        Playback: {
-            MediaPlaybackList: new () => { items: { append: (item: unknown) => void } };
-            MediaPlaybackItem: new (source: unknown, startTimeMs: number) => unknown;
-        };
-        Core: { MediaSource: { createFromStorageFile: (file: unknown) => unknown } };
-    };
-};
 
 export function getSavedVolume() {
     return appSettings.get('volume') || 1;
@@ -54,7 +25,6 @@ export function getCrossOriginValue(mediaSource: MediaSourceInfo) {
 }
 
 export function onErrorInternal(instance: MediaInstance, type: string) {
-    // Needed for video
     if (instance.destroyCustomTrack) {
         instance.destroyCustomTrack(instance._mediaElement);
     }
@@ -63,10 +33,8 @@ export function onErrorInternal(instance: MediaInstance, type: string) {
 }
 
 export function isValidDuration(duration: number) {
-    return duration
-            && !isNaN(duration)
-            && duration !== Number.POSITIVE_INFINITY
-            && duration !== Number.NEGATIVE_INFINITY;
+    return !!duration && !isNaN(duration)
+        && duration !== Number.POSITIVE_INFINITY && duration !== Number.NEGATIVE_INFINITY;
 }
 
 function setCurrentTimeIfNeeded(element: HTMLMediaElement, seconds: number) {
@@ -77,25 +45,20 @@ function setCurrentTimeIfNeeded(element: HTMLMediaElement, seconds: number) {
 }
 
 export function seekOnPlaybackStart(instance: MediaInstance, element: HTMLMediaElement, ticks?: number, onMediaReady?: () => void) {
-    const seconds = (ticks || 0) / 10000000;
+    const seconds = (ticks || 0) / TICKS_PER_SECOND;
 
     if (seconds) {
         // Appending #t=xxx to the query string doesn't seem to work with HLS
         // For plain video files, not all browsers support it either
 
         if (element.duration >= seconds) {
-            // media is ready, seek immediately
             setCurrentTimeIfNeeded(element, seconds);
             if (onMediaReady) onMediaReady();
         } else {
-            // update video player position when media is ready to be sought
             const events = ['durationchange', 'loadeddata', 'play', 'loadedmetadata'];
             const onMediaChange = function(e: Event) {
                 if (element.currentTime === 0 && element.duration >= seconds) {
-                    // seek only when video position is exactly zero,
-                    // as this is true only if video hasn't started yet or
-                    // user rewound to the very beginning
-                    // (but rewinding cannot happen as the first event with media of non-empty duration)
+                    // Ignore later media events after playback advances or seeks.
                     console.debug(`seeking to ${seconds} on ${e.type} event`);
                     setCurrentTimeIfNeeded(element, seconds);
                     events.forEach(name => {
@@ -118,11 +81,11 @@ export function applySrc(elem: HTMLMediaElement, src: string, options: MediaPlay
             const playlist = new windows.Media.Playback.MediaPlaybackList();
 
             const source1 = windows.Media.Core.MediaSource.createFromStorageFile(file);
-            const startTime = (options.playerStartPositionTicks || 0) / 10000;
-            playlist.items.append(new windows.Media.Playback.MediaPlaybackItem(source1, startTime));
+            const startTimeMs = (options.playerStartPositionTicks || 0) / TICKS_PER_MILLISECOND;
+            playlist.items.append(new windows.Media.Playback.MediaPlaybackItem(source1, startTimeMs));
             // UWP accepts a playback list and an options argument instead of a Blob.
             const createObjectURL = URL.createObjectURL as unknown as (list: typeof playlist, options: { oneTimeOnly: boolean }) => string;
-            elem.src = createObjectURL(playlist, { oneTimeOnly: true });
+            elem.src = createObjectURL.call(URL, playlist, { oneTimeOnly: true });
             return Promise.resolve();
         });
     } else {
@@ -143,26 +106,26 @@ function onSuccessfulPlay(elem: HTMLMediaElement, onErrorFn: EventListener) {
 }
 
 export function playWithPromise(elem: HTMLMediaElement, onErrorFn: EventListener) {
+    let playResult: Promise<void> | undefined;
     try {
-        return elem.play()
-            .catch((e) => {
-                const errorName = (e.name || '').toLowerCase();
-                // safari uses aborterror
-                if (errorName === 'notallowederror'
-                        || errorName === 'aborterror') {
-                    // swallow this error because the user can still click the play button on the video element
-                    return Promise.resolve();
-                }
-                return Promise.reject(e);
-            })
-            .then(() => {
-                onSuccessfulPlay(elem, onErrorFn);
-                return Promise.resolve();
-            });
+        playResult = elem.play();
+        if (!playResult) {
+            throw new TypeError('The media element did not return a playback promise');
+        }
     } catch (err) {
         console.error('error calling video.play: ' + err);
         return Promise.reject();
     }
+    return playResult.catch((error) => {
+        const errorName = (error.name || '').toLowerCase();
+        // Autoplay can still be started from the media element after these failures.
+        if (errorName === 'notallowederror' || errorName === 'aborterror') {
+            return;
+        }
+        throw error;
+    }).then(() => {
+        onSuccessfulPlay(elem, onErrorFn);
+    });
 }
 
 export function destroyCastPlayer(instance: MediaInstance) {
@@ -216,13 +179,13 @@ export function getBufferedRanges(instance: MediaInstance, elem: HTMLMediaElemen
     const ranges = [];
     const seekable = elem.buffered;
 
-    let offset;
+    let offsetTicks;
     const currentPlayOptions = instance._currentPlayOptions;
     if (currentPlayOptions) {
-        offset = currentPlayOptions.transcodingOffsetTicks;
+        offsetTicks = currentPlayOptions.transcodingOffsetTicks;
     }
 
-    offset = offset || 0;
+    offsetTicks = offsetTicks || 0;
 
     for (let i = 0, length = seekable.length; i < length; i++) {
         let start = seekable.start(i);
@@ -238,8 +201,8 @@ export function getBufferedRanges(instance: MediaInstance, elem: HTMLMediaElemen
         }
 
         ranges.push({
-            start: (start * 10000000) + offset,
-            end: (end * 10000000) + offset
+            start: (start * TICKS_PER_SECOND) + offsetTicks,
+            end: (end * TICKS_PER_SECOND) + offsetTicks
         });
     }
 
