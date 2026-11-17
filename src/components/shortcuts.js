@@ -7,6 +7,7 @@ import { EventType } from 'constants/eventType';
 import { ItemAction } from 'constants/itemAction';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import Events from 'utils/events';
+import { PLAYLIST_PLAYBACK_FIELDS } from 'utils/query/playlistFields';
 
 import { playbackManager } from './playback/playbackmanager';
 import inputManager from '../scripts/inputManager';
@@ -40,6 +41,9 @@ function playAllFromHere(card, serverId, queue) {
     const itemsContainer = dom.parentWithClass(card, 'itemsContainer');
     if (itemsContainer?.fetchData) {
         const queryOptions = queue ? { StartIndex: startIndex } : {};
+        if (card.getAttribute('data-playlistid')) {
+            queryOptions.Fields = PLAYLIST_PLAYBACK_FIELDS;
+        }
 
         return itemsContainer.fetchData(queryOptions).then(result => {
             if (queue) {
