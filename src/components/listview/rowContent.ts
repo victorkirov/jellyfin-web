@@ -10,7 +10,8 @@ function getNameIndex(name: string) {
     return code < 65 || code > 90 ? '#' : initial;
 }
 
-export function getIndex(item: ItemDto, options: CardOptions) {
+/** @returns Numeric rating keys or text labels, kept distinct by strict group comparisons. */
+export function getIndex(item: ItemDto, options: CardOptions): string | number {
     if (options.index === 'disc') {
         return item.ParentIndexNumber == null ? '' : globalize.translate('ValueDiscNumber', item.ParentIndexNumber);
     }

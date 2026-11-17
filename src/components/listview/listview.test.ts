@@ -1,5 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import { getListViewHtml } from './listview';
+import { getIndex } from './rowContent';
+import globalize from 'lib/globalize';
+import type { ItemDto } from 'types/base/models/item-dto';
 
 vi.mock('lib/layoutManager', () => ({ default: { tv: true } }));
 vi.mock('lib/globalize', () => ({ default: { translate: (key: string) => key } }));
@@ -31,5 +34,36 @@ describe('TV list markup', () => {
         expect(document.activeElement).toBe(row);
         row.click();
         host.remove();
+    });
+});
+
+describe('Legacy list grouping keys', () => {
+    it.each(['CommunityRating', 'CriticRating'])('preserves numeric %s buckets including zero and nonfinite keys', sortBy => {
+        const ratings = [-0, 0, 4.9, 4.2, null, undefined, NaN, NaN];
+        const items = ratings.map((rating, index): ItemDto => ({
+            Id: String(index), Type: 'Movie', Name: 'Item ' + index,
+            CommunityRating: sortBy === 'CommunityRating' ? rating : undefined,
+            CriticRating: sortBy === 'CriticRating' ? rating : undefined
+        }));
+        expect(getIndex(items[0], { sortBy })).toBe(-0);
+        expect(getIndex(items[2], { sortBy })).toBe(4);
+        expect(getIndex(items[4], { sortBy })).toBe('Unrated');
+        expect(getIndex(items[5], { sortBy })).toBe('Unrated');
+        expect(getIndex(items[6], { sortBy })).toBeNaN();
+        const host = document.createElement('div');
+        host.innerHTML = getListViewHtml({ items, sortBy, showIndex: true, image: false, mediaInfo: false });
+        expect(Array.from(host.querySelectorAll('.listGroupHeader'), header => header.textContent))
+            .toEqual(['0', '4', 'Unrated', 'NaN', 'NaN']);
+    });
+
+    it('keeps numeric buckets distinct from matching localized text labels', () => {
+        const translate = vi.spyOn(globalize, 'translate').mockImplementation(key => key === 'Unrated' ? '0' : key);
+        onTestFinished(() => translate.mockRestore());
+        const host = document.createElement('div');
+        host.innerHTML = getListViewHtml({
+            items: [{ Id: 'unrated', Type: 'Movie', Name: 'Unrated' }, { Id: 'rated', Type: 'Movie', Name: 'Rated', CommunityRating: 0 }],
+            sortBy: 'CommunityRating', showIndex: true, image: false, mediaInfo: false
+        });
+        expect(Array.from(host.querySelectorAll('.listGroupHeader'), header => header.textContent)).toEqual(['0', '0']);
     });
 });
