@@ -25,7 +25,6 @@
     "logoScreensaver/plugin",
     "sessionPlayer/plugin",
     "chromecastPlayer/plugin",
-    "stillWatching/plugin",
-    "syncPlay/plugin"
+    "stillWatching/plugin"
   ]
 }

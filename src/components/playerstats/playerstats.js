@@ -1,4 +1,3 @@
-import { PluginType } from 'constants/pluginType';
 import globalize from 'lib/globalize';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import Events from 'utils/events';
@@ -7,7 +6,6 @@ import { getReadableSize } from 'utils/file';
 import layoutManager from '../layoutManager';
 import { playbackManager } from '../playback/playbackmanager';
 import playMethodHelper from '../playback/playmethodhelper';
-import { pluginManager } from '../pluginManager';
 
 import 'elements/emby-button/paper-icon-button-light';
 
@@ -341,39 +339,6 @@ function getMediaSourceStats(session, player) {
     return sessionStats;
 }
 
-function getSyncPlayStats() {
-    const SyncPlay = pluginManager.firstOfType(PluginType.SyncPlay)?.instance;
-
-    if (!SyncPlay?.Manager.isSyncPlayEnabled()) {
-        return [];
-    }
-
-    const syncStats = [];
-    const stats = SyncPlay.Manager.getStats();
-
-    syncStats.push({
-        label: globalize.translate('LabelSyncPlayTimeSyncDevice'),
-        value: stats.TimeSyncDevice
-    });
-
-    syncStats.push({
-        label: globalize.translate('LabelSyncPlayTimeSyncOffset'),
-        value: stats.TimeSyncOffset + ' ' + globalize.translate('MillisecondsUnit')
-    });
-
-    syncStats.push({
-        label: globalize.translate('LabelSyncPlayPlaybackDiff'),
-        value: stats.PlaybackDiff + ' ' + globalize.translate('MillisecondsUnit')
-    });
-
-    syncStats.push({
-        label: globalize.translate('LabelSyncPlaySyncMethod'),
-        value: stats.SyncMethod
-    });
-
-    return syncStats;
-}
-
 function getStats(instance, player) {
     const statsPromise = player.getStats ? player.getStats() : Promise.resolve({});
     const sessionPromise = getSession(instance, player);
@@ -434,14 +399,6 @@ function getStats(instance, player) {
             stats: getMediaSourceStats(session, player),
             name: globalize.translate('LabelOriginalMediaInfo')
         });
-
-        const syncPlayStats = getSyncPlayStats();
-        if (syncPlayStats.length > 0) {
-            categories.push({
-                stats: syncPlayStats,
-                name: globalize.translate('LabelSyncPlayInfo')
-            });
-        }
 
         return Promise.resolve(categories);
     });

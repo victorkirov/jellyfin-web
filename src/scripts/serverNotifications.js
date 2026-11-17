@@ -3,10 +3,8 @@ import { OutboundWebSocketMessageType } from '@jellyfin/sdk/lib/websocket';
 import alert from 'components/alert';
 import focusManager from 'components/focusManager';
 import { playbackManager } from 'components/playback/playbackmanager';
-import { pluginManager } from 'components/pluginManager';
 import { appRouter } from 'components/router/appRouter';
 import toast from 'components/toast/toast';
-import { PluginType } from 'constants/pluginType';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import inputManager from 'scripts/inputManager';
 import Events from 'utils/events';
@@ -186,7 +184,7 @@ function onPlaystate({ Data }) {
 }
 
 /**
- * Subscribes to server notifications for SyncPlay and Playstate
+ * Subscribes to server notifications for playback and general commands
  * @param {import('jellyfin-apiclient').ApiClient} apiClient
  * @returns A cleanup function that will unsubscribe from the events
  */
@@ -194,14 +192,7 @@ function subscribeToApiClient(apiClient) {
     const subscriptions = [
         apiClient.subscribe([OutboundWebSocketMessageType.Play], (msg) => onPlay(msg, apiClient)),
         apiClient.subscribe([OutboundWebSocketMessageType.Playstate], (msg) => onPlaystate(msg)),
-        apiClient.subscribe([OutboundWebSocketMessageType.GeneralCommand], ({ Data }) => processGeneralCommand(Data, apiClient)),
-        apiClient.subscribe([OutboundWebSocketMessageType.SyncPlayCommand], ({ Data }) => {
-            pluginManager.firstOfType(PluginType.SyncPlay)?.instance.Manager.processCommand(Data, apiClient);
-        }),
-        apiClient.subscribe([OutboundWebSocketMessageType.SyncPlayGroupUpdate], ({ Data }) => {
-            pluginManager.firstOfType(PluginType.SyncPlay)?.instance.Manager.processGroupUpdate(Data, apiClient);
-            Events.trigger(serverNotifications, OutboundWebSocketMessageType.SyncPlayGroupUpdate, [apiClient, Data]);
-        })
+        apiClient.subscribe([OutboundWebSocketMessageType.GeneralCommand], ({ Data }) => processGeneralCommand(Data, apiClient))
     ];
 
     return () => subscriptions.get(apiClient.serverId()).forEach((unsub) => {

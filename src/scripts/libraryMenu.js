@@ -2,7 +2,6 @@ import escapeHtml from 'escape-html';
 import Headroom from 'headroom.js';
 
 import { AppFeature } from 'constants/appFeature';
-import { PluginType } from 'constants/pluginType';
 import { getUserViewsQuery } from 'hooks/api/useUserViews';
 import globalize from 'lib/globalize';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
@@ -16,8 +15,6 @@ import viewManager from '../components/viewManager/viewManager';
 import { appRouter } from '../components/router/appRouter';
 import { appHost } from '../components/apphost';
 import { playbackManager } from '../components/playback/playbackmanager';
-import { pluginManager } from '../components/pluginManager';
-import groupSelectionMenu from '../plugins/syncPlay/ui/groupSelectionMenu';
 import browser from './browser';
 import imageHelper from '../utils/image';
 import { getMenuLinks } from '../scripts/settings/webSettings';
@@ -42,7 +39,6 @@ function renderHeader() {
     html += '<h3 class="pageTitle" aria-hidden="true"></h3>';
     html += '</div>';
     html += '<div class="headerRight">';
-    html += '<button is="paper-icon-button-light" class="headerSyncButton syncButton headerButton headerButtonRight hide"><span class="material-icons groups" aria-hidden="true"></span></button>';
     html += '<span class="headerSelectedPlayer"></span>';
     html += '<button is="paper-icon-button-light" class="headerAudioPlayerButton audioPlayerButton headerButton headerButtonRight hide"><span class="material-icons music_note" aria-hidden="true"></span></button>';
     html += '<button is="paper-icon-button-light" class="headerCastButton castButton headerButton headerButtonRight hide"><span class="material-icons cast" aria-hidden="true"></span></button>';
@@ -67,7 +63,6 @@ function renderHeader() {
     headerCastButton = skinHeader.querySelector('.headerCastButton');
     headerAudioPlayerButton = skinHeader.querySelector('.headerAudioPlayerButton');
     headerSearchButton = skinHeader.querySelector('.headerSearchButton');
-    headerSyncButton = skinHeader.querySelector('.headerSyncButton');
     currentTimeText = skinHeader.querySelector('.currentTimeText');
 
     retranslateUi();
@@ -106,10 +101,6 @@ function retranslateUi() {
 
     if (mainDrawerButton) {
         mainDrawerButton.title = globalize.translate('Menu');
-    }
-
-    if (headerSyncButton) {
-        headerSyncButton.title = globalize.translate('ButtonSyncPlay');
     }
 
     if (headerAudioPlayerButton) {
@@ -162,23 +153,9 @@ function updateUserInHeader(user) {
         if (!layoutManager.tv) {
             headerCastButton.classList.remove('hide');
         }
-
-        const policy = user.Policy ? user.Policy : user.localUser.Policy;
-
-        if (
-        // Button is present
-            headerSyncButton
-                // SyncPlay plugin is loaded
-                && pluginManager.ofType(PluginType.SyncPlay).length > 0
-                // SyncPlay enabled for user
-                && policy?.SyncPlayAccess !== 'None'
-        ) {
-            headerSyncButton.classList.remove('hide');
-        }
     } else {
         headerHomeButton.classList.add('hide');
         headerCastButton.classList.add('hide');
-        headerSyncButton.classList.add('hide');
 
         if (headerSearchButton) {
             headerSearchButton.classList.add('hide');
@@ -252,7 +229,6 @@ function bindMenuEvents() {
     }
 
     headerAudioPlayerButton.addEventListener('click', showAudioPlayer);
-    headerSyncButton.addEventListener('click', onSyncButtonClicked);
 
     if (layoutManager.mobile) {
         initHeadRoom(skinHeader);
@@ -281,11 +257,6 @@ function onCastButtonClicked() {
     import('../components/playback/playerSelectionMenu').then((playerSelectionMenu) => {
         playerSelectionMenu.show(btn);
     });
-}
-
-function onSyncButtonClicked() {
-    const btn = this;
-    groupSelectionMenu.show(btn);
 }
 
 function getItemHref(item, context) {
@@ -709,7 +680,6 @@ let currentUser;
 let headerCastButton;
 let headerSearchButton;
 let headerAudioPlayerButton;
-let headerSyncButton;
 let currentTimeText;
 const enableLibraryNavDrawer = layoutManager.desktop;
 const enableLibraryNavDrawerHome = !layoutManager.tv;
