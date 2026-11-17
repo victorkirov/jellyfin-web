@@ -35,7 +35,7 @@ vi.mock('elements/emby-slider/emby-slider', () => ({}));
 const setters = [
     'language', 'dateTimeLocale', 'enableThemeSongs', 'enableThemeVideos', 'screensaver',
     'backdropScreensaverInterval', 'slideshowInterval', 'screensaverTime', 'libraryPageSize',
-    'maxDaysForNextUp', 'enableRewatchingInNextUp', 'enableFastFadein', 'enableBlurhash',
+    'maxDaysForNextUp', 'enableRewatchingInNextUp', 'enableBlurhash',
     'enableBackdrops', 'detailsBanner', 'disableCustomCss', 'allowedAudioChannels',
     'stillWatchingPrompt', 'preferFmp4HlsContainer', 'limitSegmentLength', 'enableCinemaMode',
     'selectAudioNormalization', 'set'

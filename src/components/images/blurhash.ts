@@ -38,7 +38,7 @@ function drawBlurhash(target: HTMLElement, pixels: Uint8ClampedArray, width: num
 
         // This class is just an utility class, so users can customize the canvas using their own CSS.
         canvas.classList.add('blurhash-canvas');
-        if (target.classList.contains('lazy-image-fadein') || target.classList.contains('lazy-image-fadein-fast')) {
+        if (!target.hasAttribute('data-src')) {
             canvas.classList.add('lazy-hidden');
         }
 

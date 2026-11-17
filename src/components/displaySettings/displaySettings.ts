@@ -89,7 +89,6 @@ function loadForm(context: HTMLElement, userSettings: UserSettings) {
 
     context.querySelector<HTMLInputElement>('#chkThemeSong')!.checked = userSettings.enableThemeSongs();
     context.querySelector<HTMLInputElement>('#chkThemeVideo')!.checked = userSettings.enableThemeVideos();
-    context.querySelector<HTMLInputElement>('#chkFadein')!.checked = userSettings.enableFastFadein();
     context.querySelector<HTMLInputElement>('#chkBlurhash')!.checked = userSettings.enableBlurhash();
     context.querySelector<HTMLInputElement>('#chkBackdrops')!.checked = userSettings.enableBackdrops();
     context.querySelector<HTMLInputElement>('#chkDetailsBanner')!.checked = userSettings.detailsBanner();
@@ -128,7 +127,6 @@ function saveUser(context: HTMLElement, userSettingsInstance: UserSettings) {
     userSettingsInstance.maxDaysForNextUp(context.querySelector<HTMLInputElement>('#txtMaxDaysForNextUp')!.value as unknown as number);
     userSettingsInstance.enableRewatchingInNextUp(context.querySelector<HTMLInputElement>('#chkRewatchingNextUp')!.checked);
 
-    userSettingsInstance.enableFastFadein(context.querySelector<HTMLInputElement>('#chkFadein')!.checked);
     userSettingsInstance.enableBlurhash(context.querySelector<HTMLInputElement>('#chkBlurhash')!.checked);
     userSettingsInstance.enableBackdrops(context.querySelector<HTMLInputElement>('#chkBackdrops')!.checked);
     userSettingsInstance.detailsBanner(context.querySelector<HTMLInputElement>('#chkDetailsBanner')!.checked);

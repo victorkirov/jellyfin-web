@@ -1,118 +1,65 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { postMessage, enableBlurhash, enableFastFadein, observeChildren, workerMessage } = vi.hoisted(() => ({
-    postMessage: vi.fn(),
-    workerMessage: vi.fn(),
-    enableBlurhash: vi.fn(() => true),
-    enableFastFadein: vi.fn(() => false),
-    observeChildren: vi.fn()
+const { postMessage, enableBlurhash, enableFastFadein, workerMessage } = vi.hoisted(() => ({
+    postMessage: vi.fn(), workerMessage: vi.fn(), enableBlurhash: vi.fn(() => true), enableFastFadein: vi.fn(() => false)
 }));
-
-vi.mock('./blurhash.worker.ts', () => ({
-    default: class {
-        addEventListener = workerMessage;
-        postMessage = postMessage;
-    }
-}));
+vi.mock('./blurhash.worker', () => ({ default: class {
+    addEventListener = workerMessage;
+    postMessage = postMessage;
+} }));
 vi.mock('../../scripts/settings/userSettings', () => ({ enableBlurhash, enableFastFadein }));
-vi.mock('../lazyLoader/lazyLoaderIntersectionObserver', () => ({ lazyChildren: observeChildren }));
 
 let imageLoader: typeof import('./imageLoader');
-
-function intersect(target: Element, isIntersecting = true) {
-    imageLoader.fillImage({ target, isIntersecting });
+let observers: { callback: IntersectionObserverCallback;
+    options: IntersectionObserverInit;
+    targets: Set<Element> }[];
+let frames: FrameRequestCallback[];
+let preloaders: HTMLImageElement[];
+function frame() {
+    const callbacks = frames.splice(0);
+    callbacks.forEach(callback => {
+        callback(0);
+    });
+}
+function targets() {
+    return Array.from(document.querySelectorAll<HTMLElement>('.lazy'));
+}
+function intersect(target: Element, inside = true, observerIndex = 0) {
+    const observer = observers[observerIndex];
+    observer.callback([{ target, isIntersecting: inside } as IntersectionObserverEntry], {} as IntersectionObserver);
+}
+function complete() {
+    preloaders.forEach(image => {
+        image.dispatchEvent(new Event('load'));
+    });
 }
 
 beforeEach(async () => {
     vi.clearAllMocks();
     vi.resetModules();
-    imageLoader = await import('./imageLoader');
+    observers = [];
+    frames = [];
+    preloaders = [];
     enableBlurhash.mockReturnValue(true);
-    document.body.innerHTML = '<div class="lazy" data-src="image.jpg" data-blurhash="hash"></div>';
-});
-
-describe('visible blurhash images', () => {
-    it('does no decode work until an image intersects', () => {
-        imageLoader.lazyChildren(document.body);
-        const target = document.body.firstElementChild!;
-        intersect(target, false);
-        expect(postMessage).not.toHaveBeenCalled();
-        intersect(target);
-        expect(postMessage).toHaveBeenCalledTimes(1);
-    });
-
-    it('posts one decode for a hash shared by visible images', () => {
-        document.body.innerHTML += document.body.innerHTML;
-        imageLoader.lazyChildren(document.body);
-        for (const target of document.querySelectorAll('.lazy')) {
-            intersect(target);
-            intersect(target);
+    vi.stubGlobal('IntersectionObserver', class {
+        targets = new Set<Element>();
+        constructor(callback: IntersectionObserverCallback, options: IntersectionObserverInit) {
+            observers.push({ callback, options, targets: this.targets });
         }
-        expect(postMessage).toHaveBeenCalledTimes(1);
+        observe(target: Element) {
+            this.targets.add(target);
+        }
+        unobserve(target: Element) {
+            this.targets.delete(target);
+        }
+        disconnect() {
+            this.targets.clear();
+        }
     });
-
-    it('does not retry non-blurhashable images', () => {
-        const target = document.body.firstElementChild!;
-        target.classList.add('non-blurhashable');
-        imageLoader.lazyChildren(document.body);
-        intersect(target);
-        expect(postMessage).not.toHaveBeenCalled();
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+        frames.push(callback);
+        return frames.length;
     });
-
-    it('respects disabled blurhash', () => {
-        enableBlurhash.mockReturnValue(false);
-        imageLoader.lazyChildren(document.body);
-        intersect(document.body.firstElementChild!);
-        expect(postMessage).not.toHaveBeenCalled();
-    });
-});
-
-afterEach(() => {
-    vi.unstubAllGlobals();
-});
-
-function replyWithBlurhash() {
-    workerMessage.mock.calls[0][1]({
-        data: { pixels: new Uint8ClampedArray(4), hsh: 'hash', width: 1, height: 1 }
-    });
-}
-
-function mockCanvas() {
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
-        createImageData: () => ({ data: new Uint8ClampedArray(4) }),
-        putImageData: vi.fn()
-    } as unknown as CanvasRenderingContext2D);
-}
-
-describe('late blurhash replies', () => {
-    it.each(['lazy-image-fadein', 'lazy-image-fadein-fast'])('hides a late canvas after %s', fadeClass => {
-        mockCanvas();
-        vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => callback(0));
-        imageLoader.lazyChildren(document.body);
-        const target = document.body.firstElementChild!;
-        intersect(target);
-        target.removeAttribute('data-src');
-        target.classList.add(fadeClass);
-        replyWithBlurhash();
-        expect(document.querySelector('canvas')?.classList.contains('lazy-hidden')).toBe(true);
-    });
-
-    it('checks image completion again in the canvas insertion frame', () => {
-        mockCanvas();
-        const requestFrame = vi.fn<(callback: FrameRequestCallback) => number>(() => 1);
-        vi.stubGlobal('requestAnimationFrame', requestFrame);
-        imageLoader.lazyChildren(document.body);
-        const target = document.body.firstElementChild!;
-        intersect(target);
-        replyWithBlurhash();
-        target.classList.add('lazy-image-fadein');
-        requestFrame.mock.calls[0][0](0);
-        expect(document.querySelector('canvas')?.classList.contains('lazy-hidden')).toBe(true);
-    });
-});
-
-function mockImageLoading() {
-    const preloaders: HTMLImageElement[] = [];
     vi.stubGlobal('Image', class {
         constructor() {
             const image = document.createElement('img');
@@ -120,41 +67,198 @@ function mockImageLoading() {
             return image;
         }
     });
-    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => callback(0));
-    return preloaders;
-}
+    imageLoader = await import('./imageLoader');
+    document.body.innerHTML = '<div><div class="cardPadder"></div><div class="lazy" data-src="image.jpg" data-blurhash="hash"></div></div>';
+});
+afterEach(async () => {
+    document.body.innerHTML = '';
+    await Promise.resolve();
+    vi.unstubAllGlobals();
+});
 
-describe('lazy image fade-in settings', () => {
-    it('reads fast fade-in once per batch and preserves it until image load', () => {
-        const preloaders = mockImageLoading();
-        document.body.innerHTML += document.body.innerHTML;
-        enableFastFadein.mockReturnValue(true);
+describe('poster load scheduling', () => {
+    it('applies a completed row one poster per animation frame', () => {
+        document.body.innerHTML = document.body.innerHTML.repeat(4);
         imageLoader.lazyChildren(document.body);
-        enableFastFadein.mockReturnValue(false);
-        for (const target of document.querySelectorAll('.lazy')) {
+        targets().forEach(target => {
             intersect(target);
-        }
-        for (const image of preloaders) {
-            image.dispatchEvent(new Event('load'));
-        }
-        expect(enableFastFadein).toHaveBeenCalledTimes(1);
-        for (const target of document.querySelectorAll('.lazy')) {
-            expect(target.classList.contains('lazy-image-fadein-fast')).toBe(true);
+        });
+        complete();
+        expect(frames).toHaveLength(1);
+        for (let count = 1; count <= 4; count++) {
+            frame();
+            expect(targets().filter(target => !target.hasAttribute('data-src'))).toHaveLength(count);
         }
     });
-
-    it('unloads and reloads an image when it leaves and enters the viewport', () => {
-        const preloaders = mockImageLoading();
+    it('skips detached queued posters and still applies the next attached poster', () => {
+        document.body.innerHTML += document.body.innerHTML;
         imageLoader.lazyChildren(document.body);
-        const target = document.body.firstElementChild!;
+        const [first, second] = targets();
+        targets().forEach(target => {
+            intersect(target);
+        });
+        complete();
+        first.remove();
+        frame();
+        expect(first.hasAttribute('data-src')).toBe(true);
+        expect(second.hasAttribute('data-src')).toBe(false);
+    });
+    it('skips queued posters that left the load zone and retries on reentry', () => {
+        imageLoader.lazyChildren(document.body);
+        const [target] = targets();
         intersect(target);
-        preloaders[0].dispatchEvent(new Event('load'));
-        expect(target.hasAttribute('data-src')).toBe(false);
+        complete();
         intersect(target, false);
-        expect(target.getAttribute('data-src')).toBe('image.jpg');
+        frame();
+        expect(target.hasAttribute('data-src')).toBe(true);
         intersect(target);
-        preloaders[1].dispatchEvent(new Event('load'));
+        complete();
+        frame();
         expect(target.hasAttribute('data-src')).toBe(false);
+    });
+    it('does not duplicate a pending request on repeated observer delivery', () => {
+        imageLoader.lazyChildren(document.body);
+        intersect(targets()[0]);
+        intersect(targets()[0]);
+        expect(preloaders).toHaveLength(1);
+    });
+    it('ignores an old request after setLazyImage replaces its URL', () => {
+        const [target] = targets();
+        imageLoader.setLazyImage(target, 'old.jpg');
+        imageLoader.setLazyImage(target, 'new.jpg');
+        preloaders[1].dispatchEvent(new Event('load'));
+        frame();
+        preloaders[0].dispatchEvent(new Event('load'));
+        frame();
+        expect(target.style.backgroundImage).toContain('new.jpg');
+    });
+    it('fills standalone IMG elements without waiting for an observer', () => {
+        const target = document.createElement('img');
+        document.body.appendChild(target);
+        imageLoader.setLazyImage(target, 'direct.jpg');
+        complete();
+        frame();
+        expect(target.getAttribute('src')).toBe('direct.jpg');
+    });
+    it('preserves lazyImage with an explicit source and no data attribute', () => {
+        const [target] = targets();
+        target.removeAttribute('data-src');
+        imageLoader.lazyImage(target, 'explicit.jpg');
+        complete();
+        frame();
+        expect(target.style.backgroundImage).toContain('explicit.jpg');
+    });
+    it('retains a replacement URL when unloading an older filled image', () => {
+        imageLoader.lazyChildren(document.body);
+        const [target] = targets();
+        intersect(target);
+        complete();
+        frame();
+        imageLoader.setLazyImage(target, 'replacement.jpg');
+        intersect(target, false);
+        intersect(target, false, 1);
+        intersect(target);
+        complete();
+        frame();
+        expect(target.style.backgroundImage).toContain('replacement.jpg');
+        expect(preloaders).toHaveLength(2);
+    });
+    it('retries an image after a failed preload', () => {
+        imageLoader.lazyChildren(document.body);
+        intersect(targets()[0]);
+        preloaders[0].dispatchEvent(new Event('error'));
+        intersect(targets()[0]);
+        complete();
+        frame();
+        expect(targets()[0].hasAttribute('data-src')).toBe(false);
+    });
+});
+
+describe('TV observer zones and presentation', () => {
+    it('loads 1.5 viewport heights ahead and retains posters for 3 heights', () => {
+        imageLoader.lazyChildren(document.body);
+        expect(observers.map(observer => observer.options.rootMargin)).toEqual([`${window.innerHeight * 1.5}px 0px`, `${window.innerHeight * 3}px 0px`]);
+    });
+    it('keeps filled images outside the load zone until leaving the retention zone', () => {
+        imageLoader.lazyChildren(document.body);
+        const [target] = targets();
+        intersect(target);
+        intersect(target, true, 1);
+        complete();
+        frame();
+        intersect(target, false);
+        expect(target.hasAttribute('data-src')).toBe(false);
+        intersect(target);
+        expect(preloaders).toHaveLength(1);
+        intersect(target, false);
+        intersect(target, false, 1);
+        expect(target.getAttribute('data-src')).toBe('image.jpg');
+        expect(target.style.backgroundImage).toBe('none');
+        intersect(target);
+        complete();
+        frame();
+        expect(target.hasAttribute('data-src')).toBe(false);
+    });
+    it('does not empty never-filled posters on initial retention delivery', () => {
+        imageLoader.lazyChildren(document.body);
+        intersect(targets()[0], false, 1);
+        expect(targets()[0].getAttribute('data-src')).toBe('image.jpg');
+    });
+    it('applies posters immediately without fade classes or animation listeners', () => {
+        imageLoader.lazyChildren(document.body);
+        const [target] = targets();
+        const listener = vi.spyOn(target, 'addEventListener');
+        intersect(target);
+        complete();
+        frame();
+        expect(target.className).not.toMatch(/lazy-image-fadein|lazy-hidden/);
+        expect(listener).not.toHaveBeenCalledWith('animationend', expect.anything());
+        expect(document.querySelector('.cardPadder')?.classList.contains('lazy-hidden-children')).toBe(true);
+        expect(enableFastFadein).not.toHaveBeenCalled();
+    });
+});
+
+describe('optional blurhash', () => {
+    it('decodes only when intersecting and shares a hash across posters', () => {
+        document.body.innerHTML += document.body.innerHTML;
+        imageLoader.lazyChildren(document.body);
+        targets().forEach(target => {
+            intersect(target, false);
+        });
+        expect(postMessage).not.toHaveBeenCalled();
+        targets().forEach(target => {
+            intersect(target);
+            intersect(target);
+        });
         expect(postMessage).toHaveBeenCalledTimes(1);
+    });
+    it('respects disabled blurhash', () => {
+        enableBlurhash.mockReturnValue(false);
+        imageLoader.lazyChildren(document.body);
+        intersect(targets()[0]);
+        expect(postMessage).not.toHaveBeenCalled();
+    });
+    it('does not retry non-blurhashable images', () => {
+        targets()[0].classList.add('non-blurhashable');
+        imageLoader.lazyChildren(document.body);
+        intersect(targets()[0]);
+        expect(postMessage).not.toHaveBeenCalled();
+    });
+    it.each([true, false])('hides a canvas with completion first=%s and reveals it when unloading', completionFirst => {
+        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ createImageData: () => ({ data: new Uint8ClampedArray(4) }), putImageData: vi.fn() } as unknown as CanvasRenderingContext2D);
+        imageLoader.lazyChildren(document.body);
+        intersect(targets()[0]);
+        if (completionFirst) {
+            complete();
+            frame();
+        }
+        workerMessage.mock.calls[0][1]({ data: { pixels: new Uint8ClampedArray(4), hsh: 'hash', width: 1, height: 1 } });
+        if (!completionFirst) complete();
+        frame();
+        frame();
+        expect(document.querySelector('canvas')?.classList.contains('lazy-hidden')).toBe(true);
+        intersect(targets()[0], false);
+        intersect(targets()[0], false, 1);
+        expect(document.querySelector('canvas')?.classList.contains('lazy-hidden')).toBe(false);
     });
 });

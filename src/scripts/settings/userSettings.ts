@@ -90,20 +90,12 @@ export class UserSettings extends DisplayPreferenceSettings {
         return toBoolean(this.get('enableThemeVideos', false), false);
     }
 
-    enableFastFadein(val?: boolean) {
-        if (val !== undefined) {
-            return this.set('fastFadein', val.toString(), false);
-        }
-
-        return toBoolean(this.get('fastFadein', false), true);
-    }
-
     enableBlurhash(val?: boolean) {
         if (val !== undefined) {
             return this.set('blurhash', val.toString(), false);
         }
 
-        return toBoolean(this.get('blurhash', false), true);
+        return toBoolean(this.get('blurhash', false), false);
     }
 
     enableBackdrops(val?: boolean) {
@@ -398,7 +390,6 @@ export const enableNextVideoInfoOverlay = currentSettings.enableNextVideoInfoOve
 export const enableVideoRemainingTime = currentSettings.enableVideoRemainingTime.bind(currentSettings);
 export const enableThemeSongs = currentSettings.enableThemeSongs.bind(currentSettings);
 export const enableThemeVideos = currentSettings.enableThemeVideos.bind(currentSettings);
-export const enableFastFadein = currentSettings.enableFastFadein.bind(currentSettings);
 export const enableBlurhash = currentSettings.enableBlurhash.bind(currentSettings);
 export const enableBackdrops = currentSettings.enableBackdrops.bind(currentSettings);
 export const detailsBanner = currentSettings.detailsBanner.bind(currentSettings);

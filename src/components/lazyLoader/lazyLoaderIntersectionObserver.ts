@@ -1,5 +1,5 @@
 type Callback = (entry: IntersectionObserverEntry, observer: IntersectionObserver) => void;
-type Options = { callback: Callback };
+type Options = { callback: Callback; viewportMargin?: number };
 
 const sharedLoaders = new Map<Callback, LazyLoader>();
 const activeLoaders = new Set<LazyLoader>();
@@ -40,12 +40,22 @@ export class LazyLoader {
                 });
             },
             {
-                rootMargin: '50%',
+                // Percentage root margins use viewport width, including in the polyfill.
+                rootMargin: this.options.viewportMargin === undefined ? '50%' : `${window.innerHeight * this.options.viewportMargin}px 0px`,
                 threshold: 0
             });
 
         this.observer = newObserver;
+        if (this.options.viewportMargin !== undefined) window.addEventListener('resize', this.resizeObserver);
     }
+
+    private resizeObserver = () => {
+        this.observer?.disconnect();
+        this.createObserver();
+        this.elements.forEach(element => {
+            this.observer!.observe(element);
+        });
+    };
 
     addElements(elements: ArrayLike<Element>) {
         let observer = this.observer!;
@@ -80,6 +90,7 @@ export class LazyLoader {
 
         if (observer) {
             observer.disconnect();
+            window.removeEventListener('resize', this.resizeObserver);
             this.observer = null;
             this.elements.clear();
             activeLoaders.delete(this);
@@ -99,20 +110,20 @@ export class LazyLoader {
     }
 }
 
-function unveilElements(elements: ArrayLike<Element>, callback: Callback) {
+function unveilElements(elements: ArrayLike<Element>, callback: Callback, viewportMargin?: number) {
     if (!elements.length) {
         return;
     }
     let lazyLoader = sharedLoaders.get(callback);
     if (!lazyLoader) {
-        lazyLoader = new LazyLoader({ callback: callback });
+        lazyLoader = new LazyLoader({ callback, viewportMargin });
         sharedLoaders.set(callback, lazyLoader);
     }
     lazyLoader.addElements(elements);
 }
 
-export function lazyChildren(elem: Element, callback: Callback) {
-    unveilElements(elem.getElementsByClassName('lazy'), callback);
+export function lazyChildren(elem: Element, callback: Callback, viewportMargin?: number) {
+    unveilElements(elem.getElementsByClassName('lazy'), callback, viewportMargin);
 }
 
 export default {

@@ -80,3 +80,19 @@ describe('shared lazy observers', () => {
         expect(unobserve).not.toHaveBeenCalled();
     });
 });
+
+describe('viewport height margins', () => {
+    it('updates pixel margins and retains all targets after viewport resize', () => {
+        const loader = new LazyLoader({ callback: vi.fn(), viewportMargin: 1.5 });
+        const target = document.querySelector('.lazy')!;
+        loader.addElements([target]);
+        vi.stubGlobal('innerHeight', 1080);
+        window.dispatchEvent(new Event('resize'));
+        expect(observerConstructor).toHaveBeenLastCalledWith(expect.any(Function), { rootMargin: '1620px 0px', threshold: 0 });
+        expect(observedElements.has(target)).toBe(true);
+        loader.destroy();
+        const calls = observerConstructor.mock.calls.length;
+        window.dispatchEvent(new Event('resize'));
+        expect(observerConstructor).toHaveBeenCalledTimes(calls);
+    });
+});

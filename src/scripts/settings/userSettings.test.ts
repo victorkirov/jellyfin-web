@@ -129,3 +129,14 @@ describe('local and server display preferences', () => {
         expect(settings.getDisplayPreference('layout')).toBe('Poster');
     });
 });
+
+describe('TV blurhash preference', () => {
+    it('defaults blurred placeholders to off', () => {
+        expect(new UserSettings().enableBlurhash()).toBe(false);
+    });
+    it.each([true, false])('preserves an explicit %s choice', enabled => {
+        const settings = new UserSettings();
+        settings.enableBlurhash(enabled);
+        expect(new UserSettings().enableBlurhash()).toBe(enabled);
+    });
+});
