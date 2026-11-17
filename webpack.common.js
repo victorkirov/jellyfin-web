@@ -174,11 +174,6 @@ const config = {
                 include: [
                     path.resolve(__dirname, 'node_modules/@jellyfin/libass-wasm'),
                     path.resolve(__dirname, 'node_modules/@jellyfin/sdk'),
-                    path.resolve(__dirname, 'node_modules/@mui/material'),
-                    path.resolve(__dirname, 'node_modules/@mui/private-theming'),
-                    path.resolve(__dirname, 'node_modules/@mui/styled-engine'),
-                    path.resolve(__dirname, 'node_modules/@mui/system'),
-                    path.resolve(__dirname, 'node_modules/@mui/utils'),
                     path.resolve(__dirname, 'node_modules/@remix-run/router'),
                     path.resolve(__dirname, 'node_modules/@tanstack/query-core'),
                     path.resolve(__dirname, 'node_modules/@tanstack/query-persist-client-core'),

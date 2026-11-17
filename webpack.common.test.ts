@@ -11,7 +11,7 @@ const asyncChunk = { canBeInitial: () => false };
 describe('Vendor chunk names', () => {
     it('leaves lazy-only modules out of named startup packages', () => {
         expect(getChunkName(
-            { context: '/project/node_modules/@mui/material/Autocomplete' },
+            { context: '/project/node_modules/@jellyfin/sdk/lib/utils/api/library-api' },
             [asyncChunk]
         )).toBeUndefined();
         expect(getChunkName(
@@ -22,9 +22,9 @@ describe('Vendor chunk names', () => {
 
     it('keeps a stable package name for modules needed at startup', () => {
         expect(getChunkName(
-            { context: '/project/node_modules/@mui/material/Button' },
+            { context: '/project/node_modules/@jellyfin/sdk/lib/api' },
             [initialChunk, asyncChunk]
-        )).toBe('node_modules.@mui.material');
+        )).toBe('node_modules.@jellyfin.sdk');
     });
 
     it('leaves unused async locale modules out of startup packages', () => {
