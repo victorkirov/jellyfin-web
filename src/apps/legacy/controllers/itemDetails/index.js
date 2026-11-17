@@ -19,6 +19,7 @@ import itemContextMenu from 'components/itemContextMenu';
 import itemHelper from 'components/itemHelper';
 import mediaInfo from 'components/mediainfo/mediainfo';
 import layoutManager from 'components/layoutManager';
+import { deferSection } from 'components/homesections/deferSection';
 import listView from 'components/listview/listview';
 import loading from 'components/loading/loading';
 import ItemDetailsMetadataList from 'components/itemDetails/ItemDetailsMetadataList';
@@ -556,6 +557,7 @@ function reloadFromItem(instance, page, params, item, user) {
 
     libraryMenu.setTitle('');
     unmount(instance);
+    clearDeferredDetails(page);
 
     // Start rendering the artwork first
     renderImage(page, item, apiClient);
@@ -1056,6 +1058,22 @@ function enableScrollX() {
     return browser.mobile && window.screen.availWidth <= 1000;
 }
 
+function clearDeferredDetails(page) {
+    for (const destroy of page.deferredDetails || []) destroy();
+    page.deferredDetails = [];
+}
+
+function renderDeferredDetailSection(page, section, render) {
+    if (!layoutManager.tv) return render();
+
+    section.classList.add('hide');
+    page.deferredDetails = page.deferredDetails || [];
+    page.deferredDetails.push(deferSection(section, () => {
+        section.classList.remove('hide');
+        return render();
+    }));
+}
+
 function renderLyricsContainer(view, item, apiClient) {
     const lyricContainer = view.querySelector('.lyricsContainer');
     if (lyricContainer && item.HasLyrics) {
@@ -1063,27 +1081,29 @@ function renderLyricsContainer(view, item, apiClient) {
             lyricContainer.classList.add('hide');
             return;
         }
-        //get lyrics
-        apiClient.ajax({
-            url: apiClient.getUrl('Audio/' + item.Id + '/Lyrics'),
-            type: 'GET',
-            dataType: 'json'
-        }).then((response) => {
-            if (!response.Lyrics) {
+        renderDeferredDetailSection(view, lyricContainer, () => {
+            //get lyrics
+            return apiClient.ajax({
+                url: apiClient.getUrl('Audio/' + item.Id + '/Lyrics'),
+                type: 'GET',
+                dataType: 'json'
+            }).then((response) => {
+                if (!response.Lyrics) {
+                    lyricContainer.classList.add('hide');
+                    return;
+                }
+                lyricContainer.classList.remove('hide');
+                const itemsContainer = lyricContainer.querySelector('.itemsContainer');
+                if (itemsContainer) {
+                    const html = response.Lyrics.reduce((htmlAccumulator, lyric) => {
+                        htmlAccumulator += escapeHtml(lyric.Text) + '<br/>';
+                        return htmlAccumulator;
+                    }, '');
+                    itemsContainer.innerHTML = html;
+                }
+            }).catch(() => {
                 lyricContainer.classList.add('hide');
-                return;
-            }
-            lyricContainer.classList.remove('hide');
-            const itemsContainer = lyricContainer.querySelector('.itemsContainer');
-            if (itemsContainer) {
-                const html = response.Lyrics.reduce((htmlAccumulator, lyric) => {
-                    htmlAccumulator += escapeHtml(lyric.Text) + '<br/>';
-                    return htmlAccumulator;
-                }, '');
-                itemsContainer.innerHTML = html;
-            }
-        }).catch(() => {
-            lyricContainer.classList.add('hide');
+            });
         });
     }
 }
@@ -1097,39 +1117,42 @@ function renderMoreFromSeason(view, item, apiClient) {
             return;
         }
 
-        const userId = apiClient.getCurrentUserId();
-        apiClient.getEpisodes(item.SeriesId, {
-            SeasonId: item.SeasonId,
-            UserId: userId,
-            Fields: 'ItemCounts,PrimaryImageAspectRatio,CanDelete,MediaSourceCount'
-        }).then(function (result) {
-            if (result.Items.length < 2) {
-                section.classList.add('hide');
-                return;
-            }
+        section.querySelector('h2').textContent = globalize.translate('MoreFromValue', item.SeasonName);
 
-            section.classList.remove('hide');
-            section.querySelector('h2').innerText = globalize.translate('MoreFromValue', item.SeasonName);
-            const itemsContainer = section.querySelector('.itemsContainer');
-            cardBuilder.buildCards(result.Items, {
-                parentContainer: section,
-                itemsContainer: itemsContainer,
-                shape: 'overflowBackdrop',
-                sectionTitleTagName: 'h2',
-                scalable: true,
-                showTitle: true,
-                overlayText: false,
-                centerText: true,
-                includeParentInfoInTitle: false,
-                allowBottomPadding: false
+        renderDeferredDetailSection(view, section, () => {
+            const userId = apiClient.getCurrentUserId();
+            return apiClient.getEpisodes(item.SeriesId, {
+                SeasonId: item.SeasonId,
+                UserId: userId,
+                Fields: 'ItemCounts,PrimaryImageAspectRatio,CanDelete,MediaSourceCount'
+            }).then(function (result) {
+                if (result.Items.length < 2) {
+                    section.classList.add('hide');
+                    return;
+                }
+
+                section.classList.remove('hide');
+                const itemsContainer = section.querySelector('.itemsContainer');
+                cardBuilder.buildCards(result.Items, {
+                    parentContainer: section,
+                    itemsContainer: itemsContainer,
+                    shape: 'overflowBackdrop',
+                    sectionTitleTagName: 'h2',
+                    scalable: true,
+                    showTitle: true,
+                    overlayText: false,
+                    centerText: true,
+                    includeParentInfoInTitle: false,
+                    allowBottomPadding: false
+                });
+                const card = itemsContainer.querySelector('.card[data-id="' + item.Id + '"]');
+
+                if (card) {
+                    setTimeout(function () {
+                        section.querySelector('.emby-scroller').toStart(card.previousSibling || card, true);
+                    }, 100);
+                }
             });
-            const card = itemsContainer.querySelector('.card[data-id="' + item.Id + '"]');
-
-            if (card) {
-                setTimeout(function () {
-                    section.querySelector('.emby-scroller').toStart(card.previousSibling || card, true);
-                }, 100);
-            }
         });
     }
 }
@@ -1143,47 +1166,49 @@ function renderMoreFromArtist(view, item, apiClient) {
             return;
         }
 
-        const query = {
-            IncludeItemTypes: 'MusicAlbum',
-            Recursive: true,
-            ExcludeItemIds: item.Id,
-            SortBy: 'PremiereDate,ProductionYear,SortName',
-            SortOrder: 'Descending'
-        };
-
         if (item.Type === 'MusicArtist') {
-            query.ContributingArtistIds = item.Id;
+            section.querySelector('h2').textContent = globalize.translate('HeaderAppearsOn');
         } else {
-            query.AlbumArtistIds = item.AlbumArtists.map(artist => artist.Id).join(',');
+            section.querySelector('h2').textContent = globalize.translate('MoreFromValue', item.AlbumArtists[0].Name);
         }
 
-        apiClient.getItems(apiClient.getCurrentUserId(), query).then(function (result) {
-            if (!result.Items.length) {
-                section.classList.add('hide');
-                return;
-            }
-
-            section.classList.remove('hide');
+        renderDeferredDetailSection(view, section, () => {
+            const query = {
+                IncludeItemTypes: 'MusicAlbum',
+                Recursive: true,
+                ExcludeItemIds: item.Id,
+                SortBy: 'PremiereDate,ProductionYear,SortName',
+                SortOrder: 'Descending'
+            };
 
             if (item.Type === 'MusicArtist') {
-                section.querySelector('h2').innerText = globalize.translate('HeaderAppearsOn');
+                query.ContributingArtistIds = item.Id;
             } else {
-                section.querySelector('h2').innerText = globalize.translate('MoreFromValue', item.AlbumArtists[0].Name);
+                query.AlbumArtistIds = item.AlbumArtists.map(artist => artist.Id).join(',');
             }
 
-            cardBuilder.buildCards(result.Items, {
-                parentContainer: section,
-                itemsContainer: section.querySelector('.itemsContainer'),
-                shape: 'autooverflow',
-                sectionTitleTagName: 'h2',
-                scalable: true,
-                coverImage: item.Type === 'MusicArtist' || item.Type === 'MusicAlbum',
-                showTitle: true,
-                showParentTitle: false,
-                centerText: true,
-                overlayText: false,
-                overlayPlayButton: true,
-                showYear: true
+            return apiClient.getItems(apiClient.getCurrentUserId(), query).then(function (result) {
+                if (!result.Items.length) {
+                    section.classList.add('hide');
+                    return;
+                }
+
+                section.classList.remove('hide');
+
+                cardBuilder.buildCards(result.Items, {
+                    parentContainer: section,
+                    itemsContainer: section.querySelector('.itemsContainer'),
+                    shape: 'autooverflow',
+                    sectionTitleTagName: 'h2',
+                    scalable: true,
+                    coverImage: item.Type === 'MusicArtist' || item.Type === 'MusicAlbum',
+                    showTitle: true,
+                    showParentTitle: false,
+                    centerText: true,
+                    overlayText: false,
+                    overlayPlayButton: true,
+                    showYear: true
+                });
             });
         });
     }
@@ -1205,39 +1230,41 @@ function renderItemCollections(page, item, apiClient, context) {
         return;
     }
 
-    getLibraryApi(api)
-        .getItemCollections({
-            itemId: item.Id,
-            userId,
-            fields: [ItemFields.PrimaryImageAspectRatio]
-        })
-        .then(response => response.data?.Items || [])
-        .then(collectionItems => {
-            if (!collectionItems.length) {
-                section.classList.add('hide');
-                return;
-            }
+    renderDeferredDetailSection(page, section, () => {
+        return getLibraryApi(api)
+            .getItemCollections({
+                itemId: item.Id,
+                userId,
+                fields: [ItemFields.PrimaryImageAspectRatio]
+            })
+            .then(response => response.data?.Items || [])
+            .then(collectionItems => {
+                if (!collectionItems.length) {
+                    section.classList.add('hide');
+                    return;
+                }
 
-            section.classList.remove('hide');
-            cardBuilder.buildCards(collectionItems, {
-                parentContainer: section,
-                itemsContainer: section.querySelector('.collectionsContent'),
-                shape: 'overflowPortrait',
-                sectionTitleTagName: 'h2',
-                scalable: true,
-                centerText: true,
-                showTitle: true,
-                showParentTitle: false,
-                overlayText: false,
-                overlayPlayButton: false,
-                coverImage: true,
-                // Similar to "More Like This"
-                showYear: item.Type === 'Movie' || item.Type === 'Trailer' || item.Type === 'Series',
-                context
+                section.classList.remove('hide');
+                cardBuilder.buildCards(collectionItems, {
+                    parentContainer: section,
+                    itemsContainer: section.querySelector('.collectionsContent'),
+                    shape: 'overflowPortrait',
+                    sectionTitleTagName: 'h2',
+                    scalable: true,
+                    centerText: true,
+                    showTitle: true,
+                    showParentTitle: false,
+                    overlayText: false,
+                    overlayPlayButton: false,
+                    coverImage: true,
+                    // Similar to "More Like This"
+                    showYear: item.Type === 'Movie' || item.Type === 'Trailer' || item.Type === 'Series',
+                    context
+                });
+            }).catch(() => {
+                section.classList.add('hide');
             });
-        }).catch(() => {
-            section.classList.add('hide');
-        });
+    });
 }
 
 function renderSimilarItems(page, item, context) {
@@ -1249,43 +1276,45 @@ function renderSimilarItems(page, item, context) {
             return;
         }
 
-        similarCollapsible.classList.remove('hide');
-        const apiClient = ServerConnections.getApiClient(item.ServerId);
-        const options = {
-            userId: apiClient.getCurrentUserId(),
-            limit: 12,
-            fields: 'PrimaryImageAspectRatio,CanDelete'
-        };
+        renderDeferredDetailSection(page, similarCollapsible, () => {
+            similarCollapsible.classList.remove('hide');
+            const apiClient = ServerConnections.getApiClient(item.ServerId);
+            const options = {
+                userId: apiClient.getCurrentUserId(),
+                limit: 12,
+                fields: 'PrimaryImageAspectRatio,CanDelete'
+            };
 
-        if (item.Type == 'MusicAlbum' && item.AlbumArtists && item.AlbumArtists.length) {
-            options.ExcludeArtistIds = item.AlbumArtists[0].Id;
-        }
-
-        apiClient.getSimilarItems(item.Id, options).then(function (result) {
-            if (!result.Items.length) {
-                similarCollapsible.classList.add('hide');
-                return;
+            if (item.Type == 'MusicAlbum' && item.AlbumArtists && item.AlbumArtists.length) {
+                options.ExcludeArtistIds = item.AlbumArtists[0].Id;
             }
 
-            similarCollapsible.classList.remove('hide');
-            let html = '';
-            html += cardBuilder.getCardsHtml({
-                items: result.Items,
-                shape: 'autooverflow',
-                showParentTitle: item.Type == 'MusicAlbum',
-                centerText: true,
-                showTitle: true,
-                context: context,
-                lazy: true,
-                showDetailsMenu: true,
-                coverImage: item.Type == 'MusicAlbum' || item.Type == 'MusicArtist',
-                overlayPlayButton: true,
-                overlayText: false,
-                showYear: item.Type === 'Movie' || item.Type === 'Trailer' || item.Type === 'Series'
+            return apiClient.getSimilarItems(item.Id, options).then(function (result) {
+                if (!result.Items.length) {
+                    similarCollapsible.classList.add('hide');
+                    return;
+                }
+
+                similarCollapsible.classList.remove('hide');
+                let html = '';
+                html += cardBuilder.getCardsHtml({
+                    items: result.Items,
+                    shape: 'autooverflow',
+                    showParentTitle: item.Type == 'MusicAlbum',
+                    centerText: true,
+                    showTitle: true,
+                    context: context,
+                    lazy: true,
+                    showDetailsMenu: true,
+                    coverImage: item.Type == 'MusicAlbum' || item.Type == 'MusicArtist',
+                    overlayPlayButton: true,
+                    overlayText: false,
+                    showYear: item.Type === 'Movie' || item.Type === 'Trailer' || item.Type === 'Series'
+                });
+                const similarContent = similarCollapsible.querySelector('.similarContent');
+                similarContent.innerHTML = html;
+                imageLoader.lazyChildren(similarContent);
             });
-            const similarContent = similarCollapsible.querySelector('.similarContent');
-            similarContent.innerHTML = html;
-            imageLoader.lazyChildren(similarContent);
         });
     }
 }
@@ -1774,37 +1803,41 @@ function renderCollectionItemType(page, parentItem, type, items) {
 }
 
 function renderMusicVideos(page, item, user) {
-    const request = {
-        SortBy: 'SortName',
-        SortOrder: 'Ascending',
-        IncludeItemTypes: 'MusicVideo',
-        Recursive: true,
-        Fields: 'PrimaryImageAspectRatio,CanDelete,MediaSourceCount',
-        AlbumIds: item.Id
-    };
+    renderDeferredDetailSection(page, page.querySelector('#musicVideosCollapsible'), () => {
+        const request = {
+            SortBy: 'SortName',
+            SortOrder: 'Ascending',
+            IncludeItemTypes: 'MusicVideo',
+            Recursive: true,
+            Fields: 'PrimaryImageAspectRatio,CanDelete,MediaSourceCount',
+            AlbumIds: item.Id
+        };
 
-    ServerConnections.getApiClient(item.ServerId).getItems(user.Id, request).then(function (result) {
-        if (result.Items.length) {
-            page.querySelector('#musicVideosCollapsible').classList.remove('hide');
-            const musicVideosContent = page.querySelector('#musicVideosContent');
-            musicVideosContent.innerHTML = getVideosHtml(result.Items);
-            imageLoader.lazyChildren(musicVideosContent);
-        } else {
-            page.querySelector('#musicVideosCollapsible').classList.add('hide');
-        }
+        return ServerConnections.getApiClient(item.ServerId).getItems(user.Id, request).then(function (result) {
+            if (result.Items.length) {
+                page.querySelector('#musicVideosCollapsible').classList.remove('hide');
+                const musicVideosContent = page.querySelector('#musicVideosContent');
+                musicVideosContent.innerHTML = getVideosHtml(result.Items);
+                imageLoader.lazyChildren(musicVideosContent);
+            } else {
+                page.querySelector('#musicVideosCollapsible').classList.add('hide');
+            }
+        });
     });
 }
 
 function renderAdditionalParts(page, item, user) {
-    ServerConnections.getApiClient(item.ServerId).getAdditionalVideoParts(user.Id, item.Id).then(function (result) {
-        if (result.Items.length) {
-            page.querySelector('#additionalPartsCollapsible').classList.remove('hide');
-            const additionalPartsContent = page.querySelector('#additionalPartsContent');
-            additionalPartsContent.innerHTML = getVideosHtml(result.Items);
-            imageLoader.lazyChildren(additionalPartsContent);
-        } else {
-            page.querySelector('#additionalPartsCollapsible').classList.add('hide');
-        }
+    renderDeferredDetailSection(page, page.querySelector('#additionalPartsCollapsible'), () => {
+        return ServerConnections.getApiClient(item.ServerId).getAdditionalVideoParts(user.Id, item.Id).then(function (result) {
+            if (result.Items.length) {
+                page.querySelector('#additionalPartsCollapsible').classList.remove('hide');
+                const additionalPartsContent = page.querySelector('#additionalPartsContent');
+                additionalPartsContent.innerHTML = getVideosHtml(result.Items);
+                imageLoader.lazyChildren(additionalPartsContent);
+            } else {
+                page.querySelector('#additionalPartsCollapsible').classList.add('hide');
+            }
+        });
     });
 }
 
@@ -1816,15 +1849,17 @@ function renderScenes(page, item) {
     }
 
     if (chapters.length) {
-        page.querySelector('#scenesCollapsible').classList.remove('hide');
-        const scenesContent = page.querySelector('#scenesContent');
+        renderDeferredDetailSection(page, page.querySelector('#scenesCollapsible'), () => {
+            page.querySelector('#scenesCollapsible').classList.remove('hide');
+            const scenesContent = page.querySelector('#scenesContent');
 
-        import('components/cardbuilder/chaptercardbuilder').then(({ default: chaptercardbuilder }) => {
-            chaptercardbuilder.buildChapterCards(item, chapters, {
-                itemsContainer: scenesContent,
-                backdropShape: 'overflowBackdrop',
-                squareShape: 'overflowSquare',
-                imageBlurhashes: item.ImageBlurHashes
+            return import('components/cardbuilder/chaptercardbuilder').then(({ default: chaptercardbuilder }) => {
+                chaptercardbuilder.buildChapterCards(item, chapters, {
+                    itemsContainer: scenesContent,
+                    backdropShape: 'overflowBackdrop',
+                    squareShape: 'overflowSquare',
+                    imageBlurhashes: item.ImageBlurHashes
+                });
             });
         });
     } else {
@@ -1846,10 +1881,12 @@ function getVideosHtml(items) {
 }
 
 function renderSpecials(page, item, user) {
-    ServerConnections.getApiClient(item.ServerId).getSpecialFeatures(user.Id, item.Id).then(function (specials) {
-        const specialsContent = page.querySelector('#specialsContent');
-        specialsContent.innerHTML = getVideosHtml(specials);
-        imageLoader.lazyChildren(specialsContent);
+    renderDeferredDetailSection(page, page.querySelector('#specialsCollapsible'), () => {
+        return ServerConnections.getApiClient(item.ServerId).getSpecialFeatures(user.Id, item.Id).then(function (specials) {
+            const specialsContent = page.querySelector('#specialsContent');
+            specialsContent.innerHTML = getVideosHtml(specials);
+            imageLoader.lazyChildren(specialsContent);
+        });
     });
 }
 
@@ -1859,16 +1896,18 @@ function renderCast(page, item, people) {
         return;
     }
 
-    page.querySelector('#castCollapsible').classList.remove('hide');
-    const castContent = page.querySelector('#castContent');
+    renderDeferredDetailSection(page, page.querySelector('#castCollapsible'), () => {
+        page.querySelector('#castCollapsible').classList.remove('hide');
+        const castContent = page.querySelector('#castContent');
 
-    import('components/cardbuilder/peoplecardbuilder').then(({ default: peoplecardbuilder }) => {
-        peoplecardbuilder.buildPeopleCards(people, {
-            itemsContainer: castContent,
-            coverImage: true,
-            serverId: item.ServerId,
-            shape: 'overflowPortrait',
-            imageBlurhashes: item.ImageBlurHashes
+        return import('components/cardbuilder/peoplecardbuilder').then(({ default: peoplecardbuilder }) => {
+            peoplecardbuilder.buildPeopleCards(people, {
+                itemsContainer: castContent,
+                coverImage: true,
+                serverId: item.ServerId,
+                shape: 'overflowPortrait',
+                imageBlurhashes: item.ImageBlurHashes
+            });
         });
     });
 }
@@ -1879,16 +1918,18 @@ function renderGuestCast(page, item, people) {
         return;
     }
 
-    page.querySelector('#guestCastCollapsible').classList.remove('hide');
-    const guestCastContent = page.querySelector('#guestCastContent');
+    renderDeferredDetailSection(page, page.querySelector('#guestCastCollapsible'), () => {
+        page.querySelector('#guestCastCollapsible').classList.remove('hide');
+        const guestCastContent = page.querySelector('#guestCastContent');
 
-    import('components/cardbuilder/peoplecardbuilder').then(({ default: peoplecardbuilder }) => {
-        peoplecardbuilder.buildPeopleCards(people, {
-            itemsContainer: guestCastContent,
-            coverImage: true,
-            serverId: item.ServerId,
-            shape: 'overflowPortrait',
-            imageBlurhashes: item.ImageBlurHashes
+        return import('components/cardbuilder/peoplecardbuilder').then(({ default: peoplecardbuilder }) => {
+            peoplecardbuilder.buildPeopleCards(people, {
+                itemsContainer: guestCastContent,
+                coverImage: true,
+                serverId: item.ServerId,
+                shape: 'overflowPortrait',
+                imageBlurhashes: item.ImageBlurHashes
+            });
         });
     });
 }
@@ -2164,6 +2205,7 @@ export default function (view, params) {
         });
         view.addEventListener('viewdestroy', function () {
             unmount(self);
+            clearDeferredDetails(view);
 
             currentItem = null;
             self._currentPlaybackMediaSources = null;
