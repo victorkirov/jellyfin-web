@@ -12,6 +12,7 @@ vi.mock('react-dom/client', () => ({ createRoot: () => ({ render: mocks.render }
 vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: {
     getLastUsedServer: () => undefined, getApiClients: () => []
 } }));
+vi.mock('components/playback/playbackmanager', () => ({}));
 vi.mock('./components/apphost', () => ({ appHost: { init: () => Promise.resolve() } }));
 vi.mock('./components/autoFocuser', () => ({ default: { enable: mocks.enableFocus } }));
 vi.mock('components/loading/loading', () => ({ default: { show: vi.fn() } }));

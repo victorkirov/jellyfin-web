@@ -7,6 +7,10 @@ import { createRoot } from 'react-dom/client';
 // NOTE: We need to import this first to initialize the connection
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 
+// NOTE: The playback manager subscribes to the plugin manager when it is created, and the plugin manager's
+// imports reach the playback manager (appRouter -> backdrop), so the playback manager must load first
+import 'components/playback/playbackmanager';
+
 import { appHost } from './components/apphost';
 import autoFocuser from './components/autoFocuser';
 import loading from 'components/loading/loading';
