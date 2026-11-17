@@ -13,7 +13,6 @@ import * as webSettings from '../scripts/settings/webSettings';
 import datetime from '../scripts/datetime';
 import { setBackdropTransparency } from '../components/backdrop/backdrop';
 import dialogHelper from '../components/dialogHelper/dialogHelper';
-import itemIdentifier from '../components/itemidentifier/itemidentifier';
 import { getLocationSearch } from './url.ts';
 import { queryClient } from './query/queryClient';
 
@@ -256,7 +255,6 @@ const Dashboard = {
     showLoadingMsg,
     datetime,
     dialogHelper,
-    itemIdentifier,
     setBackdropTransparency
 };
 

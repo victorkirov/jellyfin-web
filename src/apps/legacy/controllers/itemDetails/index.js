@@ -12,7 +12,6 @@ import { clearBackdrop, setBackdrops } from 'components/backdrop/backdrop';
 import cardBuilder from 'components/cardbuilder/cardBuilder';
 import { buildCardImage } from 'components/cardbuilder/cardImage';
 import { getPortraitShape, getSquareShape } from 'components/cardbuilder/utils/shape';
-import confirm from 'components/confirm/confirm';
 import imageLoader from 'components/images/imageLoader';
 import itemContextMenu from 'components/itemContextMenu';
 import itemHelper from 'components/itemHelper';
@@ -26,7 +25,6 @@ import { playbackManager } from 'components/playback/playbackmanager';
 import { appRouter } from 'components/router/appRouter';
 import itemShortcuts from 'components/shortcuts';
 import { AppFeature } from 'constants/appFeature';
-import { EventType } from 'constants/eventType';
 import { ItemAction } from 'constants/itemAction';
 import globalize from 'lib/globalize';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
@@ -590,16 +588,6 @@ function reloadFromItem(instance, page, params, item, user) {
     }
 
     showRecordingFields(instance, page, item, user);
-    const groupedVersions = (item.MediaSources || []).filter(function (g) {
-        return g.Type == 'Grouping';
-    });
-
-    if (user.Policy.IsAdministrator && groupedVersions.length) {
-        page.querySelector('.btnSplitVersions').classList.remove('hide');
-    } else {
-        page.querySelector('.btnSplitVersions').classList.add('hide');
-    }
-
     itemContextMenu.getCommands(getContextMenuOptions(item, user)).then(commands => {
         if (commands.length) {
             hideAll(page, 'btnMoreCommands', true);
@@ -1971,24 +1959,6 @@ export default function (view, params) {
         });
     }
 
-    function splitVersions(instance, page, apiClient, pageParams) {
-        confirm(globalize.translate('ConfirmSplitMedia'), globalize.translate('HeaderSplitMedia'))
-            .then(() => {
-                loading.show();
-                return apiClient.ajax({
-                    type: 'DELETE',
-                    url: apiClient.getUrl('Videos/' + pageParams.id + '/AlternateSources')
-                });
-            })
-            .then(() => {
-                reload(instance, page, pageParams);
-                Events.trigger(document, EventType.REFRESH_NEEDED);
-            })
-            .finally(() => {
-                loading.hide();
-            });
-    }
-
     function getPlayOptions(startPosition) {
         const audioStreamIndex = view.querySelector('.selectAudio').value || null;
         return {
@@ -2150,9 +2120,6 @@ export default function (view, params) {
         bindAll(view, '.btnCancelTimer', 'click', onCancelTimerClick);
         bindAll(view, '.btnDownload', 'click', onDownloadClick);
         view.querySelector('.trackSelections').addEventListener('submit', onTrackSelectionsSubmit);
-        view.querySelector('.btnSplitVersions').addEventListener('click', function () {
-            splitVersions(self, view, apiClient, params);
-        });
         bindAll(view, '.btnMoreCommands', 'click', onMoreCommandsClick);
         view.querySelector('.selectSource').addEventListener('change', function () {
             renderVideoSelections(view, self._currentPlaybackMediaSources);

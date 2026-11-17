@@ -95,72 +95,8 @@ export function supportsAddingToPlaylist(item) {
     return item.MediaType || item.IsFolder || item.Type === 'Genre' || item.Type === 'MusicGenre' || item.Type === 'MusicArtist';
 }
 
-export function canEdit(user, item) {
-    const itemType = item.Type;
-
-    if (itemType === 'UserRootFolder' || itemType === 'UserView') {
-        return false;
-    }
-
-    if (itemType === 'Program') {
-        return false;
-    }
-
-    if (itemType === 'Timer') {
-        return false;
-    }
-
-    if (itemType === 'SeriesTimer') {
-        return false;
-    }
-
-    if (item.Type === 'Recording' && item.Status !== 'Completed') {
-        return false;
-    }
-
-    if (isLocalItem(item)) {
-        return false;
-    }
-
-    return user.Policy.IsAdministrator;
-}
-
 export function isLocalItem(item) {
     return item?.Id && typeof item.Id === 'string' && item.Id.indexOf('local') === 0;
-}
-
-export function canIdentify (user, item) {
-    const itemType = item.Type;
-
-    return (itemType === 'Movie'
-        || itemType === 'Trailer'
-        || itemType === 'Series'
-        || itemType === 'BoxSet'
-        || itemType === 'Person'
-        || itemType === 'Book'
-        || itemType === 'MusicAlbum'
-        || itemType === 'MusicArtist'
-        || itemType === 'MusicVideo')
-        && user.Policy.IsAdministrator
-        && !isLocalItem(item);
-}
-
-export function canEditImages (user, item) {
-    const itemType = item.Type;
-
-    if (item.MediaType === 'Photo') {
-        return false;
-    }
-
-    if (itemType === 'UserView') {
-        return !!user.Policy.IsAdministrator;
-    }
-
-    if (item.Type === 'Recording' && item.Status !== 'Completed') {
-        return false;
-    }
-
-    return itemType !== 'Timer' && itemType !== 'SeriesTimer' && canEdit(user, item) && !isLocalItem(item);
 }
 
 export async function canEditPlaylist(user, item) {
@@ -307,22 +243,6 @@ export function canConvert (item, user) {
     return !item.IsPlaceHolder;
 }
 
-export function canRefreshMetadata (item, user) {
-    if (user.Policy.IsAdministrator) {
-        const collectionType = item.CollectionType;
-        if (collectionType === CollectionType.Livetv) {
-            return false;
-        }
-
-        return item.Type !== 'Timer' && item.Type !== 'SeriesTimer' && item.Type !== 'Program'
-            && item.Type !== 'TvChannel'
-            && !(item.Type === 'Recording' && item.Status !== 'Completed')
-            && !isLocalItem(item);
-    }
-
-    return false;
-}
-
 export function supportsMediaSourceSelection (item) {
     if (item.MediaType !== 'Video') {
         return false;
@@ -357,9 +277,6 @@ export default {
     supportsAddingToCollection: supportsAddingToCollection,
     supportsAddingToPlaylist: supportsAddingToPlaylist,
     isLocalItem: isLocalItem,
-    canIdentify: canIdentify,
-    canEdit: canEdit,
-    canEditImages: canEditImages,
     canEditSubtitles,
     canEditLyrics,
     canShare: canShare,
@@ -367,7 +284,6 @@ export default {
     canMarkPlayed: canMarkPlayed,
     canRate: canRate,
     canConvert: canConvert,
-    canRefreshMetadata: canRefreshMetadata,
     supportsMediaSourceSelection: supportsMediaSourceSelection,
     sortTracks: sortTracks
 };

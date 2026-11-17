@@ -232,24 +232,6 @@ export async function getCommands(options) {
         }
     }
 
-    const canEdit = itemHelper.canEdit(user, item);
-    if (canEdit && options.edit !== false && item.Type !== 'SeriesTimer') {
-        const text = (item.Type === 'Timer' || item.Type === 'SeriesTimer') ? globalize.translate('Edit') : globalize.translate('EditMetadata');
-        commands.push({
-            name: text,
-            id: 'edit',
-            icon: 'edit'
-        });
-    }
-
-    if (itemHelper.canEditImages(user, item) && options.editImages !== false) {
-        commands.push({
-            name: globalize.translate('EditImages'),
-            id: 'editimages',
-            icon: 'image'
-        });
-    }
-
     if (itemHelper.canEditSubtitles(user, item) && options.editSubtitles !== false) {
         commands.push({
             name: globalize.translate('EditSubtitles'),
@@ -263,14 +245,6 @@ export async function getCommands(options) {
             name: globalize.translate('EditLyrics'),
             id: 'editlyrics',
             icon: 'lyrics'
-        });
-    }
-
-    if (options.identify !== false && itemHelper.canIdentify(user, item)) {
-        commands.push({
-            name: globalize.translate('Identify'),
-            id: 'identify',
-            icon: 'edit'
         });
     }
 
@@ -296,14 +270,6 @@ export async function getCommands(options) {
                 icon: 'fiber_manual_record'
             });
         }
-    }
-
-    if (itemHelper.canRefreshMetadata(item, user)) {
-        commands.push({
-            name: globalize.translate('RefreshMetadata'),
-            id: 'refresh',
-            icon: 'refresh'
-        });
     }
 
     // Only show playlist edit actions if the user can modify the playlist
@@ -501,9 +467,6 @@ function executeCommand(item, id, options) {
                     lyricseditor.show(itemId, serverId).then(getResolveFunction(resolve, id, true), getResolveFunction(resolve, id));
                 });
                 break;
-            case 'edit':
-                editItem(apiClient, item).then(getResolveFunction(resolve, id, true), getResolveFunction(resolve, id));
-                break;
             case 'editplaylist':
                 import('./playlisteditor/playlisteditor').then(({ default: PlaylistEditor }) => {
                     const playlistEditor = new PlaylistEditor();
@@ -511,19 +474,6 @@ function executeCommand(item, id, options) {
                         id: itemId,
                         serverId
                     }).then(getResolveFunction(resolve, id, true), getResolveFunction(resolve, id));
-                });
-                break;
-            case 'editimages':
-                import('./imageeditor/imageeditor').then((imageEditor) => {
-                    imageEditor.show({
-                        itemId: itemId,
-                        serverId: serverId
-                    }).then(getResolveFunction(resolve, id, true), getResolveFunction(resolve, id));
-                });
-                break;
-            case 'identify':
-                import('./itemidentifier/itemidentifier').then((itemIdentifier) => {
-                    itemIdentifier.show(itemId, serverId).then(getResolveFunction(resolve, id, true), getResolveFunction(resolve, id));
                 });
                 break;
             case 'moremediainfo':
@@ -536,10 +486,6 @@ function executeCommand(item, id, options) {
                     const card = dom.parentWithClass(options.positionTo, 'card');
                     startMultiSelect(card);
                 });
-                break;
-            case 'refresh':
-                refresh(apiClient, item);
-                getResolveFunction(resolve, id)();
                 break;
             case 'open':
                 appRouter.showItem(item);
@@ -716,26 +662,6 @@ function play(item, resume, queue, queueNext) {
     }
 }
 
-function editItem(apiClient, item) {
-    return new Promise(function (resolve, reject) {
-        const serverId = apiClient.serverInfo().Id;
-
-        if (item.Type === 'Timer') {
-            import('./recordingcreator/recordingeditor').then(({ default: recordingEditor }) => {
-                recordingEditor.show(item.Id, serverId).then(resolve, reject);
-            });
-        } else if (item.Type === 'SeriesTimer') {
-            import('./recordingcreator/seriesrecordingeditor').then(({ default: recordingEditor }) => {
-                recordingEditor.show(item.Id, serverId).then(resolve, reject);
-            });
-        } else {
-            import('./metadataEditor/metadataEditor').then(({ default: metadataEditor }) => {
-                metadataEditor.show(item.Id, serverId).then(resolve, reject);
-            });
-        }
-    });
-}
-
 function deleteItem(apiClient, item) {
     return new Promise(function (resolve, reject) {
         import('../scripts/deleteHelper').then((deleteHelper) => {
@@ -746,16 +672,6 @@ function deleteItem(apiClient, item) {
                 resolve(true);
             }, reject);
         });
-    });
-}
-
-function refresh(apiClient, item) {
-    import('./refreshdialog/refreshdialog').then(({ default: RefreshDialog }) => {
-        new RefreshDialog({
-            itemIds: [item.Id],
-            serverId: apiClient.serverInfo().Id,
-            mode: item.Type === 'CollectionFolder' ? 'scan' : null
-        }).show();
     });
 }
 

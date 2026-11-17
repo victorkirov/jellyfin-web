@@ -327,11 +327,6 @@ function executeAction(card, target, action) {
         case ItemAction.PlayMenu:
             showPlayMenu(card, target);
             break;
-        case ItemAction.Edit:
-            getItem(target).then(itemToEdit => {
-                editItem(itemToEdit, serverId);
-            });
-            break;
         case ItemAction.PlayTrailer:
             getItem(target).then(playTrailer);
             break;
@@ -371,30 +366,6 @@ function playTrailer(item) {
 
     apiClient.getLocalTrailers(apiClient.getCurrentUserId(), item.Id).then(trailers => {
         playbackManager.play({ items: trailers });
-    });
-}
-
-function editItem(item, serverId) {
-    const apiClient = ServerConnections.getApiClient(serverId);
-
-    return new Promise((resolve, reject) => {
-        const currentServerId = apiClient.serverInfo().Id;
-
-        if (item.Type === 'Timer') {
-            if (item.ProgramId) {
-                import('./recordingcreator/recordingcreator').then(({ default: recordingCreator }) => {
-                    recordingCreator.show(item.ProgramId, currentServerId).then(resolve, reject);
-                });
-            } else {
-                import('./recordingcreator/recordingeditor').then(({ default: recordingEditor }) => {
-                    recordingEditor.show(item.Id, currentServerId).then(resolve, reject);
-                });
-            }
-        } else {
-            import('./metadataEditor/metadataEditor').then(({ default: metadataEditor }) => {
-                metadataEditor.show(item.Id, currentServerId).then(resolve, reject);
-            });
-        }
     });
 }
 
