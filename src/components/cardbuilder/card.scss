@@ -284,8 +284,14 @@ button::-moz-focus-inner {
     right: 0;
 }
 
+// Keep artwork top-aligned when equal-height button cards have different caption lengths.
+.itemsContainer > button.card {
+    display: flex;
+    flex-direction: column;
+}
+
 .cardText {
-    padding: 0.06em 2px; // 2px horizontal padding to avoid touching multiselect border
+    padding: 0 2px; // 2px horizontal padding to avoid touching multiselect border
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -308,11 +314,13 @@ button::-moz-focus-inner {
 }
 
 .cardText-first {
-    padding-top: 0.24em;
+    padding-top: 0.2em;
+    line-height: 1.25;
 }
 
 // Keep metadata compact; only mixed batches need taller shared caption slots.
 .cardText-first + .cardText {
+    margin-top: 0.2em;
     font-size: 86%;
     line-height: 1.25;
     min-height: 1.25em;
@@ -323,8 +331,20 @@ button::-moz-focus-inner {
     max-height: 2.5em;
 }
 
+// Let short titles collapse so metadata follows immediately; long titles still get two lines.
+.cardText-first > bdi {
+    display: block;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+    word-wrap: break-word;
+    line-height: 1.25;
+    max-height: 2.5em;
+    overflow: hidden;
+}
+
 // Episodic and live media put the item title below its parent title.
-.cardText-first > bdi,
 .card[data-type="Episode"] .cardText-first + .cardText-secondary > bdi,
 .card[data-type="Season"] .cardText-first + .cardText-secondary > bdi,
 .card[data-type="Program"] .cardText-first + .cardText-secondary > bdi,
@@ -389,7 +409,11 @@ button::-moz-focus-inner {
 
 .cardTextCentered,
 .cardTextCentered > .textActionButton {
-    text-align: center !important;
+    text-align: left !important;
+
+    [dir="rtl"] & {
+        text-align: right !important;
+    }
 }
 
 .cardImageContainer > .cardDefaultText {

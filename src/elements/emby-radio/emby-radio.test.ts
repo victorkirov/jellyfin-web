@@ -18,6 +18,11 @@ it('upgrades once and selects on Enter without submitting or repeating change', 
     Object.setPrototypeOf(radio, prototype);
     radio.attachedCallback();
     radio.attachedCallback();
+    radio.focus();
+    expect(radio.parentElement!.classList.contains('input-focused')).toBe(true);
+    expect(radio.checked).toBe(false);
+    radio.blur();
+    expect(radio.parentElement!.classList.contains('input-focused')).toBe(false);
     expect(document.querySelectorAll('.mdl-radio__circles')).toHaveLength(1);
     const change = vi.fn();
     radio.addEventListener('change', change);

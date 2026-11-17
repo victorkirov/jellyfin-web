@@ -19,8 +19,7 @@ it.each([
 it('keeps UI styles free of animation and transition declarations', () => {
     const violations: string[] = [];
     const allowed = [
-        'src/components/loading/loading.scss',
-        'src/elements/emby-checkbox/emby-checkbox.scss'
+        'src/components/loading/loading.scss'
     ];
     for (const path of fg.sync('src/**/*.scss', { ignore: allowed })) {
         const source = readFileSync(resolve(path), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');

@@ -66,7 +66,6 @@ function updateUserInHeader(user?: HeaderUser) {
             updateHeaderUserButton(headerUserButton, url);
             hasImage = true;
         }
-        headerUserButton.title = user.name;
         headerUserButton.classList.remove('hide');
     } else {
         headerUserButton.classList.add('hide');

@@ -151,7 +151,8 @@ html {
 }
 
 .paper-icon-button-light.show-focus:focus {
-    color: var(--jf-palette-secondary-main, $secondary-main);
+    background: #00a4dc;
+    color: rgba(0, 0, 0, 0.87);
 }
 
 a[data-role="button"],
@@ -442,9 +443,13 @@ a[data-role="button"],
     color: var(--jf-palette-text-primary, $text-primary);
 }
 
-.emby-tab-button.show-focus:focus,
 .emby-tab-button:hover {
     color: var(--jf-palette-secondary-main, $secondary-main);
+}
+
+.emby-tab-button.show-focus:focus {
+    background: #00a4dc;
+    color: rgba(0, 0, 0, 0.87);
 }
 
 .channelPrograms,

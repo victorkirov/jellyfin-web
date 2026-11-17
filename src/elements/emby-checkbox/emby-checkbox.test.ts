@@ -18,6 +18,11 @@ it('upgrades once and toggles on Enter with a bubbling change, then detaches', a
     Object.setPrototypeOf(checkbox, prototype);
     checkbox.attachedCallback();
     checkbox.attachedCallback();
+    checkbox.focus();
+    expect(checkbox.parentElement!.classList.contains('input-focused')).toBe(true);
+    expect(checkbox.checked).toBe(false);
+    checkbox.blur();
+    expect(checkbox.parentElement!.classList.contains('input-focused')).toBe(false);
     expect(document.querySelectorAll('.checkboxOutline')).toHaveLength(1);
     const change = vi.fn();
     checkbox.parentElement!.addEventListener('change', change);
@@ -28,7 +33,15 @@ it('upgrades once and toggles on Enter with a bubbling change, then detaches', a
     checkbox.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 13 }));
     expect(checkbox.checked).toBe(false);
     expect(change).toHaveBeenCalledTimes(2);
+    checkbox.focus();
     checkbox.detachedCallback();
+    expect(checkbox.parentElement!.classList.contains('input-focused')).toBe(false);
     checkbox.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 13 }));
     expect(change).toHaveBeenCalledTimes(2);
+    checkbox.blur();
+    checkbox.attachedCallback();
+    checkbox.focus();
+    expect(checkbox.parentElement!.classList.contains('input-focused')).toBe(true);
+    checkbox.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 13 }));
+    expect(change).toHaveBeenCalledTimes(3);
 });

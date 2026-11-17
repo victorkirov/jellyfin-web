@@ -65,7 +65,7 @@ afterEach(() => {
 });
 
 describe('TV card title captions', () => {
-    it.each(['ltr', 'rtl'])('reserves equal two-line title heights through rapid focus changes (%s)', direction => {
+    it.each(['ltr', 'rtl'])('preserves two-line title capacity through rapid focus changes (%s)', direction => {
         const style = document.createElement('style');
         style.textContent = compile('src/components/cardbuilder/card.scss').css;
         document.head.appendChild(style);
@@ -80,7 +80,7 @@ describe('TV card title captions', () => {
             expect(computed.whiteSpace).toBe('normal');
             expect(computed.overflow).toBe('hidden');
             expect(computed.getPropertyValue('-webkit-line-clamp')).toBe('2');
-            expect(computed.minHeight).toBe('2.5em');
+            expect(computed.minHeight).not.toBe('2.5em');
             expect(computed.maxHeight).toBe('2.5em');
             return computed.minHeight;
         });
@@ -102,7 +102,7 @@ describe('TV card title captions', () => {
         }], { shape: 'square', width: 200, disableIndicators: true, showTitle: true, showParentTitle: true, showYear: true });
         const captions = document.querySelectorAll('.cardText > bdi');
         expect(captions).toHaveLength(3);
-        expect(getComputedStyle(captions[0]).minHeight).toBe('2.5em');
+        expect(getComputedStyle(captions[0]).minHeight).not.toBe('2.5em');
         expect(getComputedStyle(captions[1]).minHeight).toBe('2.5em');
         expect(getComputedStyle(captions[2]).minHeight).not.toBe('2.5em');
         expect(captions[1].textContent).toContain('Curious George Discovers');

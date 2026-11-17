@@ -11,6 +11,7 @@
     align-items: center;
     height: 2.35em;
     cursor: pointer;
+    border-left: 0.15em solid transparent;
 }
 
 .checkboxFieldDescription {
@@ -118,12 +119,7 @@
     margin-bottom: 0.25em;
 }
 
-@keyframes repaintChrome {
-    from {
-        margin: 0;
-    }
-
-    to {
-        margin: 0;
-    }
+.emby-checkbox-label.input-focused {
+    background: rgba(255, 255, 255, 0.12);
+    border-left-color: #00a4dc;
 }

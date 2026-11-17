@@ -156,7 +156,17 @@
 }
 
 .headerTop {
-    padding: 0.54em 0;
+    padding: 0.54em 3.3%;
+}
+
+.headerLeft > .headerButton {
+    margin-left: 0;
+    margin-right: 0.58em;
+
+    [dir="rtl"] & {
+        margin-left: 0.58em;
+        margin-right: 0;
+    }
 }
 
 .sectionTabs {
@@ -194,7 +204,7 @@
 
 @media all and (min-width: 100em) {
     .headerTop {
-        padding: 0.8em 0.8em;
+        padding: 0.8em 3.3%;
     }
 
     .headerTabs {

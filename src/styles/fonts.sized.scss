@@ -25,3 +25,20 @@ h2 {
 h3 {
     @include header-font(1.17em);
 }
+
+.itemName {
+    font-size: 1.8em;
+    color: #fff;
+    font-weight: 600;
+}
+
+.dialog h1,
+.dialog h2,
+.dialog h3,
+h2.sectionTitle,
+.formDialogHeaderTitle,
+.dialogContentTitle {
+    font-size: 1.3em;
+    color: #fff;
+    font-weight: 600;
+}

@@ -23,6 +23,14 @@ function onKeyDown(this: HTMLInputElement, e: KeyboardEvent) {
     }
 }
 
+function onFocus(this: HTMLInputElement) {
+    this.parentElement!.classList.add('input-focused');
+}
+
+function onBlur(this: HTMLInputElement) {
+    this.parentElement!.classList.remove('input-focused');
+}
+
 EmbyRadioPrototype.attachedCallback = function () {
     if (this.getAttribute('data-radio') === 'true') {
         return;
@@ -58,13 +66,13 @@ EmbyRadioPrototype.attachedCallback = function () {
     html += '<circle class="mdl-radio__inner-circle" cx="50%" cy="50%" r="25%" fill="currentcolor" />';
     html += '</svg>';
 
-    html += '<div class="mdl-radio__focus-circle"></div>';
-
     html += '</div>';
 
     this.insertAdjacentHTML('afterend', html);
 
     this.addEventListener('keydown', onKeyDown);
+    this.addEventListener('focus', onFocus);
+    this.addEventListener('blur', onBlur);
 };
 
 (document as Document & { registerElement(name: string, options: { prototype: RadioPrototype; extends: string }): void }).registerElement('emby-radio', {

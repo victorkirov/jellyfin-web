@@ -31,7 +31,7 @@ it('renders named header controls, updates the user and preserves title APIs', a
     expect(document.querySelector('.headerUserButton')?.getAttribute('title')).toBe('Settings');
     handlers.get('localusersignedin')!(new Event('localusersignedin'), { ServerId: 'server' });
     await Promise.resolve();
-    expect(document.querySelector('.headerUserButton')?.getAttribute('title')).toBe('Viewer');
+    expect(document.querySelector('.headerUserButton')?.getAttribute('title')).toBe('Settings');
     expect(document.querySelector('.headerHomeButton')?.classList.contains('hide')).toBe(false);
     menu.setTitle('Movies');
     expect(document.querySelector<HTMLElement>('.pageTitle')?.innerText).toBe('Movies');
