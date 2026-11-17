@@ -289,6 +289,8 @@ function getItemHref(item, context) {
 }
 
 function toggleMainDrawer() {
+    if (layoutManager.tv) return;
+
     if (navDrawerInstance.isVisible) {
         closeMainDrawer();
     } else {
@@ -535,6 +537,8 @@ function updateCastIcon() {
 }
 
 function updateLibraryNavLinks(page) {
+    if (layoutManager.tv) return;
+
     const isLiveTvPage = page.classList.contains('liveTvPage');
     const isChannelsPage = page.classList.contains('channelsPage');
     const isEditorPage = page.classList.contains('metadataEditorPage');
@@ -638,6 +642,8 @@ function initHeadRoom(elem) {
 }
 
 function refreshLibraryDrawer(user) {
+    if (layoutManager.tv) return;
+
     loadNavDrawer();
     currentDrawerType = 'library';
 
@@ -663,6 +669,8 @@ function getNavDrawerOptions() {
 }
 
 function loadNavDrawer() {
+    if (layoutManager.tv) return Promise.resolve();
+
     if (navDrawerInstance) {
         return Promise.resolve(navDrawerInstance);
     }
@@ -674,9 +682,7 @@ function loadNavDrawer() {
         import('../lib/navdrawer/navdrawer').then(({ default: NavDrawer }) => {
             navDrawerInstance = new NavDrawer(getNavDrawerOptions());
 
-            if (!layoutManager.tv) {
-                navDrawerElement.classList.remove('hide');
-            }
+            navDrawerElement.classList.remove('hide');
 
             resolve(navDrawerInstance);
         });
