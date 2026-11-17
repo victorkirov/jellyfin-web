@@ -1933,12 +1933,21 @@ export default function (view) {
         return '<h1 class="sliderBubbleText">' + datetime.getDisplayRunningTime(ticks) + '</h1>';
     };
 
+    let markerChapters;
+    let markerRuntimeTicks;
+    let markerInfo = [];
     nowPlayingPositionSlider.getMarkerInfo = function () {
-        // use markers based on chapters
-        return currentItem?.Chapters?.map(currentChapter => ({
-            name: currentChapter.Name,
-            progress: currentChapter.StartPositionTicks / currentItem.RunTimeTicks
-        })) || [];
+        const chapters = currentItem?.Chapters;
+        const runtimeTicks = currentItem?.RunTimeTicks;
+        if (markerChapters !== chapters || markerRuntimeTicks !== runtimeTicks) {
+            markerChapters = chapters;
+            markerRuntimeTicks = runtimeTicks;
+            markerInfo = chapters?.map(currentChapter => ({
+                name: currentChapter.Name,
+                progress: currentChapter.StartPositionTicks / runtimeTicks
+            })) || [];
+        }
+        return markerInfo;
     };
 
     view.querySelector('.btnPreviousTrack').addEventListener('click', function () {
