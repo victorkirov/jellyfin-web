@@ -2,9 +2,10 @@ import browser from '../../scripts/browser';
 import 'webcomponents.js/webcomponents-lite';
 import './emby-radio.scss';
 
-const EmbyRadioPrototype = Object.create(HTMLInputElement.prototype);
+type RadioPrototype = HTMLInputElement & { attachedCallback(): void; detachedCallback?(): void };
+const EmbyRadioPrototype: RadioPrototype = Object.create(HTMLInputElement.prototype);
 
-function onKeyDown(e) {
+function onKeyDown(this: HTMLInputElement, e: KeyboardEvent) {
     // Don't submit form on enter
     // Real (non-emulator) Tizen does nothing on Space
     if (e.keyCode === 13 || (e.keyCode === 32 && browser.tizen)) {
@@ -31,14 +32,14 @@ EmbyRadioPrototype.attachedCallback = function () {
 
     this.classList.add('mdl-radio__button');
 
-    const labelElement = this.parentNode;
+    const labelElement = this.parentElement!;
     labelElement.classList.add('mdl-radio');
     labelElement.classList.add('mdl-js-radio');
     labelElement.classList.add('mdl-js-ripple-effect');
 
     labelElement.classList.add('show-focus');
 
-    const labelTextElement = labelElement.querySelector('span');
+    const labelTextElement = labelElement.querySelector('span')!;
 
     labelTextElement.classList.add('radioButtonLabel');
     labelTextElement.classList.add('mdl-radio__label');
@@ -66,7 +67,7 @@ EmbyRadioPrototype.attachedCallback = function () {
     this.addEventListener('keydown', onKeyDown);
 };
 
-document.registerElement('emby-radio', {
+(document as Document & { registerElement(name: string, options: { prototype: RadioPrototype; extends: string }): void }).registerElement('emby-radio', {
     prototype: EmbyRadioPrototype,
     extends: 'input'
 });

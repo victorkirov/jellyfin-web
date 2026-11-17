@@ -1,4 +1,3 @@
-import globalize from 'lib/globalize';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import { EventType } from 'constants/eventType';
 
@@ -6,11 +5,13 @@ import inputManager from './inputManager';
 import viewManager from '../components/viewManager/viewManager';
 import { appRouter } from '../components/router/appRouter';
 import { playbackManager } from '../components/playback/playbackmanager';
-import browser from './browser';
 import Dashboard, { pageClassOn } from '../components/dashboard';
-import Events from '../utils/events.ts';
-import { getParameterByName } from '../utils/url.ts';
-import datetime from '../scripts/datetime';
+import Events, { type Event as JellyfinEvent } from '../utils/events';
+import { getParameterByName } from '../utils/url';
+import { renderHeaderMarkup, retranslateUi, updateHeaderUserButton, updateClock } from './libraryHeader';
+import type { ConnectionClient } from 'lib/jellyfin-apiclient/connectionTypes';
+import type { UserDto } from '@jellyfin/sdk/lib/generated-client';
+import type { PlaybackStopInfo } from 'types/playbackStopInfo';
 
 import '../elements/emby-button/paper-icon-button-light';
 
@@ -19,40 +20,21 @@ import '../styles/scrollstyles.scss';
 import '../styles/flexstyles.scss';
 
 function renderHeader() {
-    let html = '';
-    html += '<div class="flex align-items-center flex-grow headerTop">';
-    html += '<div class="headerLeft">';
-    html += '<button type="button" is="paper-icon-button-light" class="headerButton headerButtonLeft headerBackButton hide"><span class="material-icons ' + (browser.safari ? 'chevron_left' : 'arrow_back') + '" aria-hidden="true"></span></button>';
-    html += '<button type="button" is="paper-icon-button-light" class="headerButton headerHomeButton hide barsMenuButton headerButtonLeft"><span class="material-icons home" aria-hidden="true"></span></button>';
-    html += '<h3 class="pageTitle" aria-hidden="true"></h3>';
-    html += '</div>';
-    html += '<div class="headerRight">';
-    html += '<button is="paper-icon-button-light" class="headerAudioPlayerButton audioPlayerButton headerButton headerButtonRight hide"><span class="material-icons music_note" aria-hidden="true"></span></button>';
-    html += '<button type="button" is="paper-icon-button-light" class="headerButton headerButtonRight headerSearchButton hide"><span class="material-icons search" aria-hidden="true"></span></button>';
-    html += '<button is="paper-icon-button-light" class="headerButton headerButtonRight headerUserButton hide"><span class="material-icons person" aria-hidden="true"></span></button>';
-    html += '<div class="currentTimeText hide"></div>';
-    html += '</div>';
-    html += '</div>';
-    html += '<div class="headerTabs sectionTabs hide">';
-    html += '</div>';
-
-    skinHeader.classList.add('skinHeader-withBackground');
-    skinHeader.classList.add('skinHeader-blurred');
-    skinHeader.innerHTML = html;
+    renderHeaderMarkup(skinHeader);
 
     Events.trigger(document, EventType.HEADER_RENDERED);
 
-    headerBackButton = skinHeader.querySelector('.headerBackButton');
-    headerHomeButton = skinHeader.querySelector('.headerHomeButton');
-    headerUserButton = skinHeader.querySelector('.headerUserButton');
-    headerAudioPlayerButton = skinHeader.querySelector('.headerAudioPlayerButton');
-    headerSearchButton = skinHeader.querySelector('.headerSearchButton');
-    currentTimeText = skinHeader.querySelector('.currentTimeText');
+    headerBackButton = skinHeader.querySelector<HTMLButtonElement>('.headerBackButton')!;
+    headerHomeButton = skinHeader.querySelector<HTMLButtonElement>('.headerHomeButton')!;
+    headerUserButton = skinHeader.querySelector<HTMLButtonElement>('.headerUserButton')!;
+    headerAudioPlayerButton = skinHeader.querySelector<HTMLButtonElement>('.headerAudioPlayerButton')!;
+    headerSearchButton = skinHeader.querySelector<HTMLButtonElement>('.headerSearchButton')!;
+    currentTimeText = skinHeader.querySelector('.currentTimeText')!;
 
-    retranslateUi();
+    retranslateUi(headerBackButton, headerHomeButton, headerAudioPlayerButton, headerSearchButton, headerUserButton);
     lazyLoadViewMenuBarImages();
     bindMenuEvents();
-    updateClock();
+    updateClock(currentTimeText);
 }
 
 function getCurrentApiClient() {
@@ -64,46 +46,24 @@ function getCurrentApiClient() {
 }
 
 function lazyLoadViewMenuBarImages() {
-    import('../components/images/imageLoader').then((imageLoader) => {
+    void import('../components/images/imageLoader').then((imageLoader) => {
         imageLoader.lazyChildren(skinHeader);
     });
 }
 
 function onBackClick() {
-    appRouter.back();
+    void appRouter.back();
 }
 
-function retranslateUi() {
-    if (headerBackButton) {
-        headerBackButton.title = globalize.translate('ButtonBack');
-    }
-
-    if (headerHomeButton) {
-        headerHomeButton.title = globalize.translate('Home');
-    }
-
-    if (headerAudioPlayerButton) {
-        headerAudioPlayerButton.title = globalize.translate('ButtonPlayer');
-    }
-
-    if (headerSearchButton) {
-        headerSearchButton.title = globalize.translate('Search');
-    }
-
-    if (headerUserButton) {
-        headerUserButton.title = globalize.translate('Settings');
-    }
-}
-
-function updateUserInHeader(user) {
-    retranslateUi();
+function updateUserInHeader(user?: HeaderUser) {
+    retranslateUi(headerBackButton, headerHomeButton, headerAudioPlayerButton, headerSearchButton, headerUserButton);
 
     let hasImage;
 
     if (user?.name) {
         if (user.imageUrl) {
             const url = user.imageUrl;
-            updateHeaderUserButton(url);
+            updateHeaderUserButton(headerUserButton, url);
             hasImage = true;
         }
         headerUserButton.title = user.name;
@@ -113,7 +73,7 @@ function updateUserInHeader(user) {
     }
 
     if (!hasImage) {
-        updateHeaderUserButton(null);
+        updateHeaderUserButton(headerUserButton, null);
     }
 
     if (user?.localUser) {
@@ -135,39 +95,16 @@ function updateUserInHeader(user) {
     requiresUserRefresh = false;
 }
 
-function updateHeaderUserButton(src) {
-    if (src) {
-        headerUserButton.classList.add('headerUserButtonRound');
-        headerUserButton.innerHTML = '<div class="headerButton headerButtonRight paper-icon-button-light headerUserButtonRound" style="background-image:url(\'' + src + "');\"></div>";
-    } else {
-        headerUserButton.classList.remove('headerUserButtonRound');
-        headerUserButton.innerHTML = '<span class="material-icons person" aria-hidden="true"></span>';
-    }
-}
-
-function updateClock() {
-    currentTimeText.classList.remove('hide');
-    let lastMinute;
-    setInterval(function() {
-        const now = new Date();
-        // Formatting the time is slow on low-end TVs, so only update it when the minute changes
-        if (now.getMinutes() !== lastMinute) {
-            lastMinute = now.getMinutes();
-            currentTimeText.innerText = datetime.getDisplayTime(now);
-        }
-    }, 1000);
-}
-
 function showSearch() {
     inputManager.handleCommand('search');
 }
 
 function onHeaderUserButtonClick() {
-    Dashboard.navigate('mypreferencesmenu');
+    void Dashboard.navigate('mypreferencesmenu');
 }
 
 function onHeaderHomeButtonClick() {
-    Dashboard.navigate('home');
+    void Dashboard.navigate('home');
 }
 
 function showAudioPlayer() {
@@ -200,7 +137,7 @@ function onPlaybackStart() {
     }
 }
 
-function onPlaybackStop(e, stopInfo) {
+function onPlaybackStop(_e: JellyfinEvent, stopInfo: PlaybackStopInfo) {
     if (stopInfo.nextMediaType != 'Audio') {
         headerAudioPlayerButton.classList.add('hide');
     }
@@ -210,7 +147,7 @@ function getTopParentId() {
     return getParameterByName('topParentId') || null;
 }
 
-function updateMenuForPageType(isLibraryPage) {
+function updateMenuForPageType(isLibraryPage: boolean) {
     const newPageType = isLibraryPage ? 1 : 3;
 
     if (currentPageType !== newPageType) {
@@ -220,11 +157,11 @@ function updateMenuForPageType(isLibraryPage) {
     }
 
     if (requiresUserRefresh) {
-        ServerConnections.user(getCurrentApiClient()).then(updateUserInHeader);
+        void ServerConnections.user(getCurrentApiClient()!).then(updateUserInHeader);
     }
 }
 
-function updateTitle(page) {
+function updateTitle(page: HTMLElement) {
     const title = page.getAttribute('data-title');
 
     if (title) {
@@ -234,7 +171,7 @@ function updateTitle(page) {
     }
 }
 
-function updateBackButton(page) {
+function updateBackButton(page: HTMLElement) {
     if (headerBackButton) {
         if (page.getAttribute('data-backbutton') !== 'false' && appRouter.canGoBack()) {
             headerBackButton.classList.remove('hide');
@@ -244,22 +181,23 @@ function updateBackButton(page) {
     }
 }
 
-let headerHomeButton;
+let headerHomeButton: HTMLButtonElement;
 let documentTitle = 'Jellyfin';
-let pageTitleElement;
-let headerBackButton;
-let headerUserButton;
-let currentUser;
-let headerSearchButton;
-let headerAudioPlayerButton;
-let currentTimeText;
-const skinHeader = document.querySelector('.skinHeader');
+let pageTitleElement: HTMLElement | null;
+let headerBackButton: HTMLButtonElement;
+let headerUserButton: HTMLButtonElement;
+type HeaderUser = Partial<Awaited<ReturnType<typeof ServerConnections.user>>>;
+let currentUser: HeaderUser | undefined;
+let headerSearchButton: HTMLButtonElement;
+let headerAudioPlayerButton: HTMLButtonElement;
+let currentTimeText: HTMLElement;
+const skinHeader = document.querySelector<HTMLElement>('.skinHeader')!;
 let requiresUserRefresh = true;
 
-function setTabs (type, selectedIndex, builder) {
-    Events.trigger(document, EventType.SET_TABS, type ? [ type, selectedIndex, builder()] : []);
+function setTabs (type: string | null, selectedIndex?: number | null, builder?: () => { name: string; enabled?: boolean; cssClass?: string; href?: string }[]) {
+    Events.trigger(document, EventType.SET_TABS, type ? [ type, selectedIndex, builder!()] : []);
 
-    import('../components/maintabsmanager').then((mainTabsManager) => {
+    void import('../components/maintabsmanager').then((mainTabsManager) => {
         if (type) {
             mainTabsManager.setTabs(viewManager.currentView(), selectedIndex, builder, function () {
                 return [];
@@ -274,7 +212,7 @@ function setTabs (type, selectedIndex, builder) {
  * Fetch the server name and update the document title.
  * @param {import('jellyfin-apiclient').ApiClient} [_apiClient] The current api client.
  */
-const fetchServerName = (_apiClient) => {
+const fetchServerName = (_apiClient?: ConnectionClient | null) => {
     _apiClient
         ?.getPublicSystemInfo()
         .then(({ ServerName }) => {
@@ -294,14 +232,14 @@ function setDefaultTitle () {
     if (pageTitleElement) {
         pageTitleElement.classList.add('pageTitleWithLogo');
         pageTitleElement.classList.add('pageTitleWithDefaultLogo');
-        pageTitleElement.style.backgroundImage = null;
+        pageTitleElement.style.backgroundImage = '';
         pageTitleElement.innerHTML = '';
     }
 
     document.title = documentTitle;
 }
 
-function setTitle (title) {
+function setTitle (title: string | null) {
     if (title == null) {
         LibraryMenu.setDefaultTitle();
         return;
@@ -320,14 +258,14 @@ function setTitle (title) {
     if (pageTitleElement) {
         pageTitleElement.classList.remove('pageTitleWithLogo');
         pageTitleElement.classList.remove('pageTitleWithDefaultLogo');
-        pageTitleElement.style.backgroundImage = null;
+        pageTitleElement.style.backgroundImage = '';
         pageTitleElement.innerText = html || '';
     }
 
     document.title = title || documentTitle;
 }
 
-function setTransparentMenu (transparent) {
+function setTransparentMenu (transparent: boolean) {
     if (transparent) {
         skinHeader.classList.add('semiTransparent');
     } else {
@@ -335,16 +273,15 @@ function setTransparentMenu (transparent) {
     }
 }
 
-let currentPageType;
-pageClassOn('pagebeforeshow', 'page', function () {
+let currentPageType: number | undefined;
+pageClassOn('pagebeforeshow', 'page', function (this: HTMLElement) {
     if (!this.classList.contains('withTabs')) {
         LibraryMenu.setTabs(null);
     }
 });
 
-pageClassOn('pageshow', 'page', function (e) {
-    const page = this;
-    const isLibraryPage = page.classList.contains('libraryPage');
+pageClassOn('pageshow', 'page', function (this: HTMLElement, e: CustomEvent<{ isRestored?: boolean }>) {
+    const isLibraryPage = this.classList.contains('libraryPage');
 
     updateMenuForPageType(isLibraryPage);
 
@@ -353,22 +290,22 @@ pageClassOn('pageshow', 'page', function (e) {
         window.scrollTo(0, 0);
     }
 
-    updateTitle(page);
-    updateBackButton(page);
+    updateTitle(this);
+    updateBackButton(this);
 });
 
-Events.on(ServerConnections, 'apiclientcreated', (e, newApiClient) => {
+Events.on(ServerConnections, 'apiclientcreated', (_e: JellyfinEvent, newApiClient: ConnectionClient) => {
     fetchServerName(newApiClient);
 });
 
-Events.on(ServerConnections, 'localusersignedin', function (e, user) {
+Events.on(ServerConnections, 'localusersignedin', function (_e: JellyfinEvent, user: UserDto) {
     const currentApiClient = ServerConnections.getApiClient(user.ServerId);
 
     currentUser = {
         localUser: user
     };
 
-    ServerConnections.user(currentApiClient).then(function (userResult) {
+    void ServerConnections.user(currentApiClient!).then(function (userResult) {
         currentUser = userResult;
         updateUserInHeader(userResult);
     });
@@ -389,7 +326,7 @@ const LibraryMenu = {
     setTransparentMenu
 };
 
-window.LibraryMenu = LibraryMenu;
+(window as Window & { LibraryMenu?: typeof LibraryMenu }).LibraryMenu = LibraryMenu;
 renderHeader();
 
 export default LibraryMenu;

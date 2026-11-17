@@ -3,9 +3,10 @@ import dom from '../../utils/dom';
 import './emby-checkbox.scss';
 import 'webcomponents.js/webcomponents-lite';
 
-const EmbyCheckboxPrototype = Object.create(HTMLInputElement.prototype);
+type CheckboxPrototype = HTMLInputElement & { attachedCallback(): void; detachedCallback?(): void };
+const EmbyCheckboxPrototype: CheckboxPrototype = Object.create(HTMLInputElement.prototype);
 
-function onKeyDown(e) {
+function onKeyDown(this: HTMLInputElement, e: KeyboardEvent) {
     // Don't submit form on enter
     // Real (non-emulator) Tizen does nothing on Space
     if (e.keyCode === 13 || (e.keyCode === 32 && browser.tizen)) {
@@ -23,8 +24,8 @@ function onKeyDown(e) {
 
 const enableRefreshHack = browser.tizen || browser.orsay || browser.operaTv || browser.web0s;
 
-function forceRefresh(loading) {
-    const elem = this.parentNode;
+function forceRefresh(this: HTMLInputElement, loading?: boolean | Event) {
+    const elem = this.parentElement!;
 
     elem.style.webkitAnimationName = 'repaintChrome';
     elem.style.webkitAnimationDelay = (loading === true ? '500ms' : '');
@@ -45,10 +46,10 @@ EmbyCheckboxPrototype.attachedCallback = function () {
 
     this.classList.add('emby-checkbox');
 
-    const labelElement = this.parentNode;
+    const labelElement = this.parentElement!;
     labelElement.classList.add('emby-checkbox-label');
 
-    const labelTextElement = labelElement.querySelector('span');
+    const labelTextElement = labelElement.querySelector('span')!;
 
     let outlineClass = 'checkboxOutline';
 
@@ -101,7 +102,7 @@ EmbyCheckboxPrototype.detachedCallback = function () {
     });
 };
 
-document.registerElement('emby-checkbox', {
+(document as Document & { registerElement(name: string, options: { prototype: CheckboxPrototype; extends: string }): void }).registerElement('emby-checkbox', {
     prototype: EmbyCheckboxPrototype,
     extends: 'input'
 });
