@@ -1094,15 +1094,13 @@ function Guide(options) {
             capture: true,
             passive: true
         });
-    } else if (layoutManager.desktop) {
-        timeslotHeaders.classList.add('timeslotHeaders-desktop');
-    }
+    } else
 
-    if (browser.iOS || browser.osx) {
-        guideContext.querySelector('.channelsContainer').classList.add('noRubberBanding');
+        if (browser.iOS || browser.osx) {
+            guideContext.querySelector('.channelsContainer').classList.add('noRubberBanding');
 
-        programGrid.classList.add('noRubberBanding');
-    }
+            programGrid.classList.add('noRubberBanding');
+        }
 
     dom.addEventListener(programGrid, 'scroll', function () {
         onProgramGridScroll(guideContext, this, timeslotHeaders);

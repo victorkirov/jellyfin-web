@@ -40,7 +40,7 @@ function loadUpcoming(context, params, promise) {
 }
 
 function enableScrollX() {
-    return !layoutManager.desktop;
+    return true;
 }
 
 function renderUpcoming(elem, items) {

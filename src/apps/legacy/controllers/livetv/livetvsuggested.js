@@ -17,7 +17,7 @@ import 'elements/emby-button/emby-button';
 import 'styles/scrollstyles.scss';
 
 function enableScrollX() {
-    return !layoutManager.desktop;
+    return true;
 }
 
 function getLimit() {

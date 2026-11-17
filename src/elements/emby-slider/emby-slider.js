@@ -303,9 +303,9 @@ EmbySliderPrototype.attachedCallback = function () {
     if (browser.edge) {
         this.classList.add('slider-browser-edge');
     }
-    if (!layoutManager.mobile) {
-        this.classList.add('mdl-slider-hoverthumb');
-    }
+
+    this.classList.add('mdl-slider-hoverthumb');
+
     if (layoutManager.tv) {
         this.classList.add('show-focus');
     }

@@ -1,6 +1,5 @@
 import viewContainer from '../viewContainer';
 import focusManager from '../focusManager';
-import layoutManager from '../layoutManager';
 
 let currentView;
 let dispatchPageEvents;
@@ -49,12 +48,10 @@ function onViewChange(view, options, isRestore) {
         if (options.autoFocus !== false) {
             focusManager.autoFocus(view);
         }
-    } else if (!layoutManager.mobile) {
-        if (view.activeElement && document.body.contains(view.activeElement) && focusManager.isCurrentlyFocusable(view.activeElement)) {
-            focusManager.focus(view.activeElement);
-        } else {
-            focusManager.autoFocus(view);
-        }
+    } else if (view.activeElement && document.body.contains(view.activeElement) && focusManager.isCurrentlyFocusable(view.activeElement)) {
+        focusManager.focus(view.activeElement);
+    } else {
+        focusManager.autoFocus(view);
     }
 
     view.dispatchEvent(new CustomEvent('viewshow', eventDetail));

@@ -49,7 +49,7 @@ export default function (view, params, tabContent, options) {
     }
 
     function enableScrollX() {
-        return !layoutManager.desktop;
+        return true;
     }
 
     const fillItemsContainer = (entry, observer) => {

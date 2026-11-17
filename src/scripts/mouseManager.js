@@ -85,7 +85,7 @@ function onPointerMove(e) {
 }
 
 function onPointerEnter(e) {
-    const pointerType = e.pointerType || (layoutManager.mobile ? 'touch' : 'mouse');
+    const pointerType = e.pointerType || 'mouse';
 
     if (pointerType === 'mouse' && !isMouseIdle) {
         const parent = focusManager.focusableParent(e.target);
@@ -139,13 +139,12 @@ function initMouse() {
         passive: true
     });
 
-    if (!layoutManager.mobile) {
-        startMouseInterval();
+    startMouseInterval();
 
-        dom.addEventListener(document, (window.PointerEvent ? 'pointermove' : 'mousemove'), onPointerMove, {
-            passive: true
-        });
-    }
+    /* eslint-disable-next-line compat/compat */
+    dom.addEventListener(document, (window.PointerEvent ? 'pointermove' : 'mousemove'), onPointerMove, {
+        passive: true
+    });
 
     /* eslint-disable-next-line compat/compat */
     dom.removeEventListener(document, (window.PointerEvent ? 'pointerenter' : 'mouseenter'), onPointerEnter, {

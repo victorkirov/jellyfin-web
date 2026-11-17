@@ -168,46 +168,29 @@ export default function (options) {
         html += '<div class="slideshowSwiperContainer"><div class="swiper-wrapper"></div></div>';
 
         if (slideshowOptions.interactive && !layoutManager.tv) {
-            const actionButtonsOnTop = layoutManager.mobile;
-
             html += getIcon('keyboard_arrow_left', 'btnSlideshowPrevious slideshowButton hide-mouse-idle-tv', false);
             html += getIcon('keyboard_arrow_right', 'btnSlideshowNext slideshowButton hide-mouse-idle-tv', false);
 
             html += '<div class="topActionButtons">';
-            if (actionButtonsOnTop) {
-                html += getIcon('play_arrow', 'btnSlideshowPause slideshowButton', true);
 
-                if (appHost.supports(AppFeature.FileDownload) && slideshowOptions.user?.Policy.EnableContentDownloading) {
-                    html += getIcon('file_download', 'btnDownload slideshowButton', true);
-                }
-                if (appHost.supports(AppFeature.Sharing)) {
-                    html += getIcon('share', 'btnShare slideshowButton', true);
-                }
-                if (screenfull.isEnabled) {
-                    html += getIcon('fullscreen', 'btnFullscreen', true);
-                    html += getIcon('fullscreen_exit', 'btnFullscreenExit hide', true);
-                }
-            }
             html += getIcon('close', 'slideshowButton btnSlideshowExit hide-mouse-idle-tv', false);
             html += '</div>';
 
-            if (!actionButtonsOnTop) {
-                html += '<div class="slideshowBottomBar hide">';
+            html += '<div class="slideshowBottomBar hide">';
 
-                html += getIcon('play_arrow', 'btnSlideshowPause slideshowButton', true, true);
-                if (appHost.supports(AppFeature.FileDownload) && slideshowOptions?.user.Policy.EnableContentDownloading) {
-                    html += getIcon('file_download', 'btnDownload slideshowButton', true);
-                }
-                if (appHost.supports(AppFeature.Sharing)) {
-                    html += getIcon('share', 'btnShare slideshowButton', true);
-                }
-                if (screenfull.isEnabled) {
-                    html += getIcon('fullscreen', 'btnFullscreen', true);
-                    html += getIcon('fullscreen_exit', 'btnFullscreenExit hide', true);
-                }
-
-                html += '</div>';
+            html += getIcon('play_arrow', 'btnSlideshowPause slideshowButton', true, true);
+            if (appHost.supports(AppFeature.FileDownload) && slideshowOptions?.user.Policy.EnableContentDownloading) {
+                html += getIcon('file_download', 'btnDownload slideshowButton', true);
             }
+            if (appHost.supports(AppFeature.Sharing)) {
+                html += getIcon('share', 'btnShare slideshowButton', true);
+            }
+            if (screenfull.isEnabled) {
+                html += getIcon('fullscreen', 'btnFullscreen', true);
+                html += getIcon('fullscreen_exit', 'btnFullscreenExit hide', true);
+            }
+
+            html += '</div>';
         } else {
             html += '<div class="slideshowImage"></div><h1 class="slideshowImageText"></h1>';
         }
@@ -267,11 +250,6 @@ export default function (options) {
         dialog.addEventListener('close', onDialogClosed);
 
         loadSwiper(dialog, options);
-
-        if (layoutManager.desktop) {
-            const topActionButtons = dialog.querySelector('.topActionButtons');
-            if (topActionButtons) topActionButtons.classList.add('hide');
-        }
 
         const btnSlideshowPrevious = dialog.querySelector('.btnSlideshowPrevious');
         if (btnSlideshowPrevious) btnSlideshowPrevious.classList.add('hide');
@@ -718,7 +696,7 @@ export default function (options) {
      * @param {Event} event - Pointer movement event.
      */
     function onPointerMove(event) {
-        const pointerType = event.pointerType || (layoutManager.mobile ? 'touch' : 'mouse');
+        const pointerType = event.pointerType || 'mouse';
 
         if (pointerType === 'mouse') {
             const eventX = event.screenX || 0;

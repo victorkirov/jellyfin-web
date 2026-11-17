@@ -39,7 +39,7 @@ function itemsPerRow() {
 }
 
 function enableScrollX() {
-    return !layoutManager.desktop;
+    return true;
 }
 
 function loadLatest(page, parentId) {

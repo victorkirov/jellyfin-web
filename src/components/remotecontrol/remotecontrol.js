@@ -179,7 +179,7 @@ function updateNowPlayingInfo(context, state, serverId) {
                     itemContextMenu.show(Object.assign({
                         item: fullItem,
                         user: user,
-                        isMobile: layoutManager.mobile
+                        isMobile: false
                     }, options))
                         .catch(() => { /* no-op */ });
                 });
@@ -280,24 +280,14 @@ export default function () {
             context.querySelector('.remoteControlSection').classList.add('hide');
         }
 
-        buttonVisible(context.querySelector('.btnLyrics'), item?.Type === 'Audio' && !layoutManager.mobile);
+        buttonVisible(context.querySelector('.btnLyrics'), item?.Type === 'Audio');
         buttonVisible(context.querySelector('.btnStop'), item != null);
         buttonVisible(context.querySelector('.btnNextTrack'), item != null);
         buttonVisible(context.querySelector('.btnPreviousTrack'), item != null);
-        if (layoutManager.mobile) {
-            const playingVideo = playbackManager.isPlayingVideo() && item !== null;
-            const playingAudio = !playbackManager.isPlayingVideo() && item !== null;
-            const playingAudioBook = playingAudio && item.Type == 'AudioBook';
-            buttonVisible(context.querySelector('.btnRepeat'), playingAudio && !playingAudioBook);
-            buttonVisible(context.querySelector('.btnShuffleQueue'), playingAudio && !playingAudioBook);
-            buttonVisible(context.querySelector('.btnRewind'), playingVideo || playingAudioBook);
-            buttonVisible(context.querySelector('.btnFastForward'), playingVideo || playingAudioBook);
-            buttonVisible(context.querySelector('.nowPlayingSecondaryButtons .btnShuffleQueue'), playingVideo);
-            buttonVisible(context.querySelector('.nowPlayingSecondaryButtons .btnRepeat'), playingVideo);
-        } else {
-            buttonVisible(context.querySelector('.btnRewind'), item != null);
-            buttonVisible(context.querySelector('.btnFastForward'), item != null);
-        }
+
+        buttonVisible(context.querySelector('.btnRewind'), item != null);
+        buttonVisible(context.querySelector('.btnFastForward'), item != null);
+
         const positionSlider = context.querySelector('.nowPlayingPositionSlider');
 
         if (positionSlider && item && item.RunTimeTicks) {
@@ -454,15 +444,7 @@ export default function () {
             }
 
             let html = '';
-            let favoritesEnabled = true;
-            if (layoutManager.mobile) {
-                if (items.length > 0) {
-                    context.querySelector('.btnTogglePlaylist').classList.remove('hide');
-                } else {
-                    context.querySelector('.btnTogglePlaylist').classList.add('hide');
-                }
-                favoritesEnabled = false;
-            }
+            const favoritesEnabled = true;
 
             html += listView.getListViewHtml({
                 items: items,
@@ -785,16 +767,10 @@ export default function () {
             if (context.querySelector('.playlist').classList.contains('hide')) {
                 context.querySelector('.playlist').classList.remove('hide');
                 context.querySelector('.volumecontrol').classList.add('hide');
-                if (layoutManager.mobile) {
-                    context.querySelector('.playlistSectionButton').classList.remove('playlistSectionButtonTransparent');
-                }
             } else {
                 context.querySelector('.playlist').classList.add('hide');
                 if (showMuteButton || showVolumeSlider) {
                     context.querySelector('.volumecontrol').classList.remove('hide');
-                }
-                if (layoutManager.mobile) {
-                    context.querySelector('.playlistSectionButton').classList.add('playlistSectionButtonTransparent');
                 }
             }
         });
@@ -845,19 +821,12 @@ export default function () {
         volumecontrolHtml += '<div class="sliderContainer nowPlayingVolumeSliderContainer"><input is="emby-slider" type="range" step="1" min="0" max="100" value="0" class="nowPlayingVolumeSlider"/></div>';
         volumecontrolHtml += '</div>';
         const optionsSection = context.querySelector('.playlistSectionButton');
-        if (!layoutManager.mobile) {
-            context.querySelector('.nowPlayingSecondaryButtons').insertAdjacentHTML('beforeend', volumecontrolHtml);
-            optionsSection.classList.remove('align-items-center', 'justify-content-center');
-            optionsSection.classList.add('align-items-right', 'justify-content-flex-end');
-            context.querySelector('.playlist').classList.remove('hide');
-            context.classList.add('padded-bottom');
-        } else {
-            optionsSection.querySelector('.btnTogglePlaylist').insertAdjacentHTML('afterend', volumecontrolHtml);
-            optionsSection.classList.add('playlistSectionButtonTransparent');
-            context.querySelector('.btnTogglePlaylist').classList.remove('hide');
-            context.querySelector('.playlistSectionButton').classList.remove('justify-content-center');
-            context.querySelector('.playlistSectionButton').classList.add('justify-content-space-between');
-        }
+
+        context.querySelector('.nowPlayingSecondaryButtons').insertAdjacentHTML('beforeend', volumecontrolHtml);
+        optionsSection.classList.remove('align-items-center', 'justify-content-center');
+        optionsSection.classList.add('align-items-right', 'justify-content-flex-end');
+        context.querySelector('.playlist').classList.remove('hide');
+        context.classList.add('padded-bottom');
 
         bindEvents(context);
         context.querySelector('.sendMessageForm').addEventListener('submit', onMessageSubmit);

@@ -3,8 +3,6 @@ import dom from '../../utils/dom';
 import layoutManager from '../../components/layoutManager';
 import inputManager from '../../scripts/inputManager';
 import focusManager from '../../components/focusManager';
-import browser from '../../scripts/browser';
-import { hasFinePointer } from '../../utils/pointer';
 import 'webcomponents.js/webcomponents-lite';
 import './emby-scroller.scss';
 
@@ -117,7 +115,6 @@ ScrollerPrototype.attachedCallback = function () {
     }
 
     const scrollFrame = this;
-    const enableScrollButtons = layoutManager.desktop && hasFinePointer() && horizontal && this.getAttribute('data-scrollbuttons') !== 'false';
 
     const options = {
         horizontal: horizontal,
@@ -131,13 +128,13 @@ ScrollerPrototype.attachedCallback = function () {
         dragHandle: 1,
         autoImmediate: true,
         skipSlideToWhenVisible: this.getAttribute('data-skipfocuswhenvisible') === 'true',
-        dispatchScrollEvent: enableScrollButtons || this.getAttribute('data-scrollevent') === 'true',
-        hideScrollbar: enableScrollButtons || this.getAttribute('data-hidescrollbar') === 'true',
-        allowNativeSmoothScroll: this.getAttribute('data-allownativesmoothscroll') === 'true' && !enableScrollButtons,
-        allowNativeScroll: !enableScrollButtons,
-        forceHideScrollbars: enableScrollButtons,
+        dispatchScrollEvent: this.getAttribute('data-scrollevent') === 'true',
+        hideScrollbar: this.getAttribute('data-hidescrollbar') === 'true',
+        allowNativeSmoothScroll: this.getAttribute('data-allownativesmoothscroll') === 'true',
+        allowNativeScroll: true,
+        forceHideScrollbars: false,
         // In edge, with the native scroll, the content jumps around when hovering over the buttons
-        requireAnimation: enableScrollButtons && browser.edge
+        requireAnimation: false
     };
 
     // If just inserted it might not have any height yet - yes this is a hack
@@ -148,17 +145,7 @@ ScrollerPrototype.attachedCallback = function () {
     if (layoutManager.tv && this.getAttribute('data-centerfocus')) {
         initCenterFocus(this, this.scroller);
     }
-
-    if (enableScrollButtons) {
-        loadScrollButtons(this);
-    }
 };
-
-function loadScrollButtons(buttonsScroller) {
-    import('../emby-scrollbuttons/emby-scrollbuttons').then(() => {
-        buttonsScroller.insertAdjacentHTML('beforebegin', '<div is="emby-scrollbuttons" class="emby-scrollbuttons padded-right"></div>');
-    });
-}
 
 ScrollerPrototype.detachedCallback = function () {
     if (this.getAttribute('data-navcommands')) {

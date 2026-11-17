@@ -13,7 +13,7 @@ import 'elements/emby-itemscontainer/emby-itemscontainer';
 import 'styles/scrollstyles.scss';
 
 function enableScrollX() {
-    return !layoutManager.desktop;
+    return true;
 }
 
 function getSections() {

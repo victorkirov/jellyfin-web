@@ -242,10 +242,6 @@ export function show(options: Options) {
         menuItemClass += ' listItem-focusscale';
     }
 
-    if (layoutManager.mobile) {
-        menuItemClass += ' actionsheet-xlargeFont';
-    }
-
     // 'options.items' is HTMLOptionsCollection, so no fancy loops
     for (let i = 0; i < options.items.length; i++) {
         const item = options.items[i];

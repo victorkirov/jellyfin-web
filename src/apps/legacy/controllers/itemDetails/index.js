@@ -37,7 +37,6 @@ import { download } from 'scripts/fileDownloader';
 import libraryMenu from 'scripts/libraryMenu';
 import * as userSettings from 'scripts/settings/userSettings';
 import Events from 'utils/events';
-import { getItemBackdropImageUrl } from 'utils/jellyfin-apiclient/backdropImage';
 import { OutboundWebSocketMessageType } from '@jellyfin/sdk/lib/websocket';
 
 import 'elements/emby-itemscontainer/emby-itemscontainer';
@@ -404,11 +403,8 @@ function renderName(item, container, context) {
     if (parentNameHtml.length) {
         if (parentNameLast) {
             // Music
-            if (layoutManager.mobile) {
-                html = '<h3 class="parentName musicParentName">' + parentNameHtml.join('</br>') + '</h3>';
-            } else {
-                html = '<h3 class="parentName musicParentName focuscontainer-x">' + parentNameHtml.join(' - ') + '</h3>';
-            }
+
+            html = '<h3 class="parentName musicParentName focuscontainer-x">' + parentNameHtml.join(' - ') + '</h3>';
         } else {
             html = '<h1 class="parentName focuscontainer-x"><bdi>' + tvShowHtml + '</bdi></h1>';
         }
@@ -452,7 +448,7 @@ function setTrailerButtonVisibility(page, item) {
 }
 
 function renderBackdrop(page, item) {
-    if (!layoutManager.mobile && dom.getWindowSize().innerWidth >= 1000) {
+    if (dom.getWindowSize().innerWidth >= 1000) {
         const isBannerEnabled = !layoutManager.tv && userSettings.detailsBanner();
         // If backdrops are disabled, but the header banner is enabled, add a class to the page to disable the transparency
         page.classList.toggle('noBackdropTransparency', isBannerEnabled && !userSettings.enableBackdrops());
@@ -461,32 +457,6 @@ function renderBackdrop(page, item) {
     } else {
         clearBackdrop();
     }
-}
-
-function renderHeaderBackdrop(page, item, apiClient) {
-    // Details banner is disabled in user settings
-    if (!userSettings.detailsBanner()) {
-        return false;
-    }
-
-    // Disable item backdrop for books and people because they only have primary images
-    if (item.Type === 'Person' || item.Type === 'Book') {
-        return false;
-    }
-
-    let hasbackdrop = false;
-    const itemBackdropElement = page.querySelector('#itemBackdrop');
-
-    const imgUrl = getItemBackdropImageUrl(apiClient, item, { maxWidth: dom.getScreenWidth() }, false);
-
-    if (imgUrl) {
-        imageLoader.lazyImage(itemBackdropElement, imgUrl);
-        hasbackdrop = true;
-    } else {
-        itemBackdropElement.style.backgroundImage = '';
-    }
-
-    return hasbackdrop;
 }
 
 function reloadFromItem(instance, page, params, item, user) {
@@ -500,11 +470,6 @@ function reloadFromItem(instance, page, params, item, user) {
     renderImage(page, item, apiClient);
 
     renderLogo(page, item, apiClient);
-
-    // Render the mobile header backdrop
-    if (layoutManager.mobile) {
-        renderHeaderBackdrop(page, item, apiClient);
-    }
 
     renderBackdrop(page, item);
 
@@ -1372,12 +1337,12 @@ function renderChildren(page, item) {
                     items: result.Items,
                     showIndexNumber: false,
                     enableOverview: true,
-                    enablePlayedButton: !layoutManager.mobile,
-                    infoButton: !layoutManager.mobile,
+                    enablePlayedButton: true,
+                    infoButton: true,
                     imageSize: 'large',
                     enableSideMediaInfo: false,
                     highlight: false,
-                    action: !layoutManager.desktop ? 'link' : 'none',
+                    action: 'link',
                     imagePlayButton: true,
                     includeParentInfoInTitle: false
                 });
@@ -1404,9 +1369,7 @@ function renderChildren(page, item) {
                 childrenItemsContainer.classList.remove('vertical-list');
             }
         }
-        if (layoutManager.mobile) {
-            childrenItemsContainer.classList.remove('padded-right');
-        }
+
         childrenItemsContainer.innerHTML = html;
         imageLoader.lazyChildren(childrenItemsContainer);
         if (item.Type == 'BoxSet') {
@@ -2012,7 +1975,7 @@ export default function (view, params) {
         view.addEventListener('viewshow', function (e) {
             const page = this;
 
-            libraryMenu.setTransparentMenu(!layoutManager.mobile);
+            libraryMenu.setTransparentMenu(true);
 
             if (e.detail.isRestored) {
                 if (currentItem) {

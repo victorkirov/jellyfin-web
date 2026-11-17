@@ -317,11 +317,10 @@ export default function (view) {
                 updateTimeDisplay(playbackManager.currentTime(currentPlayer) * 10000, currentRuntimeTicks, playbackManager.playbackStartTime(currentPlayer), playbackManager.getPlaybackRate(currentPlayer), playbackManager.getBufferedRanges(currentPlayer));
             }
 
-            if (!layoutManager.mobile) {
-                _focus(focusElement);
-            }
+            _focus(focusElement);
+
             toggleSubtitleSync();
-        } else if (currentVisibleMenu === 'osd' && !layoutManager.mobile) {
+        } else if (currentVisibleMenu === 'osd') {
             _focus(focusElement);
         }
     }
@@ -356,7 +355,7 @@ export default function (view) {
     }
 
     function onPointerMove(e) {
-        if ((e.pointerType || (layoutManager.mobile ? 'touch' : 'mouse')) === 'mouse') {
+        if ((e.pointerType || 'mouse') === 'mouse') {
             const eventX = e.screenX || e.clientX || 0;
             const eventY = e.screenY || e.clientY || 0;
             const obj = lastPointerMoveData;
@@ -1753,7 +1752,7 @@ export default function (view) {
             return;
         }
 
-        const pointerType = e.pointerType || (layoutManager.mobile ? 'touch' : 'mouse');
+        const pointerType = e.pointerType || 'mouse';
         const now = new Date().getTime();
 
         switch (pointerType) {

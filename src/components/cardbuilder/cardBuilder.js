@@ -21,7 +21,6 @@ import imageLoader from '../images/imageLoader';
 import indicators from '../indicators/indicators';
 import itemHelper from '../itemHelper';
 import layoutManager from '../layoutManager';
-import { playbackManager } from '../playback/playbackmanager';
 import { appRouter } from '../router/appRouter';
 import itemShortcuts from '../shortcuts';
 
@@ -379,10 +378,6 @@ function getCardFooterText(item, apiClient, options, footerClass, progressHtml, 
     const showTitle = options.showTitle === 'auto' ? true : (options.showTitle || item.Type === 'PhotoAlbum' || item.Type === 'Folder');
     const showOtherText = flags.isOuterFooter ? !flags.overlayText : flags.overlayText;
 
-    if (flags.isOuterFooter && options.cardLayout && layoutManager.mobile && options.cardFooterAside !== 'none') {
-        html += `<button is="paper-icon-button-light" class="itemAction btnCardOptions cardText-secondary" data-action="${ItemAction.Menu}" title="${globalize.translate('ButtonMore')}"><span class="material-icons more_vert" aria-hidden="true"></span></button>`;
-    }
-
     const cssClass = options.centerText ? 'cardText cardTextCentered' : 'cardText';
     const serverId = item.ServerId || options.serverId;
 
@@ -575,9 +570,7 @@ function getCardFooterText(item, apiClient, options, footerClass, progressHtml, 
         lines = [escapeHtml(item.Name)];
     }
 
-    const addRightTextMargin = flags.isOuterFooter && options.cardLayout && !options.centerText && options.cardFooterAside !== 'none' && layoutManager.mobile;
-
-    html += getCardTextLines(lines, cssClass, !options.overlayText, flags.isOuterFooter, options.cardLayout, addRightTextMargin, options.lines);
+    html += getCardTextLines(lines, cssClass, !options.overlayText, flags.isOuterFooter, options.cardLayout, false, options.lines);
 
     if (progressHtml) {
         html += progressHtml;
@@ -811,29 +804,6 @@ function buildCard(index, item, apiClient, options, api) {
         cardLayout: options.cardLayout
     });
 
-    let overlayButtons = '';
-    if (layoutManager.mobile) {
-        let overlayPlayButton = options.overlayPlayButton;
-
-        if (overlayPlayButton == null && !options.overlayMoreButton && !options.overlayInfoButton && !options.cardLayout) {
-            overlayPlayButton = item.MediaType === 'Video';
-        }
-
-        const btnCssClass = 'cardOverlayButton cardOverlayButton-br itemAction';
-
-        if (options.centerPlayButton) {
-            overlayButtons += `<button is="paper-icon-button-light" class="${btnCssClass} cardOverlayButton-centered" data-action="${ItemAction.Play}" title="${globalize.translate('Play')}"><span class="material-icons cardOverlayButtonIcon play_arrow" aria-hidden="true"></span></button>`;
-        }
-
-        if (overlayPlayButton && !item.IsPlaceHolder && (item.LocationType !== 'Virtual' || !item.MediaType || item.Type === 'Program') && item.Type !== 'Person') {
-            overlayButtons += `<button is="paper-icon-button-light" class="${btnCssClass}" data-action="${ItemAction.Play}" title="${globalize.translate('Play')}"><span class="material-icons cardOverlayButtonIcon play_arrow" aria-hidden="true"></span></button>`;
-        }
-
-        if (options.overlayMoreButton) {
-            overlayButtons += `<button is="paper-icon-button-light" class="${btnCssClass}" data-action="${ItemAction.Menu}" title="${globalize.translate('ButtonMore')}"><span class="material-icons cardOverlayButtonIcon more_vert" aria-hidden="true"></span></button>`;
-        }
-    }
-
     // cardBox can be it's own separate element if an outer footer is ever needed
     let cardImageContainerOpen;
     let cardImageContainerClose = '';
@@ -911,7 +881,7 @@ function buildCard(index, item, apiClient, options, api) {
         cardImageContainerOpen += getDefaultText(item, options);
     }
 
-    const tagName = layoutManager.tv && !overlayButtons ? 'button' : 'div';
+    const tagName = layoutManager.tv ? 'button' : 'div';
 
     const nameWithPrefix = (item.SortName || item.Name || '');
     let prefix = nameWithPrefix.substring(0, Math.min(3, nameWithPrefix.length));
@@ -944,7 +914,7 @@ function buildCard(index, item, apiClient, options, api) {
         cardClass: options.cardClass,
         isTV: layoutManager.tv,
         enableFocusTransform: enableFocusTransform,
-        isDesktop: layoutManager.desktop,
+        isDesktop: false,
         showChildCountIndicator: options.showChildCountIndicator,
         childCount: item.ChildCount,
         tagName: tagName,
@@ -962,53 +932,7 @@ function buildCard(index, item, apiClient, options, api) {
     const startDate = item.StartDate ? (' data-startdate="' + item.StartDate.toString() + '"') : '';
     const endDate = item.EndDate ? (' data-enddate="' + item.EndDate.toString() + '"') : '';
 
-    let additionalCardContent = '';
-
-    if (layoutManager.desktop && !options.disableHoverMenu) {
-        additionalCardContent += getHoverMenuHtml(item, action);
-    }
-
-    return '<' + tagName + ' data-index="' + index + '"' + timerAttributes + actionAttribute + ' data-isfolder="' + (item.IsFolder || false) + '" data-serverid="' + (item.ServerId || options.serverId) + '" data-id="' + (item.Id || item.ItemId) + '" data-type="' + item.Type + '"' + mediaTypeData + collectionTypeData + channelIdData + pathData + positionTicksData + playlistIdData + contextData + parentIdData + startDate + endDate + ' data-prefix="' + escapeHtml(prefix) + '" class="' + className + '"' + ariaLabelAttribute + '>' + cardImageContainerOpen + innerCardFooter + cardImageContainerClose + overlayButtons + additionalCardContent + cardScalableClose + outerCardFooter + cardBoxClose + '</' + tagName + '>';
-}
-
-/**
- * Generates HTML markup for the card overlay.
- * @param {object} item - Item used to generate the card overlay.
- * @param {string} action - Action assigned to the overlay.
- * @returns {string} HTML markup of the card overlay.
- */
-function getHoverMenuHtml(item, action) {
-    let html = '';
-
-    html += '<div class="cardOverlayContainer itemAction" data-action="' + action + '">';
-
-    const btnCssClass = 'cardOverlayButton cardOverlayButton-hover itemAction paper-icon-button-light';
-
-    if (playbackManager.canPlay(item)) {
-        html += `<button is="paper-icon-button-light" class="${btnCssClass} cardOverlayFab-primary" data-action="${ItemAction.Resume}" title="${globalize.translate('Play')}"><span class="material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover play_arrow" aria-hidden="true"></span></button>`;
-    }
-
-    html += '<div class="cardOverlayButton-br flex">';
-
-    const userData = item.UserData || {};
-
-    if (itemHelper.canMarkPlayed(item)) {
-        import('../../elements/emby-playstatebutton/emby-playstatebutton');
-        html += `<button is="emby-playstatebutton" type="button" data-action="${ItemAction.None}" class="${btnCssClass}" data-id="${item.Id}" data-serverid="${item.ServerId}" data-itemtype="${item.Type}" data-played="${userData.Played}"><span class="material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover check" aria-hidden="true"></span></button>`;
-    }
-
-    if (itemHelper.canRate(item)) {
-        const likes = userData.Likes == null ? '' : userData.Likes;
-
-        import('../../elements/emby-ratingbutton/emby-ratingbutton');
-        html += `<button is="emby-ratingbutton" type="button" data-action="${ItemAction.None}" class="${btnCssClass}" data-id="${item.Id}" data-serverid="${item.ServerId}" data-itemtype="${item.Type}" data-likes="${likes}" data-isfavorite="${userData.IsFavorite}"><span class="material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover favorite" aria-hidden="true"></span></button>`;
-    }
-
-    html += `<button is="paper-icon-button-light" class="${btnCssClass}" data-action="${ItemAction.Menu}" title="${globalize.translate('ButtonMore')}"><span class="material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover more_vert" aria-hidden="true"></span></button>`;
-    html += '</div>';
-    html += '</div>';
-
-    return html;
+    return '<' + tagName + ' data-index="' + index + '"' + timerAttributes + actionAttribute + ' data-isfolder="' + (item.IsFolder || false) + '" data-serverid="' + (item.ServerId || options.serverId) + '" data-id="' + (item.Id || item.ItemId) + '" data-type="' + item.Type + '"' + mediaTypeData + collectionTypeData + channelIdData + pathData + positionTicksData + playlistIdData + contextData + parentIdData + startDate + endDate + ' data-prefix="' + escapeHtml(prefix) + '" class="' + className + '"' + ariaLabelAttribute + '>' + cardImageContainerOpen + innerCardFooter + cardImageContainerClose + cardScalableClose + outerCardFooter + cardBoxClose + '</' + tagName + '>';
 }
 
 /**

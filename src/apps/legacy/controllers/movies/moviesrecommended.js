@@ -21,7 +21,7 @@ import 'elements/emby-tabs/emby-tabs';
 import 'elements/emby-button/emby-button';
 
 function enableScrollX() {
-    return !layoutManager.desktop;
+    return true;
 }
 
 function loadLatest(page, userId, parentId) {

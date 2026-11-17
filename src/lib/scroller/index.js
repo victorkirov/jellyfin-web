@@ -734,30 +734,22 @@ const scrollerFactory = function (frame, options) {
 
         if (!transform) {
             if (o.horizontal) {
-                if (layoutManager.desktop && !o.hideScrollbar) {
-                    nativeScrollElement.classList.add('scrollX');
-                } else {
-                    nativeScrollElement.classList.add('scrollX');
-                    nativeScrollElement.classList.add('hiddenScrollX');
+                nativeScrollElement.classList.add('scrollX');
+                nativeScrollElement.classList.add('hiddenScrollX');
 
-                    if (layoutManager.tv && o.allowNativeSmoothScroll !== false) {
-                        nativeScrollElement.classList.add('smoothScrollX');
-                    }
+                if (layoutManager.tv && o.allowNativeSmoothScroll !== false) {
+                    nativeScrollElement.classList.add('smoothScrollX');
                 }
 
                 if (o.forceHideScrollbars) {
                     nativeScrollElement.classList.add('hiddenScrollX-forced');
                 }
             } else {
-                if (layoutManager.desktop && !o.hideScrollbar) {
-                    nativeScrollElement.classList.add('scrollY');
-                } else {
-                    nativeScrollElement.classList.add('scrollY');
-                    nativeScrollElement.classList.add('hiddenScrollY');
+                nativeScrollElement.classList.add('scrollY');
+                nativeScrollElement.classList.add('hiddenScrollY');
 
-                    if (layoutManager.tv && o.allowNativeSmoothScroll !== false) {
-                        nativeScrollElement.classList.add('smoothScrollY');
-                    }
+                if (layoutManager.tv && o.allowNativeSmoothScroll !== false) {
+                    nativeScrollElement.classList.add('smoothScrollY');
                 }
 
                 if (o.forceHideScrollbars) {

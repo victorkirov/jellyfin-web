@@ -218,7 +218,7 @@ function loadNextUp(view, userId, parentId) {
 }
 
 function enableScrollX() {
-    return !layoutManager.desktop;
+    return true;
 }
 
 export default function (view, params) {
