@@ -2,13 +2,15 @@ import { getPlaylistApi } from '@jellyfin/sdk/lib/utils/api/playlist-api';
 
 import listView from 'components/listview/listview';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
+import { PLAYLIST_FIELDS } from 'utils/query/playlistFields';
 
-function getFetchPlaylistItemsFn(apiClient, itemId) {
-    return function () {
+export function getFetchPlaylistItemsFn(apiClient, itemId) {
+    return function (queryOptions) {
         const query = {
-            Fields: 'PrimaryImageAspectRatio,MediaSourceCount,Chapters,Trickplay',
+            Fields: PLAYLIST_FIELDS,
             EnableImageTypes: 'Primary,Backdrop,Banner,Thumb',
-            UserId: apiClient.getCurrentUserId()
+            UserId: apiClient.getCurrentUserId(),
+            ...queryOptions
         };
         return apiClient.getJSON(apiClient.getUrl(`Playlists/${itemId}/Items`, query));
     };
