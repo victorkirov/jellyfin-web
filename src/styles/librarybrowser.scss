@@ -1044,7 +1044,7 @@ div:not(.sectionTitleContainer-cards) > .sectionTitle-cards {
     overflow: hidden;
 
     /* NOTE: line clamping is non-standard and requires vendor-prefixed rules to function */
-    display: -webkit-box; /* stylelint-disable-line value-no-vendor-prefix */
+    display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 12;
 }
