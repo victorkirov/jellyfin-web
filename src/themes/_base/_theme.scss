@@ -567,7 +567,6 @@ a[data-role="button"],
     background-color: #3b3b3b;
 }
 
-.layout-desktop ::-webkit-scrollbar,
 .layout-tv ::-webkit-scrollbar {
     width: 0.4em;
     height: 0.4em;
@@ -577,10 +576,6 @@ a[data-role="button"],
 ::-webkit-scrollbar-thumb:vertical {
     border-radius: 2px;
     background: center no-repeat #888;
-}
-
-.timeslotHeaders-desktop::-webkit-scrollbar {
-    height: 0.7em;
 }
 
 .metadataSidebarIcon {

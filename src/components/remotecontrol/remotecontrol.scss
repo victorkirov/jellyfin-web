@@ -1,5 +1,3 @@
-@use '../../styles/mixins' as *;
-
 .nowPlayingPage {
     padding: 5em 0 0 0 !important;
 }
@@ -163,86 +161,28 @@
     z-index: 0;
 }
 
-.layout-mobile .playlistSectionButtonTransparent {
-    background: rgba(0, 0, 0, 0) !important;
-}
-
-.layout-mobile .playlistSection .playlist,
-.layout-mobile .playlistSection .contextMenu {
-    position: absolute;
-    top: 12.2em;
-    bottom: 4.2em;
-    overflow: scroll;
-    padding: 0 1em;
-    display: inline-block;
-    left: 0;
-    right: 0;
-    z-index: 1000;
-}
-
-.layout-mobile .playlistSectionButton {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    height: 4.2em;
-    right: 0;
-    padding-bottom: env(safe-area-inset-bottom);
-
-    @include conditional-max(padding-left, 7.3%, env(safe-area-inset-left));
-    @include conditional-max(padding-right, 7.3%, env(safe-area-inset-right));
-}
-
-.layout-desktop .playlistSectionButton,
 .layout-tv .playlistSectionButton {
     background: none;
     color: inherit;
 }
 
-.layout-desktop .nowPlayingPlaylist,
 .layout-tv .nowPlayingPlaylist {
     background: none;
 }
 
-.layout-mobile .playlistSectionButton .btnTogglePlaylist {
-    font-size: larger;
-    margin: 0;
-}
-
-.layout-mobile .playlistSectionButton .volumecontrol {
-    margin: 0;
-    padding-right: 0;
-    border-radius: 0;
-}
-
-.layout-mobile .playlistSectionButton .btnToggleContextMenu {
-    font-size: larger;
-    margin: 0;
-}
-
-.layout-mobile .nowPlayingSecondaryButtons .volumecontrol {
-    display: none;
-}
-
-.layout-desktop .nowPlayingInfoButtons .btnRepeat,
 .layout-tv .nowPlayingInfoButtons .btnRepeat {
     display: none;
 }
 
-.layout-desktop .nowPlayingInfoButtons .btnShuffleQueue,
 .layout-tv .nowPlayingInfoButtons .btnShuffleQueue {
     display: none;
 }
 
-.layout-desktop .playlistSectionButton .volumecontrol,
 .layout-tv .playlistSectionButton .volumecontrol {
     display: none;
 }
 
 .nowPlayingInfoControls .nowPlayingPageUserDataButtonsTitle {
-    display: none;
-}
-
-.layout-mobile .nowPlayingPageUserDataButtons {
     display: none;
 }
 
@@ -269,10 +209,6 @@
         padding-left: 7.3% !important;
         padding-right: 7.3% !important;
         height: 100%;
-    }
-
-    .layout-desktop .nowPlayingPageUserDataButtons {
-        display: none;
     }
 
     .nowPlayingInfoContainer {

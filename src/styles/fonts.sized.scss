@@ -16,10 +16,6 @@ html {
 
 h1 {
     @include header-font(1.8em);
-
-    .layout-desktop & {
-        font-size: 2em;
-    }
 }
 
 h2 {

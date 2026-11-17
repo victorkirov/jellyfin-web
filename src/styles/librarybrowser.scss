@@ -1,72 +1,5 @@
 @use 'mixins' as *;
 
-// The padding of the header content on mobile needs to be adjusted
-// based on the size of the poster card (values from card.scss)
-@mixin header-poster-padding() {
-    padding-left: 37.5%;
-
-    @media all and (min-width: 43.75em) {
-        padding-left: 25%;
-    }
-
-    @media all and (min-width: 50em) {
-        padding-left: 20%;
-    }
-
-    @media all and (min-width: 75em) {
-        padding-left: 16.666666666666666666666666666667%;
-    }
-
-    @media all and (min-width: 87.5em) {
-        padding-left: 14.285714285714285714285714285714%;
-    }
-
-    @media all and (min-width: 100em) {
-        padding-left: 12.5%;
-    }
-
-    @media all and (min-width: 120em) {
-        padding-left: 11.111111111111111111111111111111%;
-    }
-
-    @media all and (min-width: 131.25em) {
-        padding-left: 10%;
-    }
-}
-
-@mixin header-poster-padding-rtl() {
-    padding-left: unset;
-    padding-right: 37.5%;
-
-    @media all and (min-width: 43.75em) {
-        padding-right: 25%;
-    }
-
-    @media all and (min-width: 50em) {
-        padding-right: 20%;
-    }
-
-    @media all and (min-width: 75em) {
-        padding-right: 16.666666666666666666666666666667%;
-    }
-
-    @media all and (min-width: 87.5em) {
-        padding-right: 14.285714285714285714285714285714%;
-    }
-
-    @media all and (min-width: 100em) {
-        padding-right: 12.5%;
-    }
-
-    @media all and (min-width: 120em) {
-        padding-right: 11.111111111111111111111111111111%;
-    }
-
-    @media all and (min-width: 131.25em) {
-        padding-right: 10%;
-    }
-}
-
 .headerUserImage,
 .pageTitle {
     vertical-align: middle;
@@ -361,7 +294,6 @@
         right: unset;
     }
 
-    .layout-mobile &,
     .layout-tv & {
         display: none;
     }
@@ -440,16 +372,6 @@
     position: relative;
     animation: backdrop-fadein 800ms ease-in normal both;
 
-    .layout-mobile & {
-        background-attachment: initial;
-        background-position: top center;
-        margin-top: 3rem;
-
-        @media all and (orientation: portrait) and (max-width: 40em) {
-            height: 30vh;
-        }
-    }
-
     .layout-tv & {
         display: none;
     }
@@ -480,16 +402,8 @@
     margin: 0 0 0;
 }
 
-.layout-mobile .parentName {
-    margin: 0.6em 0 0;
-}
-
 .musicParentName {
     margin: 0.15em 0 0.2em;
-}
-
-.layout-mobile .musicParentName {
-    margin: -0.25em 0 0.25em;
 }
 
 .mainDetailButtons {
@@ -504,11 +418,6 @@
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
-
-    .layout-mobile & {
-        white-space: normal;
-        overflow: visible;
-    }
 }
 
 .itemName.originalTitle {
@@ -519,25 +428,8 @@
     margin: 0 0 0;
 }
 
-.layout-mobile .itemName.parentNameLast {
-    margin: 0.4em 0 0.4em;
-}
-
-.layout-mobile h1.itemName,
-.layout-mobile h1.parentName {
-    font-size: 1.6em;
-}
-
 .itemName.parentNameLast.withOriginalTitle {
     margin: 0 0 0;
-}
-
-.layout-mobile .itemName.parentNameLast.withOriginalTitle {
-    margin: 0.6em 0 0;
-}
-
-.layout-mobile .itemName.originalTitle {
-    margin: 0.5em 0 0.5em;
 }
 
 .nameContainer {
@@ -550,53 +442,6 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-
-    .layout-mobile & {
-        @media all and (orientation: portrait) and (max-width: 40em) {
-            margin-bottom: 0 !important;
-
-            .mediaInfoItem {
-                margin-top: 0.5em;
-            }
-        }
-    }
-}
-
-.layout-mobile .parentName,
-.layout-mobile .itemName,
-.layout-mobile .itemMiscInfo,
-.layout-mobile .mainDetailButtons {
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-}
-
-.layout-mobile .mainDetailButtons {
-    margin-top: 1em;
-    margin-bottom: 0.5em;
-}
-
-.layout-mobile [dir="ltr"] .mainDetailButtons {
-    margin-left: 0;
-
-    @include header-poster-padding;
-
-    // The buttons row is full width on small screens
-    @media all and (max-width: 32em) {
-        margin-bottom: 0;
-        padding-left: 0;
-    }
-}
-
-.layout-mobile [dir="rtl"] .mainDetailButtons {
-    margin-right: 0;
-
-    @include header-poster-padding-rtl;
-
-    @media all and (max-width: 32em) {
-        margin-bottom: 0;
-        padding-right: 0;
-    }
 }
 
 .subtitle {
@@ -607,39 +452,20 @@
     padding-left: 1em;
 }
 
-.layout-mobile .subtitle {
-    margin: 0.2em 0 0.2em;
-    padding-left: 0; // Reset padding for focused button since 'margin-left' is 0
-}
-
 .detailRibbon {
     display: flex;
     align-items: center;
     align-content: center;
     z-index: 2;
 
-    .layout-mobile & {
-        display: block;
-        position: relative;
-        padding: 0.5rem 5%;
-    }
-
-    .layout-desktop & {
-        position: relative;
-        margin-top: -7.2em;
-        height: 7.2em;
-    }
-
     .layout-tv & {
         display: block;
     }
 
-    .layout-desktop [dir="rtl"] &,
     .layout-tv [dir="rtl"] & {
         padding-right: 32.45vw;
     }
 
-    .layout-desktop [dir="ltr"] &,
     .layout-tv [dir="ltr"] & {
         padding-left: 32.45vw;
     }
@@ -649,20 +475,6 @@
     min-width: 0;
     max-width: 100%;
     flex: 1 0 0;
-
-    .layout-mobile & {
-        @media all and (max-width: 32em) {
-            position: relative;
-        }
-    }
-
-    .layout-mobile [dir="ltr"] & {
-        @include header-poster-padding;
-    }
-
-    .layout-mobile [dir="rtl"] & {
-        @include header-poster-padding-rtl;
-    }
 }
 
 .infoText {
@@ -676,14 +488,6 @@
 
 .detailPageSecondaryContainer {
     padding-top: 1.25em;
-
-    .layout-desktop & {
-        flex-grow: 1;
-    }
-
-    .layout-mobile & {
-        padding-top: 1em;
-    }
 }
 
 .detailImageContainer .card {
@@ -698,34 +502,6 @@
         margin: 0;
     }
 
-    .layout-mobile & {
-        position: absolute;
-        top: auto;
-        left: 5%;
-        bottom: 1rem;
-        max-width: 30vw;
-        filter: drop-shadow(0 0 0.5rem #000);
-
-        @media all and (max-width: 32em) {
-            left: 0;
-            bottom: 0;
-        }
-
-        &.backdropCard {
-            top: 1.6em;
-        }
-    }
-
-    .layout-desktop & {
-        left: 3.3%;
-        // ribbon height (7.2em) * 1.8
-        top: -12.96em;
-        margin-bottom: -12.96em; // match top offset
-        width: 25vw;
-        // FIXME: the fixed width + max height cause the card to be cropped this needs a proper fix
-        max-height: none;
-    }
-
     .layout-tv & {
         left: 5%;
         top: 0;
@@ -738,13 +514,8 @@
         left: unset;
         float: right;
 
-        .layout-mobile &,
         .layout-tv & {
             right: 5%;
-        }
-
-        .layout-desktop & {
-            right: 3.3%;
         }
     }
 }
@@ -759,11 +530,6 @@
 
     [dir="rtl"] & {
         padding-right: 32.45vw;
-    }
-
-    .layout-mobile & {
-        padding-left: 5% !important;
-        padding-right: 5% !important;
     }
 
     &::after {
@@ -797,11 +563,6 @@ div.itemDetailGalleryLink.defaultCardBackground {
     margin-top: 0;
 }
 
-.layout-mobile .sectionTitleTextButton > .material-icons {
-    margin-bottom: 0;
-    padding-top: 0.5em;
-}
-
 .itemDetailGalleryLink.defaultCardBackground > .material-icons {
     font-size: 15vw;
     margin-top: 50%;
@@ -813,16 +574,10 @@ div.itemDetailGalleryLink.defaultCardBackground {
         position: relative;
     }
 
-    .layout-desktop .itemBackdrop {
-        height: 40vh;
-    }
-
-    .layout-desktop .detailPageWrapperContainer,
     .layout-tv .detailPageWrapperContainer {
         margin-top: 0.1em;
     }
 
-    .layout-desktop .detailImageContainer .card,
     .layout-tv .detailImageContainer .card {
         top: 10%;
     }
@@ -977,12 +732,6 @@ div.itemDetailGalleryLink.defaultCardBackground {
 .detailPageWrapperContainer {
     border-spacing: 0;
     border-collapse: collapse;
-
-    .layout-desktop & {
-        display: flex;
-        flex-direction: column;
-        min-height: 60vh;
-    }
 }
 
 .mediaInfoContent .btnCopy .material-icons {
@@ -1069,10 +818,6 @@ div.itemDetailGalleryLink.defaultCardBackground {
     margin-bottom: 2.7em;
 }
 
-.layout-mobile .verticalSection-extrabottompadding {
-    margin-bottom: 1em;
-}
-
 .sectionTitleButton,
 .sectionTitleIconButton {
     margin-right: 0 !important;
@@ -1100,11 +845,6 @@ div:not(.sectionTitleContainer-cards) > .sectionTitle-cards {
     margin: 0;
     padding-top: 0.5em;
     padding-bottom: 0.2em;
-}
-
-.layout-mobile :not(.sectionTitleContainer-cards) > .sectionTitle-cards {
-    margin: 0;
-    padding-top: 0.5em;
 }
 
 .sectionTitleButton {
@@ -1251,10 +991,6 @@ div:not(.sectionTitleContainer-cards) > .sectionTitle-cards {
     margin: 0;
 }
 
-.layout-mobile #myPreferencesMenuPage {
-    padding-top: 3.75em;
-}
-
 .itemDetailsGroup {
     margin-top: 1.5em;
 }
@@ -1286,11 +1022,6 @@ div:not(.sectionTitleContainer-cards) > .sectionTitle-cards {
 .trackSelections .selectContainer .selectLabel {
     margin: 0 0.2em 0 0;
     line-height: 1.75;
-}
-
-.layout-mobile .detailsGroupItem .label,
-.layout-mobile .trackSelections .selectContainer .selectLabel {
-    flex-basis: 4.5em;
 }
 
 .trackSelections .selectContainer .detailTrackSelect {
