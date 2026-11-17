@@ -183,7 +183,6 @@ const config = {
                     path.resolve(__dirname, 'node_modules/@tanstack/query-core'),
                     path.resolve(__dirname, 'node_modules/@tanstack/query-persist-client-core'),
                     path.resolve(__dirname, 'node_modules/@tanstack/react-query'),
-                    path.resolve(__dirname, 'node_modules/@uupaa/dynamic-import-polyfill'),
                     path.resolve(__dirname, 'node_modules/axios'),
                     path.resolve(__dirname, 'node_modules/blurhash'),
                     path.resolve(__dirname, 'node_modules/date-fns'),
@@ -198,26 +197,8 @@ const config = {
                     path.resolve(__dirname, 'node_modules/react-router'),
                     path.resolve(__dirname, 'node_modules/screenfull'),
                     path.resolve(__dirname, 'node_modules/swiper'),
-                    path.resolve(__dirname, 'node_modules/usehooks-ts'),
                     path.resolve(__dirname, 'src')
                 ],
-                use: [{
-                    loader: 'babel-loader',
-                    options: {
-                        cacheCompression: false,
-                        cacheDirectory: true
-                    }
-                }]
-            },
-            // Strict EcmaScript modules require additional flags
-            {
-                test: /\.(js|jsx|mjs)$/,
-                include: [
-                    path.resolve(__dirname, 'node_modules/@tanstack/query-devtools')
-                ],
-                resolve: {
-                    fullySpecified: false
-                },
                 use: [{
                     loader: 'babel-loader',
                     options: {
