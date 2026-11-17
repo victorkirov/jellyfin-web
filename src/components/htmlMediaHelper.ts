@@ -44,7 +44,7 @@ function setCurrentTimeIfNeeded(element: HTMLMediaElement, seconds: number) {
     }
 }
 
-export function seekOnPlaybackStart(instance: MediaInstance, element: HTMLMediaElement, ticks?: number, onMediaReady?: () => void) {
+export function seekOnPlaybackStart(instance: MediaInstance, element: HTMLMediaElement, ticks?: number | null, onMediaReady?: () => void) {
     const seconds = (ticks || 0) / TICKS_PER_SECOND;
 
     if (seconds) {

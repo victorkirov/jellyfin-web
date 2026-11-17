@@ -1,10 +1,14 @@
+import { getDeviceProfile } from './apphost/deviceProfile';
+import type { BrowserDetection } from 'types/legacyPlayer';
 import appSettings from '../scripts/settings/appSettings';
-import browser from '../scripts/browser';
-import Events from '../utils/events.ts';
+import detectedBrowser from '../scripts/browser';
+import Events from '../utils/events';
 import * as webSettings from '../scripts/settings/webSettings';
 import globalize from '../lib/globalize';
-import profileBuilder from '../scripts/browserDeviceProfile';
+
 import { AppFeature } from 'constants/appFeature';
+
+const browser = detectedBrowser as BrowserDetection;
 
 const appName = 'Jellyfin Web';
 
@@ -24,99 +28,21 @@ const BrowserName = {
     safari: 'Safari'
 };
 
-function getBaseProfileOptions() {
-    return {
-        enableMkvProgressive: false
-    };
-}
-
-function getDeviceProfile() {
-    return new Promise(function (resolve) {
-        let profile;
-
-        if (window.NativeShell) {
-            profile = window.NativeShell.AppHost.getDeviceProfile(profileBuilder, __PACKAGE_JSON_VERSION__);
-        } else {
-            const builderOpts = getBaseProfileOptions();
-            profile = profileBuilder(builderOpts);
-        }
-
-        const maxVideoWidth = appSettings.maxVideoWidth();
-        const maxTranscodingVideoWidth = maxVideoWidth < 0 ? appHost.screen()?.maxAllowedWidth : maxVideoWidth;
-
-        if (maxTranscodingVideoWidth) {
-            const conditionWidth = {
-                Condition: 'LessThanEqual',
-                Property: 'Width',
-                Value: maxTranscodingVideoWidth.toString(),
-                IsRequired: false
-            };
-
-            if (appSettings.limitSupportedVideoResolution()) {
-                profile.CodecProfiles.push({
-                    Type: 'Video',
-                    Conditions: [conditionWidth]
-                });
-            }
-
-            profile.TranscodingProfiles.forEach((transcodingProfile) => {
-                if (transcodingProfile.Type === 'Video') {
-                    transcodingProfile.Conditions = (transcodingProfile.Conditions || []).filter((condition) => {
-                        return condition.Property !== 'Width';
-                    });
-
-                    transcodingProfile.Conditions.push(conditionWidth);
-                }
-            });
-        }
-
-        const preferredTranscodeVideoCodec = appSettings.preferredTranscodeVideoCodec();
-        if (preferredTranscodeVideoCodec) {
-            profile.TranscodingProfiles.forEach((transcodingProfile) => {
-                if (transcodingProfile.Type === 'Video') {
-                    const videoCodecs = transcodingProfile.VideoCodec.split(',');
-                    const index = videoCodecs.indexOf(preferredTranscodeVideoCodec);
-                    if (index !== -1) {
-                        videoCodecs.splice(index, 1);
-                        videoCodecs.unshift(preferredTranscodeVideoCodec);
-                        transcodingProfile.VideoCodec = videoCodecs.join(',');
-                    }
-                }
-            });
-        }
-
-        const preferredTranscodeVideoAudioCodec = appSettings.preferredTranscodeVideoAudioCodec();
-        if (preferredTranscodeVideoAudioCodec) {
-            profile.TranscodingProfiles.forEach((transcodingProfile) => {
-                if (transcodingProfile.Type === 'Video') {
-                    const audioCodecs = transcodingProfile.AudioCodec.split(',');
-                    const index = audioCodecs.indexOf(preferredTranscodeVideoAudioCodec);
-                    if (index !== -1) {
-                        audioCodecs.splice(index, 1);
-                        audioCodecs.unshift(preferredTranscodeVideoAudioCodec);
-                        transcodingProfile.AudioCodec = audioCodecs.join(',');
-                    }
-                }
-            });
-        }
-
-        resolve(profile);
-    });
-}
-
-function generateDeviceId() {
+/** @returns {string | number} Numeric fallback for hosts without btoa. */
+function generateDeviceId(): string | number {
     const keys = [];
 
     keys.push(navigator.userAgent);
     keys.push(new Date().getTime());
-    if (window.btoa) {
-        return btoa(keys.join('|')).replaceAll('=', '1');
+    if (typeof window.btoa === 'function') {
+        return btoa(keys.join('|')).replace(/=/g, '1');
     }
 
     return new Date().getTime();
 }
 
-function getDeviceId() {
+/** @returns {string | number | undefined} Read the existing device ID format unchanged. */
+function getDeviceId(): string | number | undefined {
     if (!deviceId) {
         const key = '_deviceId2';
 
@@ -138,7 +64,7 @@ function getDeviceName() {
 
     deviceName = 'Web Browser'; // Default device name
 
-    for (const key in BrowserName) {
+    for (const key of Object.keys(BrowserName) as (keyof typeof BrowserName)[]) {
         if (browser[key]) {
             deviceName = BrowserName[key];
             break;
@@ -205,8 +131,20 @@ function onAppHidden() {
     }
 }
 
+function supportsExternalLinks() {
+    return !browser.operaTv && !browser.tizen && !browser.orsay && !browser.web0s && !browser.ps4;
+}
+
+function supportsRemoteControl() {
+    return !browser.tv && !browser.xboxOne && !browser.ps4;
+}
+
+function supportsRemoteVideo() {
+    return !browser.operaTv && !browser.tizen && !browser.orsay && !browser.web0s && !browser.edgeUwp;
+}
+
 const supportedFeatures = function () {
-    const features = [];
+    const features: string[] = [];
 
     if (!browser.edgeUwp && !browser.tv && !browser.xboxOne && !browser.ps4) {
         features.push(AppFeature.FileDownload);
@@ -216,7 +154,7 @@ const supportedFeatures = function () {
         features.push(AppFeature.Exit);
     }
 
-    if (!browser.operaTv && !browser.tizen && !browser.orsay && !browser.web0s && !browser.ps4) {
+    if (supportsExternalLinks()) {
         features.push(AppFeature.ExternalLinks);
     }
 
@@ -233,11 +171,11 @@ const supportedFeatures = function () {
         features.push(AppFeature.PhysicalVolumeControl);
     }
 
-    if (!browser.tv && !browser.xboxOne && !browser.ps4) {
+    if (supportsRemoteControl()) {
         features.push(AppFeature.RemoteControl);
     }
 
-    if (!browser.operaTv && !browser.tizen && !browser.orsay && !browser.web0s && !browser.edgeUwp) {
+    if (supportsRemoteVideo()) {
         features.push(AppFeature.RemoteVideo);
     }
 
@@ -246,7 +184,7 @@ const supportedFeatures = function () {
     features.push(AppFeature.TargetBlank);
     features.push(AppFeature.Screensaver);
 
-    webSettings.getMultiServer().then(enabled => {
+    void webSettings.getMultiServer().then(enabled => {
         if (enabled) features.push(AppFeature.MultiServer);
     });
 
@@ -269,9 +207,6 @@ const supportedFeatures = function () {
     return features;
 }();
 
-/**
-     * Do exit according to platform
-     */
 function doExit() {
     try {
         if (window.NativeShell?.AppHost?.exit) {
@@ -288,17 +223,14 @@ function doExit() {
     }
 }
 
-let exitPromise;
+let exitPromise: Promise<void> | null;
 
-/**
-     * Ask user for exit
-     */
 function askForExit() {
     if (exitPromise) {
         return;
     }
 
-    import('../components/actionSheet/actionSheet').then((actionsheet) => {
+    void import('../components/actionSheet/actionSheet').then((actionsheet) => {
         exitPromise = actionsheet.show({
             title: globalize.translate('MessageConfirmAppExit'),
             items: [
@@ -315,8 +247,8 @@ function askForExit() {
     });
 }
 
-let deviceId;
-let deviceName;
+let deviceId: string | number | undefined;
+let deviceName: string | undefined;
 
 export const appHost = {
     getWindowState: function () {
@@ -332,7 +264,7 @@ export const appHost = {
             doExit();
         }
     },
-    supports: function (command) {
+    supports: function (command: string) {
         if (window.NativeShell) {
             return window.NativeShell.AppHost.supports(command);
         }
@@ -370,10 +302,10 @@ export const appHost = {
     getPushTokenInfo: function () {
         return {};
     },
-    setUserScalable: function (scalable) {
+    setUserScalable: function (scalable: boolean) {
         if (!browser.tv) {
             const att = scalable ? 'width=device-width, initial-scale=1, minimum-scale=1, user-scalable=yes' : 'width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no';
-            document.querySelector('meta[name=viewport]').setAttribute('content', att);
+            document.querySelector('meta[name=viewport]')!.setAttribute('content', att);
         }
     },
     screen: () => {
@@ -400,7 +332,7 @@ export const appHost = {
 };
 
 let isHidden = false;
-let hidden;
+let hidden: 'hidden' | 'webkitHidden';
 let visibilityChange;
 
 if (typeof document.hidden !== 'undefined') {
@@ -411,7 +343,7 @@ if (typeof document.hidden !== 'undefined') {
     visibilityChange = 'webkitvisibilitychange';
 }
 
-document.addEventListener(visibilityChange, function () {
+document.addEventListener(visibilityChange as string, function () {
     if (document[hidden]) {
         onAppHidden();
     } else {

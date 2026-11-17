@@ -20,7 +20,7 @@ describe('resolved module layers', () => {
         ['src/utils/query/queryKeys.ts', 'apps/legacy/features/search/types'],
         ['src/utils/query/queryKeys.ts', '../../apps/legacy/features/search/types'],
         ['src/components/playback/skipsegment.ts', 'apps/legacy/features/search/types'],
-        ['src/plugins/htmlVideoPlayer/plugin.js', '../../apps/legacy/features/search/types']
+        ['src/plugins/htmlVideoPlayer/plugin.ts', '../../apps/legacy/features/search/types']
     ])('rejects %s importing %s', async (filePath, source) => {
         const results = await eslint.lintText(`import '${source}';\n`, { filePath });
         expect(restrictions(results)).toHaveLength(1);

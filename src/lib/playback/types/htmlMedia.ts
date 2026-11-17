@@ -3,15 +3,15 @@ import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/
 export type MediaPlayOptions = {
     mediaSource?: MediaSourceInfo & { IsLocal?: boolean };
     url?: string;
-    playerStartPositionTicks?: number;
+    playerStartPositionTicks?: number | null;
     transcodingOffsetTicks?: number;
 };
 
 type UnloadablePlayer = { unload: () => void };
 
 export type MediaInstance = {
-    _mediaElement?: HTMLMediaElement;
-    destroyCustomTrack?: (element?: HTMLMediaElement) => void;
+    _mediaElement?: HTMLMediaElement | null;
+    destroyCustomTrack?: (element?: HTMLMediaElement | null) => void;
     _castPlayer?: UnloadablePlayer | null;
     _flvPlayer?: (UnloadablePlayer & { detachMediaElement: () => void; destroy: () => void }) | null;
     _currentSrc?: string | null;
