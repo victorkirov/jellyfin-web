@@ -1,6 +1,9 @@
-const sharedLoaders = new Map();
-const activeLoaders = new Set();
-let removalObserver;
+type Callback = (entry: IntersectionObserverEntry, observer: IntersectionObserver) => void;
+type Options = { callback: Callback };
+
+const sharedLoaders = new Map<Callback, LazyLoader>();
+const activeLoaders = new Set<LazyLoader>();
+let removalObserver: MutationObserver | null;
 
 function watchRemovals() {
     if (!removalObserver) {
@@ -16,9 +19,13 @@ function watchRemovals() {
 }
 
 export class LazyLoader {
-    constructor(options) {
+    options: Options;
+    elements: Set<Element>;
+    observer: IntersectionObserver | null = null;
+
+    constructor(options: Options) {
         this.options = options;
-        this.elements = new Set();
+        this.elements = new Set<Element>();
     }
 
     createObserver() {
@@ -40,12 +47,12 @@ export class LazyLoader {
         this.observer = newObserver;
     }
 
-    addElements(elements) {
-        let observer = this.observer;
+    addElements(elements: ArrayLike<Element>) {
+        let observer = this.observer!;
 
         if (!observer) {
             this.createObserver();
-            observer = this.observer;
+            observer = this.observer!;
         }
 
         Array.from(elements).forEach(element => {
@@ -59,7 +66,7 @@ export class LazyLoader {
     removeDetachedElements() {
         this.elements.forEach(element => {
             if (!document.documentElement.contains(element)) {
-                this.observer.unobserve(element);
+                this.observer!.unobserve(element);
                 this.elements.delete(element);
             }
         });
@@ -69,7 +76,7 @@ export class LazyLoader {
     }
 
     destroyObserver() {
-        const observer = this.observer;
+        const observer = this.observer!;
 
         if (observer) {
             observer.disconnect();
@@ -88,11 +95,11 @@ export class LazyLoader {
 
     destroy() {
         this.destroyObserver();
-        this.options = null;
+        this.options = null!;
     }
 }
 
-function unveilElements(elements, callback) {
+function unveilElements(elements: ArrayLike<Element>, callback: Callback) {
     if (!elements.length) {
         return;
     }
@@ -104,7 +111,7 @@ function unveilElements(elements, callback) {
     lazyLoader.addElements(elements);
 }
 
-export function lazyChildren(elem, callback) {
+export function lazyChildren(elem: Element, callback: Callback) {
     unveilElements(elem.getElementsByClassName('lazy'), callback);
 }
 

@@ -64,11 +64,11 @@ describe.each([
             expect(row?.classList.contains('smoothScrollX')).toBe(true);
             expect(row?.classList.contains('hiddenScrollX')).toBe(true);
             expect(row?.classList.contains('vertical-wrap')).toBe(false);
-            const callback = vi.mocked(lazyLoader.lazyChildren).mock.lastCall?.[1];
+            const callback = vi.mocked(lazyLoader.lazyChildren).mock.lastCall![1];
             const unobserve = vi.fn();
-            callback({ isIntersecting: false, target: row }, { unobserve });
+            callback({ isIntersecting: false, target: row! } as IntersectionObserverEntry, { unobserve, observe: vi.fn(), disconnect: vi.fn(), takeRecords: () => [], root: null, rootMargin: '50%', thresholds: [0] });
             expect(unobserve).not.toHaveBeenCalled();
-            callback({ isIntersecting: true, target: row }, { unobserve });
+            callback({ isIntersecting: true, target: row! } as IntersectionObserverEntry, { unobserve, observe: vi.fn(), disconnect: vi.fn(), takeRecords: () => [], root: null, rootMargin: '50%', thresholds: [0] });
             await Promise.resolve();
             expect(unobserve).toHaveBeenCalledWith(row);
             const thumb = style === 'Thumb' || style === 'ThumbCard';

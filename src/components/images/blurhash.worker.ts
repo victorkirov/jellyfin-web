@@ -14,3 +14,6 @@ self.onmessage = ({ data: { hash, width, height } }): void => {
     }
 };
 /* eslint-enable no-restricted-globals */
+
+// worker-loader replaces this module export with the generated Worker constructor.
+export default null as unknown as { new(): Worker };

@@ -1,26 +1,13 @@
-import Worker from './blurhash.worker.ts'; // eslint-disable-line import/default
 import * as lazyLoader from '../lazyLoader/lazyLoaderIntersectionObserver';
 import * as userSettings from '../../scripts/settings/userSettings';
 import './style.scss';
 
-const worker = new Worker();
-const targetDic = {};
-const imageOptions = new WeakMap();
-const blurhashTargets = new WeakSet();
-worker.addEventListener(
-    'message',
-    ({ data: { pixels, hsh, width, height } }) => {
-        const elems = targetDic[hsh];
-        if (elems?.length) {
-            for (const elem of elems) {
-                drawBlurhash(elem, pixels, width, height);
-            }
-            delete targetDic[hsh];
-        }
-    }
-);
+import { itemBlurhashing } from './blurhash';
 
-export function lazyImage(elem, source = elem.getAttribute('data-src')) {
+type ImageEntry = { target: Element; isIntersecting: boolean };
+const imageOptions = new WeakMap<Element, { enableBlurhash: boolean; enableFastFadein: boolean }>();
+
+export function lazyImage(elem: HTMLElement, source = elem.getAttribute('data-src')) {
     if (!source) {
         return;
     }
@@ -28,73 +15,11 @@ export function lazyImage(elem, source = elem.getAttribute('data-src')) {
     fillImageElement(elem, source);
 }
 
-function drawBlurhash(target, pixels, width, height) {
-    if (!document.documentElement.contains(target)) {
-        return;
-    }
-
-    const canvas = document.createElement('canvas');
-    canvas.setAttribute('aria-hidden', 'true');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    const imgData = ctx.createImageData(width, height);
-
-    imgData.data.set(pixels);
-    ctx.putImageData(imgData, 0, 0);
-
-    requestAnimationFrame(() => {
-        if (!document.documentElement.contains(target)) {
-            return;
-        }
-
-        // This class is just an utility class, so users can customize the canvas using their own CSS.
-        canvas.classList.add('blurhash-canvas');
-        if (target.classList.contains('lazy-image-fadein') || target.classList.contains('lazy-image-fadein-fast')) {
-            canvas.classList.add('lazy-hidden');
-        }
-
-        target.parentNode.insertBefore(canvas, target);
-        target.classList.add('blurhashed');
-        target.removeAttribute('data-blurhash');
-    });
-}
-
-function itemBlurhashing(target, hash) {
-    try {
-        // Although the default values recommended by Blurhash developers is 32x32, a size of 20x20 seems to be the sweet spot for us,
-        // improving the performance and reducing the memory usage, while retaining almost full blur quality.
-        // Lower values had more visible pixelation
-        const width = 20;
-        const height = 20;
-        if (blurhashTargets.has(target)) {
-            return;
-        }
-        blurhashTargets.add(target);
-
-        if (targetDic[hash]) {
-            targetDic[hash].push(target);
-            return;
-        }
-        targetDic[hash] = [target];
-
-        worker.postMessage({
-            hash,
-            width,
-            height
-        });
-    } catch (err) {
-        console.error(err);
-        target.classList.add('non-blurhashable');
-        return;
-    }
-}
-
-export function fillImage(entry) {
+export function fillImage(entry: ImageEntry) {
     if (!entry) {
         throw new Error('entry cannot be null');
     }
-    const target = entry.target;
+    const target = entry.target as HTMLElement;
     let source;
 
     if (target) {
@@ -106,27 +31,31 @@ export function fillImage(entry) {
     if (entry.isIntersecting) {
         const options = imageOptions.get(target);
         if (options?.enableBlurhash) {
-            const hash = target.getAttribute('data-blurhash');
-            if (!target.classList.contains('blurhashed') && !target.classList.contains('non-blurhashable')) {
-                if (hash) {
-                    itemBlurhashing(target, hash);
-                } else {
-                    target.classList.add('non-blurhashable');
-                }
-            }
+            blurhashImage(target);
         }
         if (source) {
-            fillImageElement(target, source, options?.enableFastFadein);
+            fillImageElement(target, source as string, options?.enableFastFadein);
         }
     } else if (!source) {
         emptyImageElement(target);
     }
 }
 
-function onAnimationEnd(event) {
-    const elem = event.target;
+function blurhashImage(target: HTMLElement) {
+    const hash = target.getAttribute('data-blurhash');
+    if (!target.classList.contains('blurhashed') && !target.classList.contains('non-blurhashable')) {
+        if (hash) {
+            itemBlurhashing(target, hash);
+        } else {
+            target.classList.add('non-blurhashable');
+        }
+    }
+}
+
+function onAnimationEnd(event: Event) {
+    const elem = event.target as HTMLElement;
     requestAnimationFrame(() => {
-        const canvas = elem.previousSibling;
+        const canvas = elem.previousSibling as HTMLElement | null;
         if (elem.classList.contains('blurhashed') && canvas?.tagName === 'CANVAS') {
             canvas.classList.add('lazy-hidden');
         }
@@ -137,7 +66,7 @@ function onAnimationEnd(event) {
     elem.removeEventListener('animationend', onAnimationEnd);
 }
 
-function fillImageElement(elem, url, enableFastFadein = userSettings.enableFastFadein()) {
+function fillImageElement(elem: HTMLElement, url: string | undefined, enableFastFadein = userSettings.enableFastFadein()) {
     if (url === undefined) {
         throw new TypeError('url cannot be undefined');
     }
@@ -167,9 +96,9 @@ function fillImageElement(elem, url, enableFastFadein = userSettings.enableFastF
     });
 }
 
-function emptyImageElement(elem) {
+function emptyImageElement(elem: HTMLElement) {
     elem.removeEventListener('animationend', onAnimationEnd);
-    const canvas = elem.previousSibling;
+    const canvas = elem.previousSibling as HTMLElement | null;
     if (canvas?.tagName === 'CANVAS') {
         canvas.classList.remove('lazy-hidden');
     }
@@ -186,25 +115,25 @@ function emptyImageElement(elem) {
         url = elem.getAttribute('src');
         elem.setAttribute('src', '');
     }
-    elem.setAttribute('data-src', url);
+    elem.setAttribute('data-src', url!);
 
     elem.classList.remove('lazy-image-fadein-fast', 'lazy-image-fadein');
     elem.classList.add('lazy-hidden');
 }
 
-export function lazyChildren(elem) {
+export function lazyChildren(elem: Element) {
     const options = {
         enableBlurhash: userSettings.enableBlurhash(),
         enableFastFadein: userSettings.enableFastFadein()
     };
-    for (const lazyElem of elem.querySelectorAll('.lazy')) {
+    for (const lazyElem of elem.querySelectorAll<HTMLElement>('.lazy')) {
         imageOptions.set(lazyElem, options);
     }
 
     lazyLoader.lazyChildren(elem, fillImage);
 }
 
-export function getPrimaryImageAspectRatio(items) {
+export function getPrimaryImageAspectRatio(items: { PrimaryImageAspectRatio?: number | null }[]) {
     const values = [];
 
     for (let i = 0, length = items.length; i < length; i++) {
@@ -262,14 +191,14 @@ export function getPrimaryImageAspectRatio(items) {
     return result;
 }
 
-export function fillImages(elems) {
+export function fillImages(elems: ArrayLike<ImageEntry>) {
     for (let i = 0, length = elems.length; i < length; i++) {
         const elem = elems[0];
         fillImage(elem);
     }
 }
 
-export function setLazyImage(element, url) {
+export function setLazyImage(element: HTMLElement, url: string) {
     element.classList.add('lazy');
     element.setAttribute('data-src', url);
     lazyImage(element);
