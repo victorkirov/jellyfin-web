@@ -1,11 +1,13 @@
-import { readFileSync } from 'node:fs';
-import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
-import ItemDetails from './index';
-import { getItemQuery } from 'hooks/useItem';
 import { queryClient } from 'utils/query/queryClient';
+import { getItemQuery } from 'hooks/useItem';
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { type ItemDto, type TrackSelect, type StateButton, getElement } from './types';
+import { type Api } from '@jellyfin/sdk';
+import ItemDetails from './index';
 
 const { apiClient, playbackManager, fixture, hideLoading, getListViewHtml, getSdkItem, api } = vi.hoisted(() => {
-    const data = { item: null };
+    const data = { item: null as (ItemDto & { allowRating?: boolean }) | null };
     const client = {
         getItem: vi.fn(() => Promise.resolve(data.item)),
         getCurrentUser: vi.fn(() => Promise.resolve({ Id: 'user', Policy: {} })),
@@ -19,12 +21,12 @@ const { apiClient, playbackManager, fixture, hideLoading, getListViewHtml, getSd
         getSimilarItems: vi.fn(() => Promise.resolve({ Items: [] })),
         subscribe: vi.fn()
     };
-    return { api: { basePath: 'https://test' }, getSdkItem: vi.fn(() => Promise.resolve({ data: data.item })), apiClient: client, fixture: data, hideLoading: vi.fn(), getListViewHtml: vi.fn(() => ''), playbackManager: { canPlay: () => true, getSupportedCommands: () => ['PlayMediaSource'], play: vi.fn() } };
+    return { api: { basePath: 'https://test' } as Api, getSdkItem: vi.fn(() => Promise.resolve({ data: data.item })), apiClient: client, fixture: data, hideLoading: vi.fn(), getListViewHtml: vi.fn(() => ''), playbackManager: { canPlay: () => true, getSupportedCommands: () => ['PlayMediaSource'], play: vi.fn() } };
 });
-const strings = JSON.parse(readFileSync('src/strings/en-us.json', 'utf8'));
+const strings: Record<string, string> = JSON.parse(readFileSync('src/strings/en-us.json', 'utf8'));
 const template = readFileSync('src/apps/legacy/controllers/itemDetails/index.html', 'utf8');
 vi.mock('lib/globalize', () => ({ default: {
-    translate: (key, value) => (strings[key] || key).replace('{0}', value),
+    translate: (key: string, value?: string | number) => (strings[key] || key).replace('{0}', String(value)),
     getCurrentDateTimeLocale: () => 'en-US'
 } }));
 vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: { getApiClient: () => apiClient, currentApiClient: () => apiClient, getApi: () => api } }));
@@ -37,11 +39,11 @@ vi.mock('components/cardbuilder/cardImage', () => ({ buildCardImage: () => '' })
 vi.mock('components/images/imageLoader', () => ({ default: { lazyChildren: vi.fn() } }));
 vi.mock('components/itemContextMenu', () => ({ default: { getCommands: () => Promise.resolve([]) } }));
 vi.mock('components/itemHelper', () => ({ default: {
-    supportsMediaSourceSelection: () => true, canMarkPlayed: item => !!item.allowRating, canRate: item => !!item.allowRating,
-    getDisplayName: item => item.Name, sortTracks: (first, second) => first.Index - second.Index
+    supportsMediaSourceSelection: () => true, canMarkPlayed: (item: ItemDto & { allowRating?: boolean }) => !!item.allowRating, canRate: (item: ItemDto & { allowRating?: boolean }) => !!item.allowRating,
+    getDisplayName: (item: ItemDto) => item.Name, sortTracks: (first: { Index: number }, second: { Index: number }) => first.Index - second.Index
 } }));
 vi.mock('components/mediainfo/mediainfo', async importOriginal => {
-    const original = await importOriginal();
+    const original = await importOriginal<typeof import('components/mediainfo/mediainfo')>();
     return { default: { ...original.default, fillPrimaryMediaInfo: vi.fn(), fillSecondaryMediaInfo: vi.fn() } };
 });
 vi.mock('elements/emby-progressbar/emby-progressbar', () => ({}));
@@ -72,10 +74,10 @@ beforeEach(() => {
     vi.clearAllMocks();
     queryClient.clear();
     document.body.innerHTML = template.replace(/\$\{(\w+)\}/g, (match, key) => strings[key] || key);
-    document.querySelectorAll('select').forEach(select => {
+    document.querySelectorAll<TrackSelect>('select').forEach(select => {
         select.setLabel = vi.fn();
     });
-    document.querySelectorAll('.btnPlaystate, .btnUserRating').forEach(button => {
+    document.querySelectorAll<StateButton>('.btnPlaystate, .btnUserRating').forEach(button => {
         button.setItem = vi.fn();
     });
 });
@@ -86,22 +88,22 @@ describe('Details playback labels and actions', () => {
         ['unstarted', 0, false, 'Play', false],
         ['completed', 0, true, 'Play', false]
     ])('labels %s items while retaining saved-position and restart semantics', async (state, ticks, played, label, replayVisible) => {
-        const page = document.querySelector('#itemDetailPage');
-        const item = { Id: state, Type: 'Movie', UserData: { PlaybackPositionTicks: ticks, Played: played } };
+        const page = getElement(document, '#itemDetailPage');
+        const item: ItemDto = { Id: state, Type: 'Movie', UserData: { Key: 'test', PlaybackPositionTicks: ticks, Played: played } };
         fixture.item = item;
         const controller = new ItemDetails(page, { id: state });
         expect(controller).toBeDefined();
         page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
-        await vi.waitFor(() => expect(page.querySelector('.btnPlay').classList.contains('hide')).toBe(false));
-        const resume = page.querySelector('.btnPlay');
-        const restart = page.querySelector('.btnReplay');
+        await vi.waitFor(() => expect(getElement(page, '.btnPlay').classList.contains('hide')).toBe(false));
+        const resume = getElement(page, '.btnPlay');
+        const restart = getElement(page, '.btnReplay');
         expect(resume.textContent.trim()).toBe(label);
         expect(resume.title).toBe(label);
         expect(restart.textContent.trim()).toBe('Start from beginning');
         expect(!restart.classList.contains('hide')).toBe(replayVisible);
-        page.querySelector('.selectSource').innerHTML = '<option value="version">Version</option>';
-        page.querySelector('.selectAudio').innerHTML = '<option value="4">English</option>';
-        page.querySelector('.selectSubtitles').innerHTML = '<option value="7">English</option>';
+        getElement(page, '.selectSource').innerHTML = '<option value="version">Version</option>';
+        getElement(page, '.selectAudio').innerHTML = '<option value="4">English</option>';
+        getElement(page, '.selectSubtitles').innerHTML = '<option value="7">English</option>';
         resume.click();
         expect(playbackManager.play).toHaveBeenLastCalledWith({ items: [item], startPositionTicks: ticks, mediaSourceId: 'version', audioStreamIndex: '4', subtitleStreamIndex: '7' });
         restart.click();
@@ -109,25 +111,25 @@ describe('Details playback labels and actions', () => {
     });
 
     it('provides visible secondary labels with the state-button update hook', () => {
-        const page = document.querySelector('#itemDetailPage');
-        expect(page.querySelector('.btnPlayTrailer .detailButton-text').textContent).toBe('Trailer');
-        expect(page.querySelector('.btnPlaystate .button-text')).not.toBeNull();
-        expect(page.querySelector('.btnUserRating .button-text')).not.toBeNull();
+        const page = getElement(document, '#itemDetailPage');
+        expect(getElement(page, '.btnPlayTrailer .detailButton-text').textContent).toBe('Trailer');
+        expect(getElement(page, '.btnPlaystate .button-text')).not.toBeNull();
+        expect(getElement(page, '.btnUserRating .button-text')).not.toBeNull();
     });
 });
 
 describe('Details metadata order by item type', () => {
     it.each(['Series', 'Season', 'MusicAlbum', 'Playlist', 'BoxSet'])('keeps the intended metadata order for %s', async type => {
-        const page = document.querySelector('#itemDetailPage');
-        fixture.item = { Id: type, Type: type, IsFolder: true, SeriesId: 'series' };
-        new ItemDetails(page, { id: type });
+        const page = getElement(document, '#itemDetailPage');
+        fixture.item = { Id: type, Type: type as ItemDto['Type'], IsFolder: true, SeriesId: 'series' };
+        expect(new ItemDetails(page, { id: type })).toBeDefined();
         page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
         await vi.waitFor(() => expect(hideLoading).toHaveBeenCalled());
         const viewingFirst = type === 'Series' || type === 'Season';
-        const firstChoice = page.querySelector(viewingFirst ? '.nextUpSection' : '.collectionItems');
-        const children = page.querySelector('#listChildrenCollapsible');
+        const firstChoice = getElement(page, viewingFirst ? '.nextUpSection' : '.collectionItems');
+        const children = getElement(page, '#listChildrenCollapsible');
         for (const selector of ['.detailSectionContent', '.itemDetailsGroup']) {
-            const metadata = page.querySelector(selector);
+            const metadata = getElement(page, selector);
             const isAfterChoices = Boolean(firstChoice.compareDocumentPosition(metadata) & Node.DOCUMENT_POSITION_FOLLOWING);
             expect(isAfterChoices).toBe(viewingFirst);
             const isAfterChildren = Boolean(children.compareDocumentPosition(metadata) & Node.DOCUMENT_POSITION_FOLLOWING);
@@ -138,9 +140,9 @@ describe('Details metadata order by item type', () => {
 
 describe('Season details controller', () => {
     it('uses the compact renderer without fetching unused episode synopses', async () => {
-        const page = document.querySelector('#itemDetailPage');
+        const page = getElement(document, '#itemDetailPage');
         fixture.item = { Id: 'season', Type: 'Season', IsFolder: true, SeriesId: 'series' };
-        new ItemDetails(page, { id: 'season' });
+        expect(new ItemDetails(page, { id: 'season' })).toBeDefined();
         page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
         await vi.waitFor(() => expect(getListViewHtml).toHaveBeenCalled());
         expect(getListViewHtml).toHaveBeenCalledWith(expect.objectContaining({ imageSize: 'episode', showIndexNumber: false, enableOverview: false, action: 'link', imagePlayButton: true }));
@@ -153,7 +155,7 @@ describe('Structured details track labels', () => {
         const name = 'Back.to.the.Future.1985.1080p.BluRay.release';
         fixture.item = {
             Id: 'tracks', Type: 'Movie', MediaType: 'Video',
-            UserData: { PlaybackPositionTicks: 500000000 },
+            UserData: { Key: 'test', PlaybackPositionTicks: 500000000 },
             MediaSources: [{ Id: 'tracks', Name: name, DefaultAudioStreamIndex: 5, DefaultSubtitleStreamIndex: 12, MediaStreams: [
                 { Type: 'Video', Index: 0, Width: 1920, Height: 1080, Codec: 'h264', Title: name, DisplayTitle: name },
                 { Type: 'Video', Index: 1, Width: 1280, Height: 720, Codec: 'hevc', Title: 'Restored edition', DisplayTitle: name },
@@ -164,24 +166,24 @@ describe('Structured details track labels', () => {
                 { Type: 'Subtitle', Index: 13, Language: 'eng', Codec: 'srt', Title: '<b>Signs & songs</b>', DisplayTitle: name }
             ] }]
         };
-        const page = document.querySelector('#itemDetailPage');
-        new ItemDetails(page, { id: 'tracks' });
+        const page = getElement(document, '#itemDetailPage');
+        expect(new ItemDetails(page, { id: 'tracks' })).toBeDefined();
         page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
-        await vi.waitFor(() => expect(page.querySelector('.selectAudio').options).toHaveLength(3));
-        const video = page.querySelector('.selectVideo');
-        const audio = page.querySelector('.selectAudio');
-        const subtitles = page.querySelector('.selectSubtitles');
+        await vi.waitFor(() => expect(getElement(page, '.selectAudio').options).toHaveLength(3));
+        const video = getElement(page, '.selectVideo');
+        const audio = getElement(page, '.selectAudio');
+        const subtitles = getElement(page, '.selectSubtitles');
         expect([...video.options].map(option => option.textContent)).toEqual(['1080p · H264', '720p · HEVC · Restored edition']);
         expect([...audio.options].map(option => option.textContent)).toEqual(['English · AAC · stereo · Default', 'English · AAC · 2 Channels · Director commentary', 'Audio 10']);
         expect([...subtitles.options].map(option => option.textContent)).toEqual(['Off', 'English · SRT · Forced', 'eng · SRT · <b>Signs & songs</b>']);
         expect([video, audio, subtitles].map(select => select.textContent).join(' ')).not.toContain(name);
-        expect(subtitles.querySelector('b')).toBeNull();
+        expect(getElement(subtitles, 'b')).toBeNull();
         expect([...audio.options].map(option => option.value)).toEqual(['2', '5', '9']);
         expect(audio.value).toBe('5');
         expect(subtitles.value).toBe('12');
         audio.value = '9';
         subtitles.value = '13';
-        page.querySelector('.btnPlay').click();
+        getElement(page, '.btnPlay').click();
         expect(playbackManager.play).toHaveBeenLastCalledWith(expect.objectContaining({ startPositionTicks: 500000000, audioStreamIndex: '9', subtitleStreamIndex: '13', mediaSourceId: 'tracks' }));
     });
 
@@ -189,15 +191,15 @@ describe('Structured details track labels', () => {
         fixture.item = { Id: 'missing', Type: 'Movie', MediaSources: [{ Id: 'missing', Name: 'Version', MediaStreams: [
             { Type: 'Video', Index: 4 }, { Type: 'Audio', Index: 8, Title: 'x'.repeat(100) }, { Type: 'Subtitle', Index: 16 }
         ] }] };
-        const page = document.querySelector('#itemDetailPage');
-        new ItemDetails(page, { id: 'missing' });
+        const page = getElement(document, '#itemDetailPage');
+        expect(new ItemDetails(page, { id: 'missing' })).toBeDefined();
         page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
-        await vi.waitFor(() => expect(page.querySelector('.selectAudio').options).toHaveLength(1));
-        expect(page.querySelector('.selectVideo').textContent).toBe('Video 5');
-        expect(page.querySelector('.selectAudio').textContent).toBe('Audio 9');
-        expect(page.querySelector('.selectSubtitles').options[1].textContent).toBe('Subtitles 17');
-        expect(page.querySelector('.selectSubtitles').value).toBe('-1');
-        expect(page.querySelector('.trackSelections').textContent).not.toContain('undefined');
+        await vi.waitFor(() => expect(getElement(page, '.selectAudio').options).toHaveLength(1));
+        expect(getElement(page, '.selectVideo').textContent).toBe('Video 5');
+        expect(getElement(page, '.selectAudio').textContent).toBe('Audio 9');
+        expect(getElement(page, '.selectSubtitles').options[1].textContent).toBe('Subtitles 17');
+        expect(getElement(page, '.selectSubtitles').value).toBe('-1');
+        expect(getElement(page, '.trackSelections').textContent).not.toContain('undefined');
     });
 });
 
@@ -213,12 +215,12 @@ describe('Track accessibility and range distinctions', () => {
                 { Type: 'Subtitle', Index: 9, Language: 'English', Codec: 'subrip', IsExternal: true }
             ]
         }] };
-        const page = document.querySelector('#itemDetailPage');
-        new ItemDetails(page, { id: 'flags' });
+        const page = getElement(document, '#itemDetailPage');
+        expect(new ItemDetails(page, { id: 'flags' })).toBeDefined();
         page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
-        await vi.waitFor(() => expect(page.querySelector('.selectSubtitles').options).toHaveLength(5));
-        const video = page.querySelector('.selectVideo');
-        const subtitles = page.querySelector('.selectSubtitles');
+        await vi.waitFor(() => expect(getElement(page, '.selectSubtitles').options).toHaveLength(5));
+        const video = getElement(page, '.selectVideo');
+        const subtitles = getElement(page, '.selectSubtitles');
         expect([...video.options].map(option => option.textContent)).toEqual(['HEVC · DOVIWithHDR10', 'H264']);
         expect([...subtitles.options].map(option => option.textContent)).toEqual([
             'Off', 'English · SUBRIP', 'English · SUBRIP · HI/SDH',
@@ -227,7 +229,7 @@ describe('Track accessibility and range distinctions', () => {
         expect([...subtitles.options].map(option => option.value)).toEqual(['-1', '3', '4', '7', '9']);
         expect(subtitles.value).toBe('7');
         subtitles.value = '4';
-        page.querySelector('.btnPlay').click();
+        getElement(page, '.btnPlay').click();
         expect(playbackManager.play).toHaveBeenLastCalledWith(expect.objectContaining({ subtitleStreamIndex: '4', mediaSourceId: 'flags' }));
     });
 });
@@ -236,8 +238,8 @@ describe('Details item query reuse and freshness', () => {
     it('reuses the item fetched by navigation without a legacy item request', async () => {
         fixture.item = { Id: 'cached', Type: 'Movie', ServerId: 'server' };
         await queryClient.fetchQuery(getItemQuery(api, 'cached', 'user'));
-        const page = document.querySelector('#itemDetailPage');
-        new ItemDetails(page, { id: 'cached', serverId: 'server' });
+        const page = getElement(document, '#itemDetailPage');
+        expect(new ItemDetails(page, { id: 'cached', serverId: 'server' })).toBeDefined();
         page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
         await vi.waitFor(() => expect(hideLoading).toHaveBeenCalled());
         expect(getSdkItem).toHaveBeenCalledTimes(1);
@@ -249,10 +251,10 @@ describe('Details item query reuse and freshness', () => {
         [{ basePath: 'https://test' }, 'other-user']
     ])('does not reuse another server or user item cache: %j / %s', async (previousApi, previousUser) => {
         fixture.item = { Id: 'switched', Type: 'Movie', ServerId: 'old-server' };
-        await queryClient.fetchQuery(getItemQuery(previousApi, 'switched', previousUser));
-        fixture.item = { Id: 'switched', Type: 'Movie', ServerId: 'server', UserData: { IsFavorite: true } };
-        const page = document.querySelector('#itemDetailPage');
-        new ItemDetails(page, { id: 'switched', serverId: 'server' });
+        await queryClient.fetchQuery(getItemQuery(previousApi as Api, 'switched', previousUser));
+        fixture.item = { Id: 'switched', Type: 'Movie', ServerId: 'server', UserData: { Key: 'test', IsFavorite: true } };
+        const page = getElement(document, '#itemDetailPage');
+        expect(new ItemDetails(page, { id: 'switched', serverId: 'server' })).toBeDefined();
         page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
         await vi.waitFor(() => expect(hideLoading).toHaveBeenCalled());
         expect(getSdkItem).toHaveBeenCalledTimes(2);
@@ -264,29 +266,29 @@ describe('Details item query reuse and freshness', () => {
         const query = getItemQuery(api, 'invalidated', 'user');
         await queryClient.fetchQuery(query);
         await queryClient.invalidateQueries({ queryKey: query.queryKey });
-        fixture.item = { ...fixture.item, UserData: { Played: true, IsFavorite: true } };
-        const page = document.querySelector('#itemDetailPage');
-        new ItemDetails(page, { id: 'invalidated', serverId: 'server' });
+        fixture.item = { ...fixture.item!, UserData: { Key: 'test', Played: true, IsFavorite: true } };
+        const page = getElement(document, '#itemDetailPage');
+        expect(new ItemDetails(page, { id: 'invalidated', serverId: 'server' })).toBeDefined();
         page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
         await vi.waitFor(() => expect(hideLoading).toHaveBeenCalled());
         expect(getSdkItem).toHaveBeenCalledTimes(2);
-        expect(queryClient.getQueryData(query.queryKey).UserData).toEqual({ Played: true, IsFavorite: true });
+        expect(queryClient.getQueryData(query.queryKey)!.UserData).toEqual({ Key: 'test', Played: true, IsFavorite: true });
     });
 
     it('fetches an alternate version through the item cache and keeps its playback identity', async () => {
         const sources = ['first', 'second'].map(Id => ({ Id, Name: Id, MediaStreams: [] }));
         fixture.item = { Id: 'first', Type: 'Movie', ServerId: 'server', MediaSources: sources };
-        const page = document.querySelector('#itemDetailPage');
-        new ItemDetails(page, { id: 'first', serverId: 'server' });
+        const page = getElement(document, '#itemDetailPage');
+        expect(new ItemDetails(page, { id: 'first', serverId: 'server' })).toBeDefined();
         page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
         await vi.waitFor(() => expect(hideLoading).toHaveBeenCalled());
-        fixture.item = { ...fixture.item, Id: 'second', UserData: { PlaybackPositionTicks: 10000000 } };
-        const select = page.querySelector('.selectSource');
+        fixture.item = { ...fixture.item!, Id: 'second', UserData: { Key: 'test', PlaybackPositionTicks: 10000000 } };
+        const select = getElement(page, '.selectSource');
         select.value = 'second';
         select.dispatchEvent(new Event('change'));
         await vi.waitFor(() => expect(getSdkItem).toHaveBeenCalledTimes(2));
-        await vi.waitFor(() => expect(page.querySelector('.btnPlay').textContent.trim()).toBe('Resume · 0:01'));
-        page.querySelector('.btnPlay').click();
+        await vi.waitFor(() => expect(getElement(page, '.btnPlay').textContent.trim()).toBe('Resume · 0:01'));
+        getElement(page, '.btnPlay').click();
         expect(playbackManager.play).toHaveBeenLastCalledWith(expect.objectContaining({
             items: [fixture.item], mediaSourceId: 'second', startPositionTicks: 10000000
         }));
@@ -294,17 +296,17 @@ describe('Details item query reuse and freshness', () => {
     });
 
     it('refreshes a restored item after playback or favourite changes without a version selector', async () => {
-        fixture.item = { Id: 'restore', Type: 'Movie', ServerId: 'server', allowRating: true, UserData: { PlaybackPositionTicks: 0 } };
-        const page = document.querySelector('#itemDetailPage');
-        new ItemDetails(page, { id: 'restore', serverId: 'server' });
+        fixture.item = { Id: 'restore', Type: 'Movie', ServerId: 'server', allowRating: true, UserData: { Key: 'test', PlaybackPositionTicks: 0 } };
+        const page = getElement(document, '#itemDetailPage');
+        expect(new ItemDetails(page, { id: 'restore', serverId: 'server' })).toBeDefined();
         page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
         await vi.waitFor(() => expect(hideLoading).toHaveBeenCalled());
-        fixture.item = { ...fixture.item, UserData: { PlaybackPositionTicks: 13800000000, IsFavorite: true, Played: true } };
+        fixture.item = { ...fixture.item!, UserData: { Key: 'test', PlaybackPositionTicks: 13800000000, IsFavorite: true, Played: true } };
         page.dispatchEvent(new CustomEvent('viewshow', { detail: { isRestored: true } }));
-        await vi.waitFor(() => expect(page.querySelector('.btnPlay').textContent.trim()).toBe('Resume · 23:00'));
+        await vi.waitFor(() => expect(getElement(page, '.btnPlay').textContent.trim()).toBe('Resume · 23:00'));
         expect(getSdkItem).toHaveBeenCalledTimes(2);
-        expect(page.querySelector('.btnUserRating').setItem).toHaveBeenLastCalledWith(fixture.item);
-        expect(page.querySelector('.btnPlaystate').setItem).toHaveBeenLastCalledWith(fixture.item);
+        expect((getElement(page, '.btnUserRating') as StateButton).setItem).toHaveBeenLastCalledWith(fixture.item);
+        expect((getElement(page, '.btnPlaystate') as StateButton).setItem).toHaveBeenLastCalledWith(fixture.item);
     });
 });
 
@@ -319,13 +321,13 @@ describe('Details request failures', () => {
         queryClient.setDefaultOptions({ ...defaults, queries: { ...defaults.queries, retry: false } });
         onTestFinished(() => queryClient.setDefaultOptions(defaults));
         failOnce();
-        const page = document.querySelector('#itemDetailPage');
-        fixture.item = { Id: 'failing-movie', Type: 'Movie', MediaType: 'Video', ServerId: 'server', UserData: {} };
-        new ItemDetails(page, { id: 'failing-movie', serverId: 'server' });
+        const page = getElement(document, '#itemDetailPage');
+        fixture.item = { Id: 'failing-movie', Type: 'Movie', MediaType: 'Video', ServerId: 'server', UserData: { Key: 'test' } };
+        expect(new ItemDetails(page, { id: 'failing-movie', serverId: 'server' })).toBeDefined();
         page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
         await vi.waitFor(() => expect(hideLoading).toHaveBeenCalled());
-        expect(page.querySelector('.btnPlay').classList.contains('hide')).toBe(true);
+        expect(getElement(page, '.btnPlay').classList.contains('hide')).toBe(true);
         page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
-        await vi.waitFor(() => expect(page.querySelector('.btnPlay').classList.contains('hide')).toBe(false));
+        await vi.waitFor(() => expect(getElement(page, '.btnPlay').classList.contains('hide')).toBe(false));
     });
 });

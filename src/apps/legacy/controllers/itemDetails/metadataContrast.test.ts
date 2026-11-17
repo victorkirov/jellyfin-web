@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const metadata = readFileSync('src/components/itemDetails/ItemDetailsMetadataList.tsx', 'utf8');
-const controller = readFileSync('src/apps/legacy/controllers/itemDetails/index.js', 'utf8');
+const controller = ['index', 'metadata'].map(name => readFileSync('src/apps/legacy/controllers/itemDetails/' + name + '.ts', 'utf8')).join('\n');
 const theme = readFileSync('src/themes/_base/_theme.scss', 'utf8');
 
 function luminance(channels: number[]) {
