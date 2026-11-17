@@ -2,7 +2,7 @@ import escapeHtml from 'escape-html';
 
 import { PlayerEvent } from 'apps/legacy/features/playback/constants/playerEvent';
 import { AppFeature } from 'constants/appFeature';
-import { TICKS_PER_MINUTE, TICKS_PER_SECOND } from 'constants/time';
+import { TICKS_PER_MILLISECOND, TICKS_PER_MINUTE, TICKS_PER_SECOND } from 'constants/time';
 import { EventType } from 'constants/eventType';
 
 import { playbackManager } from 'components/playback/playbackmanager';
@@ -306,7 +306,7 @@ export default function (view) {
 
             if (currentPlayer && currentItem) {
                 currentRuntimeTicks = playbackManager.duration(currentPlayer);
-                updateTimeDisplay(playbackManager.currentTime(currentPlayer) * 10000, currentRuntimeTicks, playbackManager.playbackStartTime(currentPlayer), playbackManager.getPlaybackRate(currentPlayer), playbackManager.getBufferedRanges(currentPlayer));
+                updateTimeDisplay(playbackManager.currentTime(currentPlayer) * TICKS_PER_MILLISECOND, currentRuntimeTicks, playbackManager.playbackStartTime(currentPlayer), playbackManager.getPlaybackRate(currentPlayer), playbackManager.getBufferedRanges(currentPlayer));
             }
 
             _focus(focusElement);
@@ -587,7 +587,7 @@ export default function (view) {
                 lastUpdateTime = now;
                 const player = this;
                 currentRuntimeTicks = playbackManager.duration(player);
-                const currentTime = playbackManager.currentTime(player) * 10000;
+                const currentTime = playbackManager.currentTime(player) * TICKS_PER_MILLISECOND;
                 if (currentVisibleMenu === 'osd') {
                     updateTimeDisplay(currentTime, currentRuntimeTicks, playbackManager.playbackStartTime(player), playbackManager.getPlaybackRate(player), playbackManager.getBufferedRanges(player));
                 }
@@ -714,8 +714,8 @@ export default function (view) {
         nowPlayingPositionSlider.setIsClear(isProgressClear);
 
         if (nowPlayingItem.RunTimeTicks) {
-            nowPlayingPositionSlider.setKeyboardSteps(userSettings.skipBackLength() * 1000000 / nowPlayingItem.RunTimeTicks,
-                userSettings.skipForwardLength() * 1000000 / nowPlayingItem.RunTimeTicks);
+            nowPlayingPositionSlider.setKeyboardSteps(userSettings.skipBackLength() * TICKS_PER_MILLISECOND * 100 / nowPlayingItem.RunTimeTicks,
+                userSettings.skipForwardLength() * TICKS_PER_MILLISECOND * 100 / nowPlayingItem.RunTimeTicks);
         }
 
         if (supportedCommands.indexOf('ToggleFullscreen') === -1 || player.isLocalPlayer && layoutManager.tv && playbackManager.isFullscreen(player)) {
@@ -747,14 +747,14 @@ export default function (view) {
         if (enableProgressByTimeOfDay) {
             if (nowPlayingPositionSlider && !nowPlayingPositionSlider.dragging) {
                 if (programStartDateMs && programEndDateMs) {
-                    const currentTimeMs = (playbackStartTimeTicks + (positionTicks || 0)) / 1e4;
+                    const currentTimeMs = (playbackStartTimeTicks + (positionTicks || 0)) / TICKS_PER_MILLISECOND;
                     const programRuntimeMs = programEndDateMs - programStartDateMs;
 
                     nowPlayingPositionSlider.value = getDisplayPercentByTimeOfDay(programStartDateMs, programRuntimeMs, currentTimeMs);
 
                     if (bufferedRanges.length) {
-                        const rangeStart = getDisplayPercentByTimeOfDay(programStartDateMs, programRuntimeMs, (playbackStartTimeTicks + (bufferedRanges[0].start || 0)) / 1e4);
-                        const rangeEnd = getDisplayPercentByTimeOfDay(programStartDateMs, programRuntimeMs, (playbackStartTimeTicks + (bufferedRanges[0].end || 0)) / 1e4);
+                        const rangeStart = getDisplayPercentByTimeOfDay(programStartDateMs, programRuntimeMs, (playbackStartTimeTicks + (bufferedRanges[0].start || 0)) / TICKS_PER_MILLISECOND);
+                        const rangeEnd = getDisplayPercentByTimeOfDay(programStartDateMs, programRuntimeMs, (playbackStartTimeTicks + (bufferedRanges[0].end || 0)) / TICKS_PER_MILLISECOND);
                         nowPlayingPositionSlider.setBufferedRanges([{
                             start: rangeStart,
                             end: rangeEnd
@@ -1436,7 +1436,7 @@ export default function (view) {
         }
 
         // Update trickplay values
-        const currentTimeMs = positionTicks / 10_000;
+        const currentTimeMs = positionTicks / TICKS_PER_MILLISECOND;
         const currentTile = Math.floor(currentTimeMs / trickplayInfo.Interval);
 
         const tileSize = trickplayInfo.TileWidth * trickplayInfo.TileHeight;
@@ -1744,8 +1744,8 @@ export default function (view) {
             const newPercent = parseFloat(this.value);
 
             if (enableProgressByTimeOfDay) {
-                let seekAirTimeTicks = newPercent / 100 * (programEndDateMs - programStartDateMs) * 1e4;
-                seekAirTimeTicks += 1e4 * programStartDateMs;
+                let seekAirTimeTicks = newPercent / 100 * (programEndDateMs - programStartDateMs) * TICKS_PER_MILLISECOND;
+                seekAirTimeTicks += TICKS_PER_MILLISECOND * programStartDateMs;
                 seekAirTimeTicks -= playbackStartTimeTicks;
                 playbackManager.seek(seekAirTimeTicks, player);
             } else {

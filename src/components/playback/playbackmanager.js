@@ -29,7 +29,7 @@ import { bindMediaSegmentManager } from 'apps/legacy/features/playback/utils/med
 import { bindMediaSessionSubscriber } from 'apps/legacy/features/playback/utils/mediaSessionSubscriber';
 import { AppFeature } from 'constants/appFeature';
 import { PluginType } from 'constants/pluginType';
-import { TICKS_PER_SECOND } from 'constants/time';
+import { TICKS_PER_MILLISECOND, TICKS_PER_SECOND } from 'constants/time';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import { OutboundWebSocketMessageType } from '@jellyfin/sdk/lib/websocket';
 import { MediaError } from 'types/mediaError';
@@ -681,7 +681,7 @@ function getNowPlayingItemForReporting(player, item, mediaSource) {
         nowPlayingItem.MediaSources = null;
     }
 
-    nowPlayingItem.RunTimeTicks = nowPlayingItem.RunTimeTicks || player.duration() * 10000;
+    nowPlayingItem.RunTimeTicks = nowPlayingItem.RunTimeTicks || player.duration() * TICKS_PER_MILLISECOND;
 
     return nowPlayingItem;
 }
@@ -1716,7 +1716,7 @@ export class PlaybackManager {
 
         function changeStream(player, ticks, params) {
             if (canPlayerSeek(player) && params == null) {
-                player.currentTime(parseInt(ticks / 10000, 10));
+                player.currentTime(parseInt(ticks / TICKS_PER_MILLISECOND, 10));
                 return;
             }
 
@@ -2303,7 +2303,7 @@ export class PlaybackManager {
             let playerDuration = player.duration();
 
             if (playerDuration) {
-                playerDuration *= 10000;
+                playerDuration *= TICKS_PER_MILLISECOND;
             }
 
             return playerDuration;
@@ -2314,7 +2314,7 @@ export class PlaybackManager {
                 throw new Error('player cannot be null');
             }
 
-            let playerTime = Math.floor(10000 * (player).currentTime());
+            let playerTime = Math.floor(TICKS_PER_MILLISECOND * (player).currentTime());
 
             const streamInfo = getPlayerData(player).streamInfo;
             if (streamInfo) {
@@ -3409,7 +3409,7 @@ export class PlaybackManager {
 
             playerData.streamInfo = streamInfo;
 
-            streamInfo.playbackStartTimeTicks = new Date().getTime() * 10000;
+            streamInfo.playbackStartTimeTicks = new Date().getTime() * TICKS_PER_MILLISECOND;
 
             if (mediaSource) {
                 playerData.audioStreamIndex = mediaSource.DefaultAudioStreamIndex;
@@ -3454,7 +3454,7 @@ export class PlaybackManager {
             playerData.streamInfo = {};
 
             const streamInfo = playerData.streamInfo;
-            streamInfo.playbackStartTimeTicks = new Date().getTime() * 10000;
+            streamInfo.playbackStartTimeTicks = new Date().getTime() * TICKS_PER_MILLISECOND;
 
             const state = self.getPlayerState(player, item, mediaSource);
 
@@ -3495,7 +3495,7 @@ export class PlaybackManager {
             streamInfo.ended = true;
 
             if (isServerItem(playerStopInfo.item)) {
-                state.PlayState.PositionTicks = (playerStopInfo.positionMs || 0) * 10000;
+                state.PlayState.PositionTicks = (playerStopInfo.positionMs || 0) * TICKS_PER_MILLISECOND;
 
                 reportPlayback(self, state, player, true, playerStopInfo.item.ServerId, 'reportPlaybackStopped');
             }
@@ -3897,7 +3897,7 @@ export class PlaybackManager {
             return player.currentTime();
         }
 
-        return this.getCurrentTicks(player) / 10000;
+        return this.getCurrentTicks(player) / TICKS_PER_MILLISECOND;
     }
 
     getNextItem() {
@@ -3980,7 +3980,7 @@ export class PlaybackManager {
         let ticks = this.getCurrentTicks(player);
 
         // Go back 10 seconds
-        ticks -= 100000000;
+        ticks -= 10 * TICKS_PER_SECOND;
 
         // If there's no previous track, then at least rewind to beginning
         if (this.getCurrentPlaylistIndex(player) === 0) {
@@ -4005,7 +4005,7 @@ export class PlaybackManager {
         }
 
         // Go back 15 seconds
-        const offsetTicks = userSettings.skipForwardLength() * 10000;
+        const offsetTicks = userSettings.skipForwardLength() * TICKS_PER_MILLISECOND;
 
         this.seekRelative(offsetTicks, player);
     }
@@ -4017,7 +4017,7 @@ export class PlaybackManager {
         }
 
         // Go back 15 seconds
-        const offsetTicks = 0 - (userSettings.skipBackLength() * 10000);
+        const offsetTicks = 0 - (userSettings.skipBackLength() * TICKS_PER_MILLISECOND);
 
         this.seekRelative(offsetTicks, player);
     }
@@ -4044,7 +4044,7 @@ export class PlaybackManager {
     }
 
     seekMs(ms, player = this._currentPlayer) {
-        const ticks = ms * 10000;
+        const ticks = ms * TICKS_PER_MILLISECOND;
         this.seek(ticks, player);
     }
 

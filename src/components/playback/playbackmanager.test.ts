@@ -380,3 +380,15 @@ describe('fallback track selection and optional stream changes', () => {
         expect(vi.getTimerCount()).toBe(0);
     });
 });
+
+describe('player millisecond and server tick boundaries', () => {
+    it('seeks in milliseconds and reports the same position in ticks', async () => {
+        const { play, manager, player } = setup();
+        await play();
+        const currentTime = vi.spyOn(player, 'currentTime').mockReturnValue(12_500);
+        manager.seek(125_000_000, player);
+        expect(currentTime).toHaveBeenCalledWith(12_500);
+        expect(manager.getCurrentTicks(player)).toBe(125_000_000);
+        await manager.stop(player);
+    });
+});

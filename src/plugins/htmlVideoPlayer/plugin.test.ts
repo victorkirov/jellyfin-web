@@ -17,19 +17,31 @@ vi.mock('../../components/loading/loading', () => ({ default: {} }));
 vi.mock('../../utils/dom', () => ({ default: {} }));
 vi.mock('../../components/playback/playbackmanager', () => ({ playbackManager: {} }));
 vi.mock('../../components/router/appRouter', () => ({ appRouter: {} }));
-vi.mock('../../components/htmlMediaHelper', () => ({ getSavedVolume: () => 1 }));
+vi.mock('../../components/htmlMediaHelper', () => ({
+    getSavedVolume: () => 1,
+    destroyFlvPlayer: vi.fn(), destroyCastPlayer: vi.fn(), getCrossOriginValue: () => null,
+    applySrc: (element: HTMLVideoElement, url: string) => {
+        element.setAttribute('src', url);
+        return Promise.resolve();
+    },
+    playWithPromise: () => Promise.resolve()
+}));
 vi.mock('../../components/itemHelper', () => ({ default: {} }));
 vi.mock('../../lib/globalize', () => ({ default: {} }));
 vi.mock('../../scripts/browserDeviceProfile', () => ({ default: {}, canPlaySecondaryAudio: {} }));
-vi.mock('../../scripts/settings/webSettings', () => ({ getIncludeCorsCredentials: {} }));
+vi.mock('../../scripts/settings/webSettings', () => ({ getIncludeCorsCredentials: vi.fn().mockResolvedValue(false) }));
 vi.mock('../../components/backdrop/backdrop', () => ({ setBackdropTransparency: {} }));
-vi.mock('../../utils/events.ts', () => ({ default: {} }));
+vi.mock('../../utils/events.ts', () => ({ default: { trigger: vi.fn() } }));
 vi.mock('../../utils/container.ts', () => ({ includesAny: {} }));
 vi.mock('../../utils/mediaSource.ts', () => ({ isHls: {} }));
 
 // Expose the legacy player's internal subtitle lifecycle to the regression tests.
 type SubtitlePlayer = {
     setSubtitleAppearance: () => void;
+    setCurrentSrc: (element: HTMLVideoElement, options: object) => Promise<void>;
+    onTimeUpdate: (event: { target: HTMLVideoElement }) => void;
+    ensureValidVideo: (element: HTMLVideoElement) => void;
+    _currentPlayOptions: { transcodingOffsetTicks: number };
     createMediaElement: (options: object) => Promise<HTMLVideoElement>;
     fetchSubtitles: () => Promise<{ TrackEvents: {
         StartPositionTicks: number;
@@ -49,6 +61,26 @@ describe('Custom subtitle cues', () => {
         player = new HtmlVideoPlayer() as unknown as SubtitlePlayer;
         vi.spyOn(player, 'setSubtitleAppearance').mockImplementation(() => undefined);
         await player.createMediaElement({});
+    });
+
+    it('converts a fractional resume position from ticks to seconds in the media URL', async () => {
+        const element = document.querySelector('video')!;
+        await player.setCurrentSrc(element, {
+            url: 'https://example/video.mp4',
+            playerStartPositionTicks: 125_000_000,
+            mediaSource: { MediaStreams: [] }
+        });
+        expect(element.getAttribute('src')).toBe('https://example/video.mp4#t=12.5');
+    });
+
+    it('adds transcoding ticks to subtitle playback time in milliseconds', () => {
+        const element = document.querySelector('video')!;
+        element.currentTime = 2.5;
+        player._currentPlayOptions = { transcodingOffsetTicks: 30_000_000 };
+        vi.spyOn(player, 'ensureValidVideo').mockImplementation(() => undefined);
+        const update = vi.spyOn(player, 'updateSubtitleText').mockImplementation(() => undefined);
+        player.onTimeUpdate({ target: element });
+        expect(update).toHaveBeenCalledExactlyOnceWith(5500);
     });
 
     async function loadTrack(text: string, trackIndex = 0) {

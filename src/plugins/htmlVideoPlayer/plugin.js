@@ -6,6 +6,7 @@ import { useCustomSubtitles } from 'apps/legacy/features/playback/utils/subtitle
 import subtitleAppearanceHelper from 'components/subtitlesettings/subtitleappearancehelper';
 import { AppFeature } from 'constants/appFeature';
 import { PluginType } from 'constants/pluginType';
+import { TICKS_PER_MILLISECOND, TICKS_PER_SECOND } from 'constants/time';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import { currentSettings as userSettings } from 'scripts/settings/userSettings';
 import { MediaError } from 'types/mediaError';
@@ -204,7 +205,7 @@ function getBitmapSubtitleDisplaySettings() {
 }
 
 function getSubtitleTimeOffset(playOptions, subtitleOffset = 0) {
-    return ((playOptions?.transcodingOffsetTicks || 0) / 10000000) + subtitleOffset;
+    return ((playOptions?.transcodingOffsetTicks || 0) / TICKS_PER_SECOND) + subtitleOffset;
 }
 
 function getDefaultProfile() {
@@ -541,7 +542,7 @@ export class HtmlVideoPlayer {
         console.debug(`playing url: ${val}`);
 
         // Convert to seconds
-        const seconds = (options.playerStartPositionTicks || 0) / 10000000;
+        const seconds = (options.playerStartPositionTicks || 0) / TICKS_PER_SECOND;
         if (seconds) {
             val += `#t=${seconds}`;
         }
@@ -773,7 +774,7 @@ export class HtmlVideoPlayer {
      */
     setTrackEventsSubtitleOffset(trackEvents, offsetValue, currentTrackIndex) {
         if (Array.isArray(trackEvents)) {
-            offsetValue = this.updateCurrentTrackOffset(offsetValue, currentTrackIndex) * 1e7; // ticks
+            offsetValue = this.updateCurrentTrackOffset(offsetValue, currentTrackIndex) * TICKS_PER_SECOND; // ticks
             if (offsetValue === 0) {
                 return;
             }
@@ -981,7 +982,7 @@ export class HtmlVideoPlayer {
         // Not sure yet how this is coming up null since we never null it out, but it is causing app crashes
         if (currentPlayOptions) {
             let timeMs = time * 1000;
-            timeMs += ((currentPlayOptions.transcodingOffsetTicks || 0) / 10000);
+            timeMs += ((currentPlayOptions.transcodingOffsetTicks || 0) / TICKS_PER_MILLISECOND);
             this.updateSubtitleText(timeMs);
         }
 
@@ -1362,7 +1363,7 @@ export class HtmlVideoPlayer {
                         onErrorInternal(this, MediaError.ASS_RENDER_ERROR);
                     }, 0);
                 },
-                timeOffset: (this._currentPlayOptions.transcodingOffsetTicks || 0) / 10000000,
+                timeOffset: (this._currentPlayOptions.transcodingOffsetTicks || 0) / TICKS_PER_SECOND,
 
                 // new octopus options; override all, even defaults
                 renderMode: 'wasm-blend',
@@ -1620,7 +1621,7 @@ export class HtmlVideoPlayer {
             for (const trackEvent of data.TrackEvents) {
                 const TrackCue = window.VTTCue || window.TextTrackCue;
                 const text = normalizeTrackEventText(trackEvent.Text, false);
-                const cue = new TrackCue(trackEvent.StartPositionTicks / 10000000, trackEvent.EndPositionTicks / 10000000, text);
+                const cue = new TrackCue(trackEvent.StartPositionTicks / TICKS_PER_SECOND, trackEvent.EndPositionTicks / TICKS_PER_SECOND, text);
 
                 if (cue.line === 'auto') {
                     if (cueLine < 0) {
@@ -1650,7 +1651,7 @@ export class HtmlVideoPlayer {
             const subtitleTextElement = subtitleTextElements[i];
 
             if (trackEvents && subtitleTextElement) {
-                const ticks = timeMs * 10000;
+                const ticks = timeMs * TICKS_PER_MILLISECOND;
                 let selectedTrackEvent;
                 for (const trackEvent of trackEvents) {
                     if (trackEvent.StartPositionTicks <= ticks && trackEvent.EndPositionTicks >= ticks) {

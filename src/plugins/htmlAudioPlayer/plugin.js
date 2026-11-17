@@ -1,5 +1,6 @@
 import { AppFeature } from 'constants/appFeature';
 import { PluginType } from 'constants/pluginType';
+import { TICKS_PER_SECOND } from 'constants/time';
 import { MediaError } from 'types/mediaError';
 
 import browser from '../../scripts/browser';
@@ -118,7 +119,7 @@ class HtmlAudioPlayer {
             });
 
             // Convert to seconds
-            const seconds = (options.playerStartPositionTicks || 0) / 10000000;
+            const seconds = (options.playerStartPositionTicks || 0) / TICKS_PER_SECOND;
             if (seconds) {
                 val += '#t=' + seconds;
             }
