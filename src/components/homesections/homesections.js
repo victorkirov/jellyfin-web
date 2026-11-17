@@ -6,6 +6,8 @@ import ServerConnections from 'lib/jellyfin-apiclient/ServerConnections';
 import Dashboard from 'utils/dashboard';
 import { queryClient } from 'utils/query/queryClient';
 
+import { deferSection } from './deferSection';
+
 import { loadRecordings } from './sections/activeRecordings';
 import { loadLibraryButtons } from './sections/libraryButtons';
 import { loadLibraryTiles } from './sections/libraryTiles';
@@ -107,7 +109,13 @@ export function loadSections(elem, apiClient, user, userSettings) {
         });
 }
 
+function clearDeferredSections(elem) {
+    for (const destroy of elem.deferredSections || []) destroy();
+    elem.deferredSections = [];
+}
+
 export function destroySections(elem) {
+    clearDeferredSections(elem);
     const elems = elem.querySelectorAll('.itemsContainer');
     for (const e of elems) {
         e.fetchData = null;
@@ -119,6 +127,7 @@ export function destroySections(elem) {
 }
 
 export function pause(elem) {
+    clearDeferredSections(elem);
     const elems = elem.querySelectorAll('.itemsContainer');
     for (const e of elems) {
         e.pause();
@@ -126,11 +135,20 @@ export function pause(elem) {
 }
 
 export function resume(elem, options) {
+    clearDeferredSections(elem);
     const elems = elem.querySelectorAll('.itemsContainer');
     const promises = [];
 
-    Array.prototype.forEach.call(elems, section => {
-        if (section.resume) {
+    Array.prototype.forEach.call(elems, (section, index) => {
+        if (!section.resume) return;
+        if (layoutManager.tv && section.fetchData && index >= 2 && (options?.refresh || section.needsRefresh)) {
+            section.needsRefresh = true;
+            section.pause();
+            elem.deferredSections.push(deferSection(
+                section.parentContainer || section,
+                () => section.resume(options)
+            ));
+        } else {
             promises.push(section.resume(options));
         }
     });
