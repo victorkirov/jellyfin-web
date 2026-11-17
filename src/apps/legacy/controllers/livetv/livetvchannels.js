@@ -4,7 +4,8 @@ import libraryBrowser from 'scripts/libraryBrowser';
 import loading from 'components/loading/loading';
 import * as userSettings from 'scripts/settings/userSettings';
 import Events from 'utils/events';
-import { setFilterStatus } from 'components/filterdialog/filterIndicator';
+import { clearLiveTvStatus, showLiveTvStatus } from 'components/guide/liveTvStatus';
+import { getFilterStatus, setFilterStatus } from 'components/filterdialog/filterIndicator';
 
 import 'elements/emby-itemscontainer/emby-itemscontainer';
 
@@ -72,7 +73,9 @@ export default function (view, params, tabContent) {
 
         const query = getQuery();
 
+        clearLiveTvStatus(context);
         for (const elem of context.querySelectorAll('.paging')) {
+            elem.classList.toggle('hide', !result.Items.length);
             elem.innerHTML = libraryBrowser.getQueryPagingHtml({
                 startIndex: query.StartIndex,
                 limit: query.Limit,
@@ -81,6 +84,10 @@ export default function (view, params, tabContent) {
                 updatePageSizeSetting: false,
                 filterButton: false
             });
+        }
+
+        if (!result.Items.length) {
+            showLiveTvStatus(context, getFilterStatus(query) ? 'LiveTvNoMatchingChannels' : 'LiveTvNoChannels');
         }
 
         const html = getChannelsHtml(result.Items);
@@ -115,6 +122,7 @@ export default function (view, params, tabContent) {
     }
 
     function reloadItems(context) {
+        clearLiveTvStatus(context);
         loading.show();
         isLoading = true;
         const query = getQuery();
@@ -126,7 +134,15 @@ export default function (view, params, tabContent) {
             renderChannels(context, result);
             loading.hide();
             isLoading = false;
-
+        }, function () {
+            loading.hide();
+            isLoading = false;
+            context.querySelector('#items').innerHTML = '';
+            for (const paging of context.querySelectorAll('.paging')) {
+                paging.classList.add('hide');
+            }
+            showLiveTvStatus(context, 'LiveTvLoadError', () => reloadItems(context));
+        }).then(function () {
             import('components/autoFocuser').then(({ default: autoFocuser }) => {
                 autoFocuser.autoFocus(context);
             });

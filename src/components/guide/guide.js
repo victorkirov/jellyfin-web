@@ -33,6 +33,7 @@ import 'webcomponents.js/webcomponents-lite';
 
 import template from './tvguide.template.html';
 import sortPrograms from './sortPrograms';
+import { clearLiveTvStatus, showLiveTvStatus } from './liveTvStatus';
 
 function showViewSettings(instance) {
     import('./guide-settings').then(({ default: guideSettingsDialog }) => {
@@ -137,7 +138,7 @@ function Guide(options) {
     let items = {};
 
     self.options = options;
-    self.categoryOptions = { categories: [] };
+    self.categoryOptions = { categories: /** @type {string[]} */ ([]) };
 
     // 30 mins
     const cellCurationMinutes = 30;
@@ -151,9 +152,9 @@ function Guide(options) {
     let programCells;
     let lastFocusDirection;
 
-    self.refresh = function () {
+    self.refresh = function (isBackground) {
         currentDate = null;
-        reloadPage(options.element);
+        reloadPage(options.element, isBackground === true);
         restartAutoRefresh();
     };
 
@@ -190,7 +191,7 @@ function Guide(options) {
         const intervalMs = 60000 * 15; // (minutes)
 
         autoRefreshInterval = setInterval(function () {
-            self.refresh();
+            self.refresh(true);
         }, intervalMs);
     }
 
@@ -221,7 +222,7 @@ function Guide(options) {
         loading.hide();
     }
 
-    function reloadGuide(context, newStartDate, scrollToTimeMs, focusToTimeMs, startTimeOfDayMs, focusProgramOnRender) {
+    function reloadGuide(context, newStartDate, scrollToTimeMs, focusToTimeMs, startTimeOfDayMs, focusProgramOnRender, isBackground) {
         const apiClient = ServerConnections.getApiClient(options.serverId);
 
         const channelQuery = {
@@ -236,6 +237,7 @@ function Guide(options) {
         currentChannelLimit = channelLimit;
 
         showLoading();
+        clearLiveTvStatus(context);
 
         channelQuery.StartIndex = currentStartIndex;
         channelQuery.Limit = channelLimit;
@@ -303,7 +305,16 @@ function Guide(options) {
             showEpisodeTitle: !layoutManager.tv
         };
 
-        apiClient.getLiveTvChannels(channelQuery).then(function (channelsResult) {
+        return apiClient.getLiveTvChannels(channelQuery).then(function (channelsResult) {
+            const hasChannels = channelsResult.Items.length > 0;
+            context.querySelector('.timeslotHeaders').classList.toggle('hide', !hasChannels);
+            context.querySelector('.guideVerticalScroller').classList.toggle('hide', !hasChannels);
+            if (!hasChannels) {
+                context.querySelector('.guideOptions').classList.add('hide');
+                showLiveTvStatus(context, categories.length ? 'LiveTvNoMatchingChannels' : 'LiveTvNoChannels', null, true);
+                hideLoading();
+                return;
+            }
             const btnPreviousPage = context.querySelector('.btnPreviousPage');
             const btnNextPage = context.querySelector('.btnNextPage');
 
@@ -353,13 +364,18 @@ function Guide(options) {
                 programQuery.Fields = programFields.join('');
             }
 
-            apiClient.getLiveTvPrograms(programQuery).then(function (programsResult) {
+            return apiClient.getLiveTvPrograms(programQuery).then(function (programsResult) {
                 const guideOptions = { focusProgramOnRender, scrollToTimeMs, focusToTimeMs, startTimeOfDayMs };
 
                 renderGuide(context, date, channelsResult.Items, programsResult.Items, renderOptions, guideOptions, apiClient);
 
+                if (!programsResult.Items.length) {
+                    showLiveTvStatus(context, 'LiveTvNoPrograms', null, true);
+                }
                 hideLoading();
             });
+        }).catch(function () {
+            showGuideError(context, isBackground);
         });
     }
 
@@ -782,11 +798,11 @@ function Guide(options) {
         }
     }
 
-    function changeDate(page, date, scrollToTimeMs, focusToTimeMs, startTimeOfDayMs, focusProgramOnRender) {
+    function changeDate(page, date, scrollToTimeMs, focusToTimeMs, startTimeOfDayMs, focusProgramOnRender, isBackground) {
         const newStartDate = normalizeDateToTimeslot(date);
         currentDate = newStartDate;
 
-        reloadGuide(page, newStartDate, scrollToTimeMs, focusToTimeMs, startTimeOfDayMs, focusProgramOnRender);
+        return reloadGuide(page, newStartDate, scrollToTimeMs, focusToTimeMs, startTimeOfDayMs, focusProgramOnRender, isBackground);
     }
 
     function getDateTabText(date, isActive, tabIndex) {
@@ -803,13 +819,13 @@ function Guide(options) {
         return html;
     }
 
-    function setDateRange(page, guideInfo) {
+    function setDateRange(page, guideInfo, isBackground) {
         const today = new Date();
         const nowHours = today.getHours();
         today.setHours(nowHours, 0, 0, 0);
 
-        let start = datetime.parseISO8601Date(guideInfo.StartDate, { toLocal: true });
-        const end = datetime.parseISO8601Date(guideInfo.EndDate, { toLocal: true });
+        let start = guideInfo.StartDate ? datetime.parseISO8601Date(guideInfo.StartDate, { toLocal: true }) : new Date(today);
+        const end = guideInfo.EndDate ? datetime.parseISO8601Date(guideInfo.EndDate, { toLocal: true }) : new Date(today);
 
         start.setHours(nowHours, 0, 0, 0);
         end.setHours(0, 0, 0, 0);
@@ -858,16 +874,33 @@ function Guide(options) {
         }
 
         const focusToTimeMs = ((newDateHours * 60) + minutes) * 60 * 1000;
-        changeDate(page, date, scrollToTimeMs, focusToTimeMs, startTimeOfDayMs, layoutManager.tv);
+        return changeDate(page, date, scrollToTimeMs, focusToTimeMs, startTimeOfDayMs, layoutManager.tv, isBackground);
     }
 
-    function reloadPage(page) {
+    function showGuideError(page, isBackground) {
+        hideLoading();
+        if (isBackground) {
+            return;
+        }
+        page.querySelector('.timeslotHeaders').classList.add('hide');
+        page.querySelector('.guideVerticalScroller').classList.add('hide');
+        page.querySelector('.guideOptions').classList.add('hide');
+        const status = showLiveTvStatus(page, 'LiveTvLoadError', () => reloadPage(page), true);
+        focusManager.autoFocus(status, true);
+    }
+
+    function reloadPage(page, isBackground) {
+        const preserveRenderedGuide = !!isBackground && !!page.querySelector('.guide-channelHeaderCell')
+            && !page.querySelector('.guideVerticalScroller').classList.contains('hide');
         showLoading();
+        clearLiveTvStatus(page);
 
         const apiClient = ServerConnections.getApiClient(options.serverId);
 
-        apiClient.getLiveTvGuideInfo().then(function (guideInfo) {
-            setDateRange(page, guideInfo);
+        return apiClient.getLiveTvGuideInfo().then(function (guideInfo) {
+            return setDateRange(page, guideInfo, preserveRenderedGuide);
+        }).catch(function () {
+            showGuideError(page, preserveRenderedGuide);
         });
     }
 

@@ -1,5 +1,6 @@
 import cardBuilder from 'components/cardbuilder/cardBuilder';
 import { getBackdropShape, getPortraitShape } from 'components/cardbuilder/utils/shape';
+import { clearLiveTvStatus, showLiveTvStatus } from 'components/guide/liveTvStatus';
 import imageLoader from 'components/images/imageLoader';
 import layoutManager from 'components/layoutManager';
 import loading from 'components/loading/loading';
@@ -28,106 +29,58 @@ function getLimit() {
     return 9;
 }
 
-function loadRecommendedPrograms(page) {
-    loading.show();
-    let limit = getLimit();
-
-    if (enableScrollX()) {
-        limit *= 2;
+function reload(page, enableFullRender) {
+    if (!enableFullRender) {
+        return;
     }
 
-    ApiClient.getLiveTvRecommendedPrograms({
-        userId: Dashboard.getCurrentUserId(),
-        IsAiring: true,
-        limit: limit,
-        ImageTypeLimit: 1,
-        EnableImageTypes: 'Primary,Thumb,Backdrop',
-        EnableTotalRecordCount: false,
-        Fields: 'ChannelInfo,PrimaryImageAspectRatio'
-    }).then(function (result) {
-        renderItems(page, result.Items, 'activeProgramItems', 'play', {
-            showAirDateTime: false,
-            showAirEndTime: true
-        });
-        loading.hide();
+    loading.show();
+    clearLiveTvStatus(page);
+    const sections = [
+        { className: 'activeProgramItems', query: { IsAiring: true, limit: getLimit() * (enableScrollX() ? 2 : 1) }, recommended: true, overlay: 'play', options: { showAirDateTime: false, showAirEndTime: true } },
+        { className: 'upcomingEpisodeItems', query: { IsMovie: false, IsSports: false, IsKids: false, IsNews: false, IsSeries: true } },
+        { className: 'upcomingTvMovieItems', query: { IsMovie: true, Fields: 'ChannelInfo' }, options: { shape: getPortraitShape(enableScrollX()), preferThumb: null, showParentTitle: false } },
+        { className: 'upcomingSportsItems', query: { IsSports: true } },
+        { className: 'upcomingKidsItems', query: { IsKids: true } },
+        { className: 'upcomingNewsItems', query: { IsNews: true }, options: { showParentTitleOrTitle: true, showTitle: false, showParentTitle: false } }
+    ];
+    let failed = false;
+    let hasPrograms = false;
 
+    return Promise.all(sections.map(function (section) {
+        const query = Object.assign({
+            userId: Dashboard.getCurrentUserId(),
+            HasAired: false,
+            limit: getLimit(),
+            EnableTotalRecordCount: false,
+            Fields: 'ChannelInfo,PrimaryImageAspectRatio',
+            EnableImageTypes: section.recommended ? 'Primary,Thumb,Backdrop' : 'Primary,Thumb'
+        }, section.query);
+        if (section.recommended) {
+            delete query.HasAired;
+            query.ImageTypeLimit = 1;
+        }
+        const request = section.recommended ? ApiClient.getLiveTvRecommendedPrograms(query) : ApiClient.getLiveTvPrograms(query);
+        return request.then(function (result) {
+            hasPrograms = hasPrograms || result.Items.length > 0;
+            renderItems(page, result.Items, section.className, section.overlay, section.options);
+        }, function () {
+            failed = true;
+            renderItems(page, [], section.className);
+        });
+    })).then(function () {
+        loading.hide();
+        if (failed || !hasPrograms) {
+            let message = 'LiveTvNoPrograms';
+            if (failed) {
+                message = hasPrograms ? 'LiveTvPartialLoadError' : 'LiveTvLoadError';
+            }
+            showLiveTvStatus(page, message, failed ? () => reload(page, true) : null, true);
+        }
         import('components/autoFocuser').then(({ default: autoFocuser }) => {
             autoFocuser.autoFocus(page);
         });
     });
-}
-
-function reload(page, enableFullRender) {
-    if (enableFullRender) {
-        loadRecommendedPrograms(page);
-        ApiClient.getLiveTvPrograms({
-            userId: Dashboard.getCurrentUserId(),
-            HasAired: false,
-            limit: getLimit(),
-            IsMovie: false,
-            IsSports: false,
-            IsKids: false,
-            IsNews: false,
-            IsSeries: true,
-            EnableTotalRecordCount: false,
-            Fields: 'ChannelInfo,PrimaryImageAspectRatio',
-            EnableImageTypes: 'Primary,Thumb'
-        }).then(function (result) {
-            renderItems(page, result.Items, 'upcomingEpisodeItems');
-        });
-        ApiClient.getLiveTvPrograms({
-            userId: Dashboard.getCurrentUserId(),
-            HasAired: false,
-            limit: getLimit(),
-            IsMovie: true,
-            EnableTotalRecordCount: false,
-            Fields: 'ChannelInfo',
-            EnableImageTypes: 'Primary,Thumb'
-        }).then(function (result) {
-            renderItems(page, result.Items, 'upcomingTvMovieItems', null, {
-                shape: getPortraitShape(enableScrollX()),
-                preferThumb: null,
-                showParentTitle: false
-            });
-        });
-        ApiClient.getLiveTvPrograms({
-            userId: Dashboard.getCurrentUserId(),
-            HasAired: false,
-            limit: getLimit(),
-            IsSports: true,
-            EnableTotalRecordCount: false,
-            Fields: 'ChannelInfo,PrimaryImageAspectRatio',
-            EnableImageTypes: 'Primary,Thumb'
-        }).then(function (result) {
-            renderItems(page, result.Items, 'upcomingSportsItems');
-        });
-        ApiClient.getLiveTvPrograms({
-            userId: Dashboard.getCurrentUserId(),
-            HasAired: false,
-            limit: getLimit(),
-            IsKids: true,
-            EnableTotalRecordCount: false,
-            Fields: 'ChannelInfo,PrimaryImageAspectRatio',
-            EnableImageTypes: 'Primary,Thumb'
-        }).then(function (result) {
-            renderItems(page, result.Items, 'upcomingKidsItems');
-        });
-        ApiClient.getLiveTvPrograms({
-            userId: Dashboard.getCurrentUserId(),
-            HasAired: false,
-            limit: getLimit(),
-            IsNews: true,
-            EnableTotalRecordCount: false,
-            Fields: 'ChannelInfo,PrimaryImageAspectRatio',
-            EnableImageTypes: 'Primary,Thumb'
-        }).then(function (result) {
-            renderItems(page, result.Items, 'upcomingNewsItems', null, {
-                showParentTitleOrTitle: true,
-                showTitle: false,
-                showParentTitle: false
-            });
-        });
-    }
 }
 
 function renderItems(page, items, sectionClass, overlayButton, cardOptions) {
@@ -152,6 +105,7 @@ function renderItems(page, items, sectionClass, overlayButton, cardOptions) {
     }, cardOptions || {}));
     const elem = page.querySelector('.' + sectionClass);
     elem.innerHTML = html;
+    elem.closest('.verticalSection').classList.toggle('hide', !items.length);
     imageLoader.lazyChildren(elem);
 }
 
