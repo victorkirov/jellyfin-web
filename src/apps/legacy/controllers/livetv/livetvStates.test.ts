@@ -15,6 +15,7 @@ const { apiClient, filterQuery, loading } = vi.hoisted(() => ({
 vi.mock('components/cardbuilder/cardBuilder', () => ({ default: { getCardsHtml: ({ items }: { items: { Name: string }[] }) => items.map(item => `<button>${item.Name}</button>`).join('') } }));
 vi.mock('components/cardbuilder/utils/shape', () => ({ getBackdropShape: () => 'backdrop', getPortraitShape: () => 'portrait' }));
 vi.mock('components/images/imageLoader', () => ({ default: { lazyChildren: vi.fn() } }));
+vi.mock('lib/scrollManager', () => ({ default: { isEnabled: () => false } }));
 vi.mock('lib/layoutManager', () => ({ default: { tv: true } }));
 vi.mock('components/loading/loading', () => ({ default: loading }));
 vi.mock('components/maintabsmanager', () => ({}));
@@ -41,6 +42,16 @@ function page() {
 }
 
 beforeEach(() => {
+    // jsdom has no layout for the real focus manager's visibility check.
+    vi.spyOn(HTMLElement.prototype, 'offsetParent', 'get').mockImplementation(function (this: HTMLElement) {
+        if (this.classList.contains('hide')) return null;
+        let parent: HTMLElement | null = this.parentElement;
+        while (parent) {
+            if (parent.classList.contains('hide')) return null;
+            parent = parent.parentElement;
+        }
+        return this.parentElement;
+    });
     vi.stubGlobal('ApiClient', apiClient);
     apiClient.getLiveTvChannels.mockResolvedValue({ Items: [], TotalRecordCount: 0 });
     apiClient.getLiveTvPrograms.mockResolvedValue({ Items: [] });
@@ -49,13 +60,14 @@ beforeEach(() => {
 afterEach(() => {
     document.body.innerHTML = '';
     vi.clearAllMocks();
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
 });
 
 describe('Live TV channel response states', () => {
     it('explains a successful empty response and hides empty paging', async () => {
         const tab = page().querySelector('#channelsTab') as HTMLElement;
-        new Channels(tab, {}, tab).renderTab();
+        await new Channels(tab, {}, tab).renderTab();
         await vi.waitFor(() => expect(tab.textContent).toContain('LiveTvNoChannels'));
         expect(tab.querySelector('a')?.getAttribute('href')).toBe('#/home');
         expect([...tab.querySelectorAll('.paging')].every(element => element.classList.contains('hide'))).toBe(true);
@@ -64,10 +76,10 @@ describe('Live TV channel response states', () => {
     it('distinguishes filtered emptiness and keeps the filter action', async () => {
         const tab = page().querySelector('#channelsTab') as HTMLElement;
         const controller = new Channels(tab, {}, tab);
-        controller.renderTab();
+        await controller.renderTab();
         await vi.waitFor(() => expect(filterQuery.current).toBeDefined());
         filterQuery.current!.IsFavorite = true;
-        controller.renderTab();
+        await controller.renderTab();
         await vi.waitFor(() => expect(tab.textContent).toContain('LiveTvNoMatchingChannels'));
         expect(tab.querySelector('.btnFilter')).not.toBeNull();
     });
@@ -75,15 +87,41 @@ describe('Live TV channel response states', () => {
     it('renders populated channels without an empty message', async () => {
         apiClient.getLiveTvChannels.mockResolvedValue({ Items: [{ Name: 'Channel one' }], TotalRecordCount: 1 });
         const tab = page().querySelector('#channelsTab') as HTMLElement;
-        new Channels(tab, {}, tab).renderTab();
+        await new Channels(tab, {}, tab).renderTab();
         await vi.waitFor(() => expect(tab.textContent).toContain('Channel one'));
         expect(tab.querySelector('.liveTvStatus')).toBeNull();
+    });
+
+    it.each(['card', 'paging'])('focuses Retry after a failed refresh removes or hides the focused %s', async focusTarget => {
+        apiClient.getLiveTvChannels.mockResolvedValueOnce({ Items: [{ Name: 'Old channel' }], TotalRecordCount: 1 });
+        const tab = page().querySelector('#channelsTab') as HTMLElement;
+        const controller = new Channels(tab, {}, tab);
+        await controller.renderTab();
+        expect(tab.querySelector('#items')?.textContent).toContain('Old channel');
+        tab.classList.remove('hide');
+        const previousFocus = focusTarget === 'card' ?
+            tab.querySelector<HTMLButtonElement>('#items button')! :
+            tab.querySelector('.paging')!.appendChild(document.createElement('button'));
+        previousFocus.focus();
+        expect(document.activeElement).toBe(previousFocus);
+        apiClient.getLiveTvChannels.mockRejectedValueOnce(new Error('offline'));
+        await expect(controller.renderTab()).rejects.toThrow('offline');
+        expect(tab.querySelector('#items')?.innerHTML).toBe('');
+        expect([...tab.querySelectorAll('.paging')].every(element => element.classList.contains('hide'))).toBe(true);
+        expect(tab.querySelector('.liveTvStatus')?.textContent).toContain('LiveTvLoadError');
+        const retry = tab.querySelector<HTMLButtonElement>('.liveTvStatus button')!;
+        expect(retry.textContent).toBe('Retry');
+        expect(document.activeElement).toBe(retry);
+        apiClient.getLiveTvChannels.mockResolvedValue({ Items: [{ Name: 'Recovered channel' }], TotalRecordCount: 1 });
+        tab.querySelector<HTMLButtonElement>('.liveTvStatus button')!.click();
+        await vi.waitFor(() => expect(tab.querySelector('#items')?.textContent).toBe('Recovered channel'));
+        expect([...tab.querySelectorAll('.paging')].every(element => !element.classList.contains('hide'))).toBe(true);
     });
 
     it('separates failure from emptiness and retries the same channel query', async () => {
         apiClient.getLiveTvChannels.mockRejectedValueOnce(new Error('offline'));
         const tab = page().querySelector('#channelsTab') as HTMLElement;
-        new Channels(tab, {}, tab).renderTab();
+        await expect(new Channels(tab, {}, tab).renderTab()).rejects.toThrow('offline');
         await vi.waitFor(() => expect(tab.textContent).toContain('LiveTvLoadError'));
         expect(tab.textContent).not.toContain('LiveTvNoChannels');
         expect(loading.hide).toHaveBeenCalled();
@@ -92,7 +130,7 @@ describe('Live TV channel response states', () => {
         apiClient.getLiveTvChannels.mockResolvedValue({ Items: [{ Name: 'Recovered' }], TotalRecordCount: 1 });
         tab.querySelector<HTMLButtonElement>('.liveTvStatus button')!.click();
         await vi.waitFor(() => expect(tab.textContent).toContain('Recovered'));
-        expect(apiClient.getLiveTvChannels.mock.calls[1][0]).toBe(apiClient.getLiveTvChannels.mock.calls[0][0]);
+        expect(apiClient.getLiveTvChannels.mock.calls[1][0]).toEqual(apiClient.getLiveTvChannels.mock.calls[0][0]);
         expect(tab.querySelector('.liveTvStatus')).toBeNull();
     });
 });

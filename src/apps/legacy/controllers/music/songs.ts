@@ -1,20 +1,22 @@
 import { ItemAction } from 'constants/itemAction';
-import type { LibraryController, LibraryPageData, LibraryResult } from '../libraryControllerTypes';
+import { createLibraryRefresh } from '../libraryRefresh';
+import { bindLibraryPaging } from '../libraryPaging';
+import type { LibraryController, LibraryPageData } from '../libraryControllerTypes';
 
 import libraryBrowser from 'scripts/libraryBrowser';
 import imageLoader from 'components/images/imageLoader';
 import listView from 'components/listview/listview';
-import loading from 'components/loading/loading';
 import { playbackManager } from 'components/playback/playbackmanager';
 import * as userSettings from 'scripts/settings/userSettings';
 import globalize from 'lib/globalize';
-import Dashboard from 'components/dashboard';
 import Events from 'utils/events';
 import { setFilterStatus } from 'components/filterdialog/filterIndicator';
 
 import 'components/itemscontainer/emby-itemscontainer';
 
 export default class LibraryTab {
+    destroy!: () => void;
+    isRefreshInterrupted!: () => boolean;
     alphaPicker?: LibraryController['alphaPicker'];
     getCurrentViewStyle!: LibraryController['getCurrentViewStyle'];
     renderTab!: LibraryController['renderTab'];
@@ -58,69 +60,24 @@ export default class LibraryTab {
             return `${params.topParentId}-songs`;
         };
 
-        const reloadItems = (page: HTMLElement = tabContent) => {
-            loading.show();
-            isLoading = true;
-            const query = getQuery();
-            setFilterStatus(tabContent, query);
-
-            void window.ApiClient.getItems(Dashboard.getCurrentUserId()!, query).then((response) => {
-                // These endpoints return Items and TotalRecordCount for paged library queries.
-                const result = response as LibraryResult;
-                const onNextPageClick = () => {
-                    if (isLoading) {
-                        return;
-                    }
-
-                    if (userSettings.libraryPageSize() > 0) {
-                        query.StartIndex += query.Limit!;
-                    }
-                    reloadItems(tabContent);
-                };
-
-                const onPreviousPageClick = () => {
-                    if (isLoading) {
-                        return;
-                    }
-
-                    if (userSettings.libraryPageSize() > 0) {
-                        query.StartIndex = Math.max(0, query.StartIndex - query.Limit!);
-                    }
-                    reloadItems(tabContent);
-                };
-
+        const refreshState = createLibraryRefresh({
+            view, focus: tabContent, getQuery,
+            load: query => {
+                setFilterStatus(tabContent, query);
+                return window.ApiClient.getItems(window.ApiClient.getCurrentUserId(), query);
+            },
+            render: (result, query) => {
                 window.scrollTo(0, 0);
-                const pagingHtml = libraryBrowser.getQueryPagingHtml({
-                    startIndex: query.StartIndex,
-                    limit: query.Limit,
-                    totalRecordCount: result.TotalRecordCount,
-                    showLimit: false,
-                    updatePageSizeSetting: false,
-                    addLayoutButton: false,
-                    sortButton: false,
-                    filterButton: false
-                });
                 const html = listView.getListViewHtml({
                     items: result.Items,
                     action: ItemAction.PlayAllFromHere,
                     smallIcon: true,
                     artist: true
                 });
-                let elems = tabContent.querySelectorAll('.paging');
-
-                for (let i = 0, length = elems.length; i < length; i++) {
-                    elems[i].innerHTML = pagingHtml;
-                }
-
-                elems = tabContent.querySelectorAll('.btnNextPage');
-                for (let i = 0, length = elems.length; i < length; i++) {
-                    elems[i].addEventListener('click', onNextPageClick);
-                }
-
-                elems = tabContent.querySelectorAll('.btnPreviousPage');
-                for (let i = 0, length = elems.length; i < length; i++) {
-                    elems[i].addEventListener('click', onPreviousPageClick);
-                }
+                bindLibraryPaging({ view: tabContent, query: getQuery(), totalRecordCount: result.TotalRecordCount,
+                    isLoading: refreshState.isLoading, getRequestId: refreshState.getRequestId,
+                    refresh: () => refreshState.refresh()
+                });
 
                 const itemsContainer = tabContent.querySelector<HTMLElement>('.itemsContainer')!;
                 itemsContainer.innerHTML = html;
@@ -128,18 +85,13 @@ export default class LibraryTab {
                 userSettings.saveQuerySettings(getSavedQueryKey(), query);
 
                 tabContent.querySelector<HTMLElement>('.btnShuffle')!.classList.toggle('hide', result.TotalRecordCount < 1);
-
-                loading.hide();
-                isLoading = false;
-
-                void import('components/autoFocuser').then(({ default: autoFocuser }) => {
-                    autoFocuser.autoFocus(page);
-                });
-            });
-        };
+            }
+        });
+        this.destroy = refreshState.destroy;
+        this.isRefreshInterrupted = refreshState.isInterrupted;
+        const reloadItems = () => refreshState.refreshSafely();
 
         const data: Record<string, LibraryPageData> = {};
-        let isLoading = false;
 
         this.showFilterMenu = () => {
             void import('components/filterdialog/filterdialog').then(({ default: FilterDialog }) => {
@@ -217,7 +169,7 @@ export default class LibraryTab {
         initPage(tabContent);
 
         this.renderTab = () => {
-            reloadItems(tabContent);
+            return refreshState.refresh();
         };
     }
 }

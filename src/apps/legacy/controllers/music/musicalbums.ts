@@ -1,7 +1,8 @@
+import { createLibraryRefresh } from '../libraryRefresh';
+import { bindLibraryPaging } from '../libraryPaging';
 import { getAlbumsHtml } from '../libraryItemRendering';
-import type { LibraryController, LibraryPageData, LibraryResult } from '../libraryControllerTypes';
+import type { LibraryController, LibraryPageData } from '../libraryControllerTypes';
 import { playbackManager } from 'components/playback/playbackmanager';
-import loading from 'components/loading/loading';
 import libraryBrowser from 'scripts/libraryBrowser';
 import imageLoader from 'components/images/imageLoader';
 import AlphaPicker from 'components/alphaPicker/alphaPicker';
@@ -13,6 +14,8 @@ import { setFilterStatus } from 'components/filterdialog/filterIndicator';
 import 'components/itemscontainer/emby-itemscontainer';
 
 export default class LibraryTab {
+    destroy!: () => void;
+    isRefreshInterrupted!: () => boolean;
     alphaPicker?: LibraryController['alphaPicker'];
     getCurrentViewStyle!: LibraryController['getCurrentViewStyle'];
     renderTab!: LibraryController['renderTab'];
@@ -86,82 +89,32 @@ export default class LibraryTab {
             itemsContainer.innerHTML = '';
         };
 
-        const reloadItems = () => {
-            loading.show();
-            isLoading = true;
-            const query = getQuery();
-            setFilterStatus(tabContent, query);
-
-            void window.ApiClient.getItems(window.ApiClient.getCurrentUserId(), query).then((response) => {
-                // These endpoints return Items and TotalRecordCount for paged library queries.
-                const result = response as LibraryResult;
-                const onNextPageClick = () => {
-                    if (isLoading) {
-                        return;
-                    }
-
-                    if (userSettings.libraryPageSize() > 0) {
-                        query.StartIndex += query.Limit!;
-                    }
-                    reloadItems();
-                };
-
-                const onPreviousPageClick = () => {
-                    if (isLoading) {
-                        return;
-                    }
-
-                    if (userSettings.libraryPageSize() > 0) {
-                        query.StartIndex = Math.max(0, query.StartIndex - query.Limit!);
-                    }
-                    reloadItems();
-                };
-
+        const refreshState = createLibraryRefresh({
+            view, focus: tabContent, getQuery,
+            load: query => {
+                setFilterStatus(tabContent, query);
+                return window.ApiClient.getItems(window.ApiClient.getCurrentUserId(), query);
+            },
+            render: (result, query) => {
                 window.scrollTo(0, 0);
                 this.alphaPicker?.updateControls(query);
-                let html;
-                const pagingHtml = libraryBrowser.getQueryPagingHtml({
-                    startIndex: query.StartIndex,
-                    limit: query.Limit,
-                    totalRecordCount: result.TotalRecordCount,
-                    showLimit: false,
-                    updatePageSizeSetting: false,
-                    addLayoutButton: false,
-                    sortButton: false,
-                    filterButton: false
+                const html = getAlbumsHtml({ viewStyle: this.getCurrentViewStyle(), query, result });
+                bindLibraryPaging({ view: tabContent, query: getQuery(), totalRecordCount: result.TotalRecordCount,
+                    isLoading: refreshState.isLoading, getRequestId: refreshState.getRequestId,
+                    refresh: () => refreshState.refresh()
                 });
-                html = getAlbumsHtml({ viewStyle: this.getCurrentViewStyle(), query, result });
-                let elems = tabContent.querySelectorAll('.paging');
-
-                for (const elem of elems) {
-                    elem.innerHTML = pagingHtml;
-                }
-
-                elems = tabContent.querySelectorAll('.btnNextPage');
-                for (const elem of elems) {
-                    elem.addEventListener('click', onNextPageClick);
-                }
-
-                elems = tabContent.querySelectorAll('.btnPreviousPage');
-                for (const elem of elems) {
-                    elem.addEventListener('click', onPreviousPageClick);
-                }
 
                 const itemsContainer = tabContent.querySelector<HTMLElement>('.itemsContainer')!;
                 itemsContainer.innerHTML = html;
                 imageLoader.lazyChildren(itemsContainer);
                 userSettings.saveQuerySettings(getSavedQueryKey(), query);
-                loading.hide();
-                isLoading = false;
-
-                void import('components/autoFocuser').then(({ default: autoFocuser }) => {
-                    autoFocuser.autoFocus(tabContent);
-                });
-            });
-        };
+            }
+        });
+        this.destroy = refreshState.destroy;
+        this.isRefreshInterrupted = refreshState.isInterrupted;
+        const reloadItems = () => refreshState.refreshSafely();
 
         let pageData: LibraryPageData | undefined;
-        let isLoading = false;
 
         this.showFilterMenu = () => {
             void import('components/filterdialog/filterdialog').then(({ default: FilterDialog }) => {
@@ -264,8 +217,8 @@ export default class LibraryTab {
         onViewStyleChange();
 
         this.renderTab = () => {
-            reloadItems();
             this.alphaPicker?.updateControls(getQuery());
+            return refreshState.refresh();
         };
     }
 }

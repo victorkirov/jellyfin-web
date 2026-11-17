@@ -123,7 +123,7 @@ describe.each([
     { name: 'shows', Factory: Shows, count: 6, type: 'Episode', limit: 30, fields: ['PrimaryImageAspectRatio'], images: ['Primary', 'Backdrop', 'Thumb'] },
     { name: 'music', Factory: Music, count: 7, type: 'Audio', limit: 27, fields: ['PrimaryImageAspectRatio'], images: ['Primary', 'Backdrop', 'Banner', 'Thumb'] }
 ])('$name recommended controller', ({ Factory, count, type, limit, fields, images }) => {
-    it('loads every tab once across preload, repeat switching and view restoration', async () => {
+    it('preserves preloaded and completed tabs across switching and Back', async () => {
         const view = makeView(Factory);
         expect(userSettings.get).toHaveBeenCalledWith('landing-parent');
         for (let index = 0; index < count; index++) {
@@ -148,8 +148,11 @@ describe.each([
         view.dispatchEvent(new Event('viewshow'));
         expect(mocks.tabs![1]).toBe(count - 1);
         select(0);
-        await Promise.resolve();
+        await vi.dynamicImportSettled();
         expect(mocks.children[0].renderTab).toHaveBeenCalledTimes(1);
+        for (const inactiveChild of mocks.children.slice(1)) {
+            expect(inactiveChild.renderTab).toHaveBeenCalledTimes(1);
+        }
         view.dispatchEvent(new Event('viewdestroy'));
         mocks.children.forEach(child => {
             expect(child.destroy).toHaveBeenCalledTimes(1);

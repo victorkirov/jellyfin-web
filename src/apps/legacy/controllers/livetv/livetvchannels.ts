@@ -1,8 +1,9 @@
+import { createLibraryRefresh } from '../libraryRefresh';
+import { bindLibraryPaging } from '../libraryPaging';
 import type { LibraryController, LibraryPageData, LibraryResult } from '../libraryControllerTypes';
 import cardBuilder from 'components/cardbuilder/cardBuilder';
 import imageLoader from 'components/images/imageLoader';
-import libraryBrowser from 'scripts/libraryBrowser';
-import loading from 'components/loading/loading';
+import focusManager from 'lib/focusManager';
 import * as userSettings from 'scripts/settings/userSettings';
 import Events from 'utils/events';
 import { clearLiveTvStatus, showLiveTvStatus } from 'components/guide/liveTvStatus';
@@ -11,6 +12,8 @@ import { getFilterStatus, setFilterStatus } from 'components/filterdialog/filter
 import 'components/itemscontainer/emby-itemscontainer';
 
 export default class LibraryTab {
+    destroy!: () => void;
+    isRefreshInterrupted!: () => boolean;
     alphaPicker?: LibraryController['alphaPicker'];
     getCurrentViewStyle!: LibraryController['getCurrentViewStyle'];
     renderTab!: LibraryController['renderTab'];
@@ -52,45 +55,11 @@ export default class LibraryTab {
         };
 
         const renderChannels = (context: HTMLElement, result: LibraryResult) => {
-            const onNextPageClick = () => {
-                if (isLoading) {
-                    return;
-                }
-
-                if (userSettings.libraryPageSize() > 0) {
-                    query.StartIndex += query.Limit!;
-                }
-                reloadItems(context).then(() => {
-                    window.scrollTo(0, 0);
-                });
-            };
-
-            const onPreviousPageClick = () => {
-                if (isLoading) {
-                    return;
-                }
-
-                if (userSettings.libraryPageSize() > 0) {
-                    query.StartIndex = Math.max(0, query.StartIndex - query.Limit!);
-                }
-                reloadItems(context).then(() => {
-                    window.scrollTo(0, 0);
-                });
-            };
-
             const query = getQuery();
 
             clearLiveTvStatus(context);
             for (const elem of context.querySelectorAll('.paging')) {
                 elem.classList.toggle('hide', !result.Items.length);
-                elem.innerHTML = libraryBrowser.getQueryPagingHtml({
-                    startIndex: query.StartIndex,
-                    limit: query.Limit,
-                    totalRecordCount: result.TotalRecordCount,
-                    showLimit: false,
-                    updatePageSizeSetting: false,
-                    filterButton: false
-                });
             }
 
             if (!result.Items.length) {
@@ -101,20 +70,13 @@ export default class LibraryTab {
             const elem = context.querySelector<HTMLElement>('#items')!;
             elem.innerHTML = html;
             imageLoader.lazyChildren(elem);
-            let i;
-            let length;
-            let elems;
-
-            for (elems = context.querySelectorAll('.btnNextPage'), i = 0, length = elems.length; i < length; i++) {
-                elems[i].addEventListener('click', onNextPageClick);
-            }
-
-            for (elems = context.querySelectorAll('.btnPreviousPage'), i = 0, length = elems.length; i < length; i++) {
-                elems[i].addEventListener('click', onPreviousPageClick);
-            }
+            bindLibraryPaging({ view: context, query: getQuery(), totalRecordCount: result.TotalRecordCount,
+                isLoading: refreshState.isLoading, getRequestId: refreshState.getRequestId,
+                refresh: () => refreshState.refresh()
+            });
         };
 
-        const showFilterMenu = (context: HTMLElement) => {
+        const showFilterMenu = () => {
             void import('components/filterdialog/filterdialog').then(({ default: FilterDialog }) => {
                 const filterDialog = new FilterDialog({
                     query: getQuery(),
@@ -122,50 +84,40 @@ export default class LibraryTab {
                     serverId: window.ApiClient.serverId()
                 });
                 Events.on(filterDialog, 'filterchange', () => {
-                    reloadItems(context);
+                    reloadItems();
                 });
                 void filterDialog.show();
             });
         };
 
-        const reloadItems = (context: HTMLElement) => {
-            clearLiveTvStatus(context);
-            loading.show();
-            isLoading = true;
-            const query = getQuery();
-            setFilterStatus(context, query);
-
-            const apiClient = window.ApiClient;
-            query.UserId = apiClient.getCurrentUserId();
-            return apiClient.getLiveTvChannels(query).then((response) => {
-                // These endpoints return Items and TotalRecordCount for paged library queries.
-                const result = response as LibraryResult;
-                renderChannels(context, result);
-                loading.hide();
-                isLoading = false;
-            }, () => {
-                loading.hide();
-                isLoading = false;
-                context.querySelector<HTMLElement>('#items')!.innerHTML = '';
-                for (const paging of context.querySelectorAll('.paging')) {
+        const refreshState = createLibraryRefresh({
+            view, focus: tabContent, getQuery,
+            load: query => {
+                clearLiveTvStatus(tabContent);
+                setFilterStatus(tabContent, getQuery());
+                query.UserId = window.ApiClient.getCurrentUserId();
+                return window.ApiClient.getLiveTvChannels(query);
+            },
+            render: result => renderChannels(tabContent, result),
+            onError: () => {
+                tabContent.querySelector<HTMLElement>('#items')!.innerHTML = '';
+                for (const paging of tabContent.querySelectorAll('.paging')) {
                     paging.classList.add('hide');
                 }
-                showLiveTvStatus(context, 'LiveTvLoadError', () => reloadItems(context));
-            }).then(() => {
-                void import('components/autoFocuser').then(({ default: autoFocuser }) => {
-                    autoFocuser.autoFocus(context);
-                });
-            });
-        };
+                focusManager.autoFocus(showLiveTvStatus(tabContent, 'LiveTvLoadError', () => refreshState.refreshSafely()), true);
+            }
+        });
+        this.destroy = refreshState.destroy;
+        this.isRefreshInterrupted = refreshState.isInterrupted;
+        const reloadItems = () => refreshState.refreshSafely();
 
         let pageData: LibraryPageData | undefined;
-        let isLoading = false;
         tabContent.querySelector<HTMLElement>('.btnFilter')!.addEventListener('click', () => {
-            showFilterMenu(tabContent);
+            showFilterMenu();
         });
 
         this.renderTab = () => {
-            reloadItems(tabContent);
+            return refreshState.refresh();
         };
     }
 }

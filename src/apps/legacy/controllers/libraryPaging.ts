@@ -27,7 +27,7 @@ export function supportedLibraryLayout(value: string) {
 }
 
 export function bindLibraryPaging({ view, query, totalRecordCount, isLoading, getRequestId, refresh, focus }: {
-    view: HTMLElement; query: LibraryQuery; totalRecordCount: number; isLoading(): boolean;
+    view: HTMLElement; query: LibraryQuery; totalRecordCount?: number; isLoading(): boolean;
     getRequestId(): number; refresh(): unknown; focus?(): void;
 }) {
     const pagingHtml = libraryBrowser.getQueryPagingHtml({
@@ -47,7 +47,7 @@ export function bindLibraryPaging({ view, query, totalRecordCount, isLoading, ge
         if (isLoading() || (!query.Limit || query.Limit <= 0)) return;
         const previousStartIndex = query.StartIndex;
         const startIndex = Math.max(0, previousStartIndex + direction * query.Limit);
-        if (startIndex === query.StartIndex || startIndex >= totalRecordCount) return;
+        if (startIndex === query.StartIndex || (totalRecordCount != null && startIndex >= totalRecordCount)) return;
         query.StartIndex = startIndex;
         const refreshResult = refresh();
         const requestId = getRequestId();

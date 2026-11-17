@@ -2,6 +2,7 @@ type TabController = {
     initTab?(): void;
     preRender?(): void;
     renderTab(): void | Promise<void>;
+    isRefreshInterrupted?(): boolean;
     destroy?(): void;
 };
 
@@ -54,9 +55,9 @@ export default function createTabControllerCache(loadController: (index: number)
             const currentRendering = rendering;
             if (!currentRendering[index]) {
                 currentRendering[index] = get(index).then(controller => {
-                    if (!destroyed && selectedIndex === index && controller && currentRendered.indexOf(index) === -1) {
+                    if (!destroyed && currentRendering === rendering && currentRendered === rendered && selectedIndex === index && controller && (currentRendered.indexOf(index) === -1 || controller.isRefreshInterrupted?.())) {
                         return Promise.resolve(controller.renderTab()).then(() => {
-                            if (!destroyed && selectedIndex === index && currentRendered === rendered) currentRendered.push(index);
+                            if (!destroyed && currentRendering === rendering && selectedIndex === index && currentRendered === rendered && currentRendered.indexOf(index) === -1) currentRendered.push(index);
                         });
                     }
                 }).catch(reportError).then(() => {
@@ -67,6 +68,7 @@ export default function createTabControllerCache(loadController: (index: number)
         },
         pause() {
             selectedIndex = null;
+            rendering = [];
         },
         reset() {
             rendered = [];
