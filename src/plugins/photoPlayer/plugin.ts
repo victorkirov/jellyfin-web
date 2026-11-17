@@ -1,9 +1,23 @@
+import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client';
+
 import { PluginType } from 'constants/pluginType';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import screenSaverManager from 'scripts/screensavermanager';
 import * as userSettings from 'scripts/settings/userSettings';
 
+type PhotoPlayOptions = {
+    items?: BaseItemDto[] | null;
+    startIndex?: number;
+    autoplay?: boolean;
+    shuffle?: boolean;
+};
+
 export default class PhotoPlayer {
+    name: string;
+    type: PluginType;
+    id: string;
+    priority: number;
+
     constructor() {
         this.name = 'Photo Player';
         this.type = PluginType.MediaPlayer;
@@ -11,8 +25,8 @@ export default class PhotoPlayer {
         this.priority = 1;
     }
 
-    play(options) {
-        return new Promise(function (resolve) {
+    play(options: PhotoPlayOptions) {
+        return new Promise<void>(function (resolve) {
             import('../../components/slideshow/slideshow').then(({ default: Slideshow }) => {
                 const index = options.startIndex || 0;
 
@@ -42,7 +56,7 @@ export default class PhotoPlayer {
         });
     }
 
-    canPlayMediaType(mediaType) {
+    canPlayMediaType(mediaType?: string) {
         return (mediaType || '').toLowerCase() === 'photo';
     }
 }
