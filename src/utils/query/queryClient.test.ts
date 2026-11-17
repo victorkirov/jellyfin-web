@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PersistedClient } from '@tanstack/react-query-persist-client';
-import { del, set } from 'idb-keyval';
+import { persistQueryClientRestore, type PersistedClient } from '@tanstack/react-query-persist-client';
+import { del, get, set } from 'idb-keyval';
 import { createIDBPersister } from './queryClient';
+import { QueryClient } from '@tanstack/react-query';
+import { QUERY_CACHE_VERSION } from './queryKeys';
 
 vi.mock('idb-keyval', () => ({ get: vi.fn(), set: vi.fn(), del: vi.fn() }));
 
@@ -12,6 +14,18 @@ const client = (timestamp: number): PersistedClient => ({
 });
 
 describe('IndexedDB query persistence', () => {
+    it('discards persisted keys from before server and user scoping', async () => {
+        const oldClient = client(Date.now());
+        oldClient.buster = 'build';
+        vi.mocked(get).mockResolvedValue(oldClient);
+        await persistQueryClientRestore({
+            queryClient: new QueryClient(),
+            persister: createIDBPersister(),
+            buster: `build-${QUERY_CACHE_VERSION}`
+        });
+        expect(del).toHaveBeenCalledWith('query-cache');
+    });
+
     beforeEach(() => {
         vi.useFakeTimers();
         vi.clearAllMocks();

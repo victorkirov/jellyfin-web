@@ -1,3 +1,4 @@
+import { serverQueryKey } from 'utils/query/queryKeys';
 import { getAuthenticationApi } from '@jellyfin/sdk/lib/utils/api/authentication-api';
 import { useQuery } from '@tanstack/react-query';
 import type { AxiosRequestConfig } from 'axios';
@@ -19,7 +20,7 @@ const fetchQuickConnectEnabled = async (
 export const useQuickConnectEnabled = () => {
     const currentApi = useApi();
     return useQuery({
-        queryKey: [ 'QuickConnect', 'Enabled' ],
+        queryKey: serverQueryKey(currentApi.api, 'QuickConnect', 'Enabled'),
         queryFn: ({ signal }) => fetchQuickConnectEnabled(currentApi, { signal })
     });
 };

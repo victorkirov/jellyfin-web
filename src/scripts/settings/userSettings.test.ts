@@ -17,6 +17,18 @@ beforeEach(() => localStorage.clear());
 afterEach(() => vi.useRealTimers());
 
 describe('settings JSON decoding', () => {
+    it('does not parse missing settings while the user preference snapshot is empty', () => {
+        const settings = new UserSettings();
+        settings.displayPrefs = { CustomPrefs: {} };
+        const parse = vi.spyOn(JSON, 'parse');
+        try {
+            expect(settings.loadQuerySettings('missing', { Limit: 100 })).toEqual({ Limit: 100 });
+            expect(parse).not.toHaveBeenCalled();
+        } finally {
+            parse.mockRestore();
+        }
+    });
+
     it.each(['{broken', 'null', '[]', '42', '"text"'])('uses defaults for %s', value => {
         const settings = new UserSettings();
         appSettings.set('movies', value);

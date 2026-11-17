@@ -1,3 +1,4 @@
+import { userQueryKey } from 'utils/query/queryKeys';
 import { Api } from '@jellyfin/sdk';
 import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collection-type';
 import { StudioApiGetStudiosRequest } from '@jellyfin/sdk/lib/generated-client/api/studio-api';
@@ -36,7 +37,7 @@ export const useStudiosSearch = (
     const isStudiosEnabled = (!collectionType || isMovies(collectionType) || isTVShows(collectionType));
 
     return useQuery({
-        queryKey: ['Search', 'Studios', collectionType, parentId, searchTerm],
+        queryKey: userQueryKey(api, userId, 'Search', 'Studios', collectionType, parentId, searchTerm),
         queryFn: ({ signal }) => fetchStudios(
             api!,
             userId!,

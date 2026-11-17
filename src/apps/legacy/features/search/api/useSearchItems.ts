@@ -1,3 +1,4 @@
+import { userQueryKey } from 'utils/query/queryKeys';
 import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
 import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client/models/base-item-dto';
 import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collection-type';
@@ -37,7 +38,7 @@ export const useSearchItems = (
     const isLiveTvEnabled = !isLiveTvPending || !collectionType || !isLivetv(collectionType);
 
     return useQuery({
-        queryKey: ['Search', 'Items', collectionType, parentId, searchTerm],
+        queryKey: userQueryKey(api, userId, 'Search', 'Items', collectionType, parentId, searchTerm),
         queryFn: async ({ signal }) => {
             if (liveTvSections && collectionType && isLivetv(collectionType)) {
                 return sortSections(liveTvSections);

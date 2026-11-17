@@ -1,3 +1,4 @@
+import { userQueryKey } from 'utils/query/queryKeys';
 import type { Api } from '@jellyfin/sdk/lib/api';
 import type { LibraryApiGetLatestMediaRequest } from '@jellyfin/sdk/lib/generated-client/api/library-api';
 import { getLibraryApi } from '@jellyfin/sdk/lib/utils/api/library-api';
@@ -20,7 +21,7 @@ export const getLatestMediaQuery = (
     api?: Api,
     params?: LibraryApiGetLatestMediaRequest
 ) => queryOptions({
-    queryKey: [ 'User', params?.userId, 'LatestMedia', params ],
+    queryKey: userQueryKey(api, params?.userId, 'LatestMedia', params),
     queryFn: ({ signal }) => fetchLatestMedia(api!, params, { signal }),
     enabled: !!api
 });

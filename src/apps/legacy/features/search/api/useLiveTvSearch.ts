@@ -1,3 +1,4 @@
+import { userQueryKey } from 'utils/query/queryKeys';
 import { Api } from '@jellyfin/sdk';
 import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collection-type';
 import { useQuery } from '@tanstack/react-query';
@@ -142,7 +143,7 @@ export const useLiveTvSearch = (
     const userId = user?.Id;
 
     return useQuery({
-        queryKey: ['Search', 'LiveTv', collectionType, parentId, searchTerm],
+        queryKey: userQueryKey(api, userId, 'Search', 'LiveTv', collectionType, parentId, searchTerm),
         queryFn: ({ signal }) =>
             fetchLiveTv(api!, userId!, searchTerm, signal),
         enabled: !!api && !!userId && !!collectionType && !!isLivetv(collectionType)

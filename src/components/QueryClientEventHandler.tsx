@@ -5,6 +5,7 @@ import { useCallback, useEffect, type FC } from 'react';
 import { EventType } from 'constants/eventType';
 import { useApi } from 'hooks/useApi';
 import Events from 'utils/events';
+import { userLibraryQueryKeys } from 'utils/query/queryKeys';
 
 /** Component that handles mapping events to query client actions. */
 const QueryClientEventHandler: FC = () => {
@@ -16,10 +17,10 @@ const QueryClientEventHandler: FC = () => {
     ), [queryClient]);
 
     const invalidateItemQueries = useCallback(() => (
-        queryClient.invalidateQueries({
-            queryKey: ['User', user?.Id, 'Items']
-        })
-    ), [queryClient, user?.Id]);
+        Promise.all(userLibraryQueryKeys(api, user?.Id).map(queryKey => (
+            queryClient.invalidateQueries({ queryKey })
+        )))
+    ), [api, queryClient, user?.Id]);
 
     useEffect(() => {
         Events.on(document, EventType.LANGUAGE_CHANGE, clearQueries);

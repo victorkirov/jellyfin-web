@@ -1,3 +1,4 @@
+import { userQueryKey } from 'utils/query/queryKeys';
 import type { AxiosRequestConfig } from 'axios';
 import type { Api } from '@jellyfin/sdk';
 import type { UserApiGetUsersRequest } from '@jellyfin/sdk/lib/generated-client';
@@ -29,9 +30,9 @@ export const useUsers = (
     requestParams?: UserApiGetUsersRequest,
     options?: UseUsersOptions
 ) => {
-    const { api } = useApi();
+    const { api, user } = useApi();
     return useQuery({
-        queryKey: [ QUERY_KEY ],
+        queryKey: userQueryKey(api, user?.Id, QUERY_KEY, requestParams),
         queryFn: ({ signal }) =>
             fetchUsers(api!, requestParams, { signal }),
         enabled: !!api,

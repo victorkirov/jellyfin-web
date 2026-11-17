@@ -1,3 +1,4 @@
+import { userQueryKey } from 'utils/query/queryKeys';
 import type { Api } from '@jellyfin/sdk/lib/api';
 import type { ShowApiGetNextUpRequest } from '@jellyfin/sdk/lib/generated-client/api/show-api';
 import { getShowApi } from '@jellyfin/sdk/lib/utils/api/show-api';
@@ -20,7 +21,7 @@ export const getNextUpQuery = (
     api?: Api,
     params?: ShowApiGetNextUpRequest
 ) => queryOptions({
-    queryKey: [ 'User', params?.userId, 'NextUp', params ],
+    queryKey: userQueryKey(api, params?.userId, 'NextUp', params),
     queryFn: ({ signal }) => fetchNextUp(api!, params, { signal }),
     enabled: !!api
 });

@@ -5,6 +5,7 @@ import EmbyButtonPrototype from '../emby-button/emby-button';
 import serverNotifications from 'scripts/serverNotifications';
 import Events from 'utils/events';
 import { queryClient } from 'utils/query/queryClient';
+import { userLibraryQueryKeys } from 'utils/query/queryKeys';
 
 function onClick() {
     const button = this;
@@ -17,7 +18,9 @@ function onClick() {
     apiClient.updateFavoriteStatus(userId, id, !isFavorite)
         .then(userData => {
             setState(button, userData.Likes, userData.IsFavorite);
-            void queryClient.invalidateQueries({ queryKey: ['User', userId, 'Items'] });
+            userLibraryQueryKeys(ServerConnections.getApi(serverId), userId).forEach(queryKey => {
+                void queryClient.invalidateQueries({ queryKey });
+            });
         });
 }
 

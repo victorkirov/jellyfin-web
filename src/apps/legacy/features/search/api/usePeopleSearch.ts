@@ -1,3 +1,4 @@
+import { userQueryKey } from 'utils/query/queryKeys';
 import { Api } from '@jellyfin/sdk';
 import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collection-type';
 import { useQuery } from '@tanstack/react-query';
@@ -37,7 +38,7 @@ export const usePeopleSearch = (
     const isPeopleEnabled = (!collectionType || isMovies(collectionType) || isTVShows(collectionType));
 
     return useQuery({
-        queryKey: ['Search', 'People', collectionType, parentId, searchTerm],
+        queryKey: userQueryKey(api, userId, 'Search', 'People', collectionType, parentId, searchTerm),
         queryFn: ({ signal }) => fetchPeople(
             api!,
             userId!,

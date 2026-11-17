@@ -5,6 +5,7 @@ import QueryClientEventHandler from 'components/QueryClientEventHandler';
 import { ApiProvider } from 'hooks/useApi';
 import { UserSettingsProvider } from 'hooks/useUserSettings';
 import { persister, queryClient } from 'utils/query/queryClient';
+import { QUERY_CACHE_VERSION } from 'utils/query/queryKeys';
 
 import RootAppRouter from 'RootAppRouter';
 
@@ -12,7 +13,7 @@ const RootApp = () => (
     <PersistQueryClientProvider
         client={queryClient}
         persistOptions={{
-            buster: __JF_BUILD_VERSION__,
+            buster: `${__JF_BUILD_VERSION__}-${QUERY_CACHE_VERSION}`,
             persister
         }}
     >

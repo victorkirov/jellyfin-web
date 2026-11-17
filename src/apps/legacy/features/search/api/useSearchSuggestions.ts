@@ -1,3 +1,4 @@
+import { userQueryKey } from 'utils/query/queryKeys';
 import type { AxiosRequestConfig } from 'axios';
 import type { Api } from '@jellyfin/sdk';
 import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
@@ -39,7 +40,7 @@ export const useSearchSuggestions = (parentId?: string) => {
     const userId = user?.Id;
 
     return useQuery({
-        queryKey: ['SearchSuggestions', { parentId }],
+        queryKey: userQueryKey(api, userId, 'SearchSuggestions', { parentId }),
         queryFn: ({ signal }) =>
             fetchGetItems(api!, userId!, parentId, { signal }),
         refetchOnWindowFocus: false,

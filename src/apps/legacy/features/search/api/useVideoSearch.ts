@@ -1,3 +1,4 @@
+import { userQueryKey } from 'utils/query/queryKeys';
 import { Api } from '@jellyfin/sdk';
 import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collection-type';
 import { useQuery } from '@tanstack/react-query';
@@ -42,7 +43,7 @@ export const useVideoSearch = (
     const userId = user?.Id;
 
     return useQuery({
-        queryKey: ['Search', 'Video', collectionType, parentId, searchTerm],
+        queryKey: userQueryKey(api, userId, 'Search', 'Video', collectionType, parentId, searchTerm),
         queryFn: ({ signal }) => fetchVideos(
             api!,
             userId!,

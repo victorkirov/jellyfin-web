@@ -1,3 +1,4 @@
+import { userQueryKey } from 'utils/query/queryKeys';
 import type { Api } from '@jellyfin/sdk/lib/api';
 import { getLibraryApi } from '@jellyfin/sdk/lib/utils/api/library-api';
 import { queryOptions } from '@tanstack/react-query';
@@ -21,7 +22,7 @@ export const getItemQuery = (
     itemId?: string,
     userId?: string
 ) => queryOptions({
-    queryKey: [ 'User', userId, 'Items', itemId ],
+    queryKey: userQueryKey(api, userId, 'Items', itemId),
     queryFn: ({ signal }) => fetchItem(api!, itemId!, userId!, { signal }),
     enabled: !!api && !!userId && !!itemId
 });

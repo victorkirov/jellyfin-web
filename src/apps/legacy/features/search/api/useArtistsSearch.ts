@@ -1,3 +1,4 @@
+import { userQueryKey } from 'utils/query/queryKeys';
 import { Api } from '@jellyfin/sdk';
 import { ArtistApiGetArtistsRequest } from '@jellyfin/sdk/lib/generated-client/api/artist-api';
 import { CollectionType } from '@jellyfin/sdk/lib/generated-client/models/collection-type';
@@ -34,7 +35,7 @@ export const useArtistsSearch = (
     const userId = user?.Id;
 
     return useQuery({
-        queryKey: ['Search', 'Artists', collectionType, parentId, searchTerm],
+        queryKey: userQueryKey(api, userId, 'Search', 'Artists', collectionType, parentId, searchTerm),
         queryFn: ({ signal }) => fetchArtists(
             api!,
             userId!,

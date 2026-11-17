@@ -1,3 +1,4 @@
+import { userQueryKey } from 'utils/query/queryKeys';
 import type { Api } from '@jellyfin/sdk/lib/api';
 import type { LiveTvApiGetRecommendedProgramsRequest } from '@jellyfin/sdk/lib/generated-client/api/live-tv-api';
 import { getLiveTvApi } from '@jellyfin/sdk/lib/utils/api/live-tv-api';
@@ -20,7 +21,7 @@ export const getRecommendedProgramsQuery = (
     api?: Api,
     params?: LiveTvApiGetRecommendedProgramsRequest
 ) => queryOptions({
-    queryKey: [ 'User', params?.userId, 'RecommendedPrograms', params ],
+    queryKey: userQueryKey(api, params?.userId, 'RecommendedPrograms', params),
     queryFn: ({ signal }) => fetchRecommendedPrograms(api!, params, { signal }),
     enabled: !!api
 });

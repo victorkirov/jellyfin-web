@@ -1,3 +1,4 @@
+import { userQueryKey } from 'utils/query/queryKeys';
 import { Api } from '@jellyfin/sdk';
 import type { UserApiGetUserByIdRequest } from '@jellyfin/sdk/lib/generated-client/api/user-api';
 import { getUserApi } from '@jellyfin/sdk/lib/utils/api/user-api';
@@ -27,7 +28,7 @@ export const getUserQuery = (
     api?: Api,
     { userId }: GetUserByIdParams = {}
 ) => queryOptions({
-    queryKey: [ QUERY_KEY, userId ],
+    queryKey: userQueryKey(api, userId),
     queryFn: ({ signal }) => fetchUser(api!, { userId: userId! }, { signal }),
     enabled: !!api && !!userId
 });
