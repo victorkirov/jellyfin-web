@@ -7,7 +7,6 @@ import { ServerConnections } from 'lib/jellyfin-apiclient';
 import { queryClient } from 'utils/query/queryClient';
 
 import browser from '../../scripts/browser';
-import layoutManager from '../layoutManager';
 import { pluginManager } from '../pluginManager';
 import { appHost } from '../apphost';
 import focusManager from '../focusManager';
@@ -81,12 +80,6 @@ function loadForm(context, user, userSettings) {
         context.querySelector('.languageSection').classList.add('hide');
     }
 
-    if (appHost.supports(AppFeature.DisplayMode)) {
-        context.querySelector('.fldDisplayMode').classList.remove('hide');
-    } else {
-        context.querySelector('.fldDisplayMode').classList.add('hide');
-    }
-
     if (appHost.supports(AppFeature.ExternalLinks)) {
         context.querySelector('.learnHowToContributeContainer').classList.remove('hide');
     } else {
@@ -142,8 +135,6 @@ function loadForm(context, user, userSettings) {
     context.querySelector('#chkRewatchingNextUp').checked = userSettings.enableRewatchingInNextUp();
     context.querySelector('#chkUseEpisodeImagesInNextUp').checked = userSettings.useEpisodeImagesInNextUpAndResume();
 
-    context.querySelector('.selectLayout').value = layoutManager.getSavedLayout() || '';
-
     showOrHideMissingEpisodesField(context);
 
     loading.hide();
@@ -185,7 +176,6 @@ function saveUser(context, user, userSettingsInstance, apiClient) {
         skinManager.setTheme(userSettingsInstance.theme());
     }
 
-    layoutManager.setLayout(context.querySelector('.selectLayout').value);
     return apiClient.updateUserConfiguration(user.Id, user.Configuration);
 }
 

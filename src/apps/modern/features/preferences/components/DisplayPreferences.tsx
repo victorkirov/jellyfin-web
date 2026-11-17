@@ -12,7 +12,6 @@ import React, { Fragment } from 'react';
 
 import { appHost } from 'components/apphost';
 import { AppFeature } from 'constants/appFeature';
-import { LayoutMode } from 'constants/layoutMode';
 import { useApi } from 'hooks/useApi';
 import { useThemes } from 'hooks/useThemes';
 import globalize from 'lib/globalize';
@@ -33,30 +32,6 @@ export function DisplayPreferences({ onChange, values }: Readonly<DisplayPrefere
     return (
         <Stack spacing={3}>
             <Typography variant='h2'>{globalize.translate('Display')}</Typography>
-
-            { appHost.supports(AppFeature.DisplayMode) && (
-                <FormControl fullWidth>
-                    <InputLabel id='display-settings-layout-label'>{globalize.translate('LabelDisplayMode')}</InputLabel>
-                    <Select
-                        aria-describedby='display-settings-layout-description'
-                        inputProps={{
-                            name: 'layout'
-                        }}
-                        labelId='display-settings-layout-label'
-                        onChange={onChange}
-                        value={values.layout}
-                    >
-                        <MenuItem value={LayoutMode.Auto}>{globalize.translate('Auto')}</MenuItem>
-                        <MenuItem value={LayoutMode.DesktopLegacy}>{globalize.translate('Desktop')}</MenuItem>
-                        <MenuItem value={LayoutMode.MobileLegacy}>{globalize.translate('Mobile')}</MenuItem>
-                        <MenuItem value={LayoutMode.Tv}>{globalize.translate('TV')}</MenuItem>
-                    </Select>
-                    <FormHelperText component={Stack} id='display-settings-layout-description'>
-                        <span>{globalize.translate('DisplayModeHelp')}</span>
-                        <span>{globalize.translate('LabelPleaseRestart')}</span>
-                    </FormHelperText>
-                </FormControl>
-            ) }
 
             { themes.length > 0 && (
                 <FormControl fullWidth>

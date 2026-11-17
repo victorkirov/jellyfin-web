@@ -13,7 +13,6 @@ export interface DisplaySettingsValues {
     enableRewatchingInNextUp: boolean;
     episodeImagesInNextUp: boolean;
     language: string;
-    layout: string;
     libraryPageSize: number;
     maxDaysForNextUp: number;
     screensaver: string;

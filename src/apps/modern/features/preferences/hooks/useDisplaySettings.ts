@@ -3,7 +3,6 @@ import { ApiClient } from 'jellyfin-apiclient';
 import { useCallback, useEffect, useState } from 'react';
 
 import { appHost } from 'components/apphost';
-import layoutManager from 'components/layoutManager';
 import { AppFeature } from 'constants/appFeature';
 import { useApi } from 'hooks/useApi';
 import themeManager from 'scripts/themeManager';
@@ -98,7 +97,6 @@ async function loadDisplaySettings({
         enableRewatchingInNextUp: Boolean(settings.enableRewatchingInNextUp()),
         episodeImagesInNextUp: Boolean(settings.useEpisodeImagesInNextUpAndResume()),
         language: settings.language() || 'auto',
-        layout: layoutManager.getSavedLayout() || 'auto',
         libraryPageSize: settings.libraryPageSize(),
         maxDaysForNextUp: settings.maxDaysForNextUp(),
         screensaver: settings.screensaver() || 'none',
@@ -151,8 +149,6 @@ async function saveDisplaySettings({
     userSettings.backdropScreensaverInterval(newDisplaySettings.backdropScreensaverInterval);
     userSettings.slideshowInterval(newDisplaySettings.slideshowInterval);
     userSettings.theme(newDisplaySettings.theme);
-
-    layoutManager.setLayout(normalizeValue(newDisplaySettings.layout));
 
     const promises = [
         themeManager.setTheme(userSettings.theme())

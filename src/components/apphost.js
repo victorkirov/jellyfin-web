@@ -6,7 +6,6 @@ import * as webSettings from '../scripts/settings/webSettings';
 import globalize from '../lib/globalize';
 import profileBuilder from '../scripts/browserDeviceProfile';
 import { AppFeature } from 'constants/appFeature';
-import { LayoutMode } from 'constants/layoutMode';
 
 const appName = 'Jellyfin Web';
 
@@ -180,10 +179,6 @@ function supportsFullscreen() {
 
     const element = document.documentElement;
     return !!(element.requestFullscreen || element.mozRequestFullScreen || element.webkitRequestFullscreen || element.msRequestFullscreen || document.createElement('video').webkitEnterFullscreen);
-}
-
-function getDefaultLayout() {
-    return LayoutMode.Modern;
 }
 
 function supportsHtmlMediaAutoplay() {
@@ -366,13 +361,6 @@ export const appHost = {
         return supportedFeatures.indexOf(command.toLowerCase()) !== -1;
     },
     preferVisualCards: browser.android || browser.chrome,
-    getDefaultLayout: function () {
-        if (window.NativeShell) {
-            return window.NativeShell.AppHost.getDefaultLayout();
-        }
-
-        return getDefaultLayout();
-    },
     getDeviceProfile,
     init: function () {
         if (window.NativeShell) {
