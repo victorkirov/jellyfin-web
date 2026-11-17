@@ -1,8 +1,9 @@
 import React, { FunctionComponent, useCallback, useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import type { ApiClient, ConnectResponse } from 'jellyfin-apiclient';
+import type { ApiClient } from 'jellyfin-apiclient';
 
 import { ConnectionState, ServerConnections } from 'lib/jellyfin-apiclient';
+import type { ConnectResult } from 'lib/jellyfin-apiclient/connectionTypes';
 
 import ConnectionErrorPage from './ConnectionErrorPage';
 import Loading from './loading/LoadingComponent';
@@ -66,7 +67,7 @@ const ConnectionRequired: FunctionComponent<ConnectionRequiredProps> = ({
         else navigate(route);
     }, [ location.pathname, navigate ]);
 
-    const bounce = useCallback(async (connectionResponse: ConnectResponse) => {
+    const bounce = useCallback(async (connectionResponse: ConnectResult) => {
         switch (connectionResponse.State) {
             case ConnectionState.SignedIn:
                 // Already logged in, bounce to the home page
@@ -94,7 +95,7 @@ const ConnectionRequired: FunctionComponent<ConnectionRequiredProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ navigateIfNotThere, location.pathname, navigate ]);
 
-    const handleServerSignIn = useCallback(async (firstConnection: ConnectResponse) => {
+    const handleServerSignIn = useCallback(async (firstConnection: ConnectResult) => {
         if (firstConnection.State === ConnectionState.ServerSignIn) {
             // Verify server setup is complete
             try {

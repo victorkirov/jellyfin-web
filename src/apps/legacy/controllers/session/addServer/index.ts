@@ -1,25 +1,26 @@
 import loading from 'components/loading/loading';
 import globalize from 'lib/globalize';
 import { ConnectionState, ServerConnections } from 'lib/jellyfin-apiclient';
+import type { ConnectResult } from 'lib/jellyfin-apiclient/connectionTypes';
 import appSettings from 'scripts/settings/appSettings';
 import Dashboard from 'components/dashboard';
 
 import 'components/buttons/emby-button';
 
-function handleConnectionResult(page, result) {
+function handleConnectionResult(result: ConnectResult) {
     loading.hide();
     switch (result.State) {
         case ConnectionState.SignedIn: {
             const apiClient = result.ApiClient;
             Dashboard.onServerChanged(apiClient.getCurrentUserId(), apiClient.accessToken(), apiClient);
-            Dashboard.navigate('home');
+            void Dashboard.navigate('home');
             break;
         }
         case ConnectionState.ServerSignIn:
-            Dashboard.navigate('login?serverid=' + result.Servers[0].Id, false, 'none');
+            void Dashboard.navigate('login?serverid=' + result.Servers[0].Id, false);
             break;
         case ConnectionState.ServerSelection:
-            Dashboard.navigate('selectserver', false, 'none');
+            void Dashboard.navigate('selectserver', false);
             break;
         case ConnectionState.ServerUpdateNeeded:
             Dashboard.alert({
@@ -34,39 +35,38 @@ function handleConnectionResult(page, result) {
     }
 }
 
-function submitServer(page) {
+function submitServer(page: HTMLElement) {
     loading.show();
     // eslint-disable-next-line sonarjs/slow-regex
-    const host = page.querySelector('#txtServerHost').value.replace(/\/+$/, '');
-    ServerConnections.connectToAddress(host, {
+    const host = page.querySelector<HTMLInputElement>('#txtServerHost')!.value.replace(/\/+$/, '');
+    void ServerConnections.connectToAddress(host, {
         enableAutoLogin: appSettings.enableAutoLogin()
     }).then(function(result) {
-        handleConnectionResult(page, result);
+        handleConnectionResult(result);
     }, function() {
-        handleConnectionResult(page, {
+        handleConnectionResult({
             State: ConnectionState.Unavailable
         });
     });
 }
 
-export default function(view) {
-    view.querySelector('.addServerForm').addEventListener('submit', onServerSubmit);
-    view.querySelector('.btnCancel').addEventListener('click', goBack);
+export default function(view: HTMLElement) {
+    view.querySelector<HTMLFormElement>('.addServerForm')!.addEventListener('submit', onServerSubmit);
+    view.querySelector<HTMLButtonElement>('.btnCancel')!.addEventListener('click', goBack);
 
-    import('components/autoFocuser').then(({ default: autoFocuser }) => {
+    void import('components/autoFocuser').then(({ default: autoFocuser }) => {
         autoFocuser.autoFocus(view);
     });
 
-    function onServerSubmit(e) {
+    function onServerSubmit(e: Event) {
         submitServer(view);
         e.preventDefault();
         return false;
     }
 
     function goBack() {
-        import('components/router/appRouter').then(({ appRouter }) => {
-            appRouter.back();
+        void import('components/router/appRouter').then(({ appRouter }) => {
+            void appRouter.back();
         });
     }
 }
-

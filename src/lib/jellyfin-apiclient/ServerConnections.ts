@@ -1,3 +1,5 @@
+import type { UserDto } from '@jellyfin/sdk/lib/generated-client';
+import type { ConnectOptions, ConnectionClient, ImageOptions, CredentialStore } from './connectionTypes';
 import { Credentials } from 'jellyfin-apiclient';
 
 import { appHost } from 'components/apphost';
@@ -11,22 +13,23 @@ import { createApiClient } from 'utils/jellyfin-apiclient/createApiClient';
 
 import ConnectionManager from './connectionManager';
 
-const normalizeImageOptions = options => {
+const normalizeImageOptions = (options: ImageOptions) => {
     if (!options.quality && (options.maxWidth || options.width || options.maxHeight || options.height || options.fillWidth || options.fillHeight)) {
         options.quality = 90;
     }
 };
 
 class ServerConnections extends ConnectionManager {
-    firstConnection = false;
+    firstConnection: boolean | null = false;
+    localApiClient: ConnectionClient | null;
 
-    constructor() {
-        super(...arguments);
+    constructor(...args: ConstructorParameters<typeof ConnectionManager>) {
+        super(...args);
         this.localApiClient = null;
         this.firstConnection = null;
 
         Events.on(this, 'localusersignedout', (_e, logoutInfo) => {
-            setUserInfo(null, null);
+            void setUserInfo(null, null);
             // Ensure the updated credentials are persisted to storage
             credentialProvider.credentials(credentialProvider.credentials());
 
@@ -41,11 +44,11 @@ class ServerConnections extends ConnectionManager {
 
             // Calling getApi will ensure apiClient._sdk is initialized.
             this.getApi(apiClient.serverId());
-            apiClient.subscribe = apiClient._sdk.subscribe.bind(apiClient._sdk);
+            apiClient.subscribe = apiClient._sdk!.subscribe.bind(apiClient._sdk);
         });
     }
 
-    initApiClient(server) {
+    initApiClient(server: string) {
         console.debug('creating ApiClient singleton');
 
         const apiClient = createApiClient(
@@ -54,7 +57,7 @@ class ServerConnections extends ConnectionManager {
             appHost.appVersion(),
             appHost.deviceName(),
             appHost.deviceId()
-        );
+        ) as ConnectionClient;
 
         apiClient.enableAutomaticNetworking = false;
         apiClient.manualAddressOnly = true;
@@ -69,14 +72,14 @@ class ServerConnections extends ConnectionManager {
     /**
      * @returns {Promise<import('jellyfin-apiclient').ConnectResponse>} The result of the connection attempt.
      */
-    connect(options) {
+    connect(options?: ConnectOptions) {
         return super.connect({
             enableAutoLogin: appSettings.enableAutoLogin(),
             ...options
         });
     }
 
-    setLocalApiClient(apiClient) {
+    setLocalApiClient(apiClient: ConnectionClient | null | undefined) {
         if (apiClient) {
             this.localApiClient = apiClient;
             window.ApiClient = apiClient;
@@ -119,17 +122,17 @@ class ServerConnections extends ConnectionManager {
         return apiClient;
     }
 
-    onLocalUserSignedIn(user) {
+    onLocalUserSignedIn = (user: UserDto) => {
         const apiClient = this.getApiClient(user.ServerId);
         this.setLocalApiClient(apiClient);
-        setTimeout(() => detectBitrate(this.getApi(user.ServerId), true), 6000);
+        setTimeout(() => detectBitrate(this.getApi(user.ServerId)!, true), 6000);
         return setUserInfo(user.Id, apiClient).then(() => {
             if (window.NativeShell && typeof window.NativeShell.onLocalUserSignedIn === 'function') {
                 return window.NativeShell.onLocalUserSignedIn(user, apiClient.accessToken());
             }
             return Promise.resolve();
         });
-    }
+    };
 }
 
 const credentialProvider = new Credentials();
@@ -137,7 +140,7 @@ const credentialProvider = new Credentials();
 const capabilities = Dashboard.capabilities(appHost);
 
 export default new ServerConnections(
-    credentialProvider,
+    credentialProvider as CredentialStore,
     () => appHost.appName(),
     () => appHost.appVersion(),
     () => appHost.deviceName(),
