@@ -47,6 +47,7 @@ import 'elements/emby-scroller/emby-scroller';
 import 'elements/emby-select/emby-select';
 
 import 'styles/scrollstyles.scss';
+import './index.scss';
 
 /** Item types that use a list view for their children. */
 const LIST_VIEW_TYPES = [
@@ -286,19 +287,20 @@ function reloadPlayButtons(page, item) {
 
         const isResumable = (item.UserData?.PlaybackPositionTicks || 0) > 0;
         hideAll(page, 'btnReplay', isResumable);
-
-        for (const btnPlay of page.querySelectorAll('.btnPlay')) {
-            if (isResumable) {
-                btnPlay.title = globalize.translate('ButtonResume');
-            } else {
-                btnPlay.title = globalize.translate('Play');
-            }
-        }
     } else {
         hideAll(page, 'btnPlay');
         hideAll(page, 'btnReplay');
         hideAll(page, 'btnInstantMix');
         hideAll(page, 'btnShuffle');
+    }
+
+    const positionTicks = item.Type === 'Program' ? 0 : (item.UserData?.PlaybackPositionTicks || 0);
+    const label = positionTicks > 0 ?
+        globalize.translate('ButtonResume') + ' · ' + datetime.getDisplayRunningTime(positionTicks) :
+        globalize.translate('Play');
+    for (const btnPlay of page.querySelectorAll('.btnPlay')) {
+        btnPlay.title = label;
+        btnPlay.querySelector('.detailButton-text').textContent = label;
     }
 
     return canPlay;

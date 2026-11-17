@@ -1,0 +1,12 @@
+.itemDetailPage .mainDetailButtons {
+    flex-wrap: wrap;
+}
+
+.itemDetailPage .detailButton-primary .detailButton-content {
+    flex-direction: row;
+}
+
+.itemDetailPage .detailButton-primary .detailButton-text {
+    margin: 0 0.45em;
+    font-size: inherit;
+}

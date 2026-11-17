@@ -1,0 +1,98 @@
+import { readFileSync } from 'node:fs';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import ItemDetails from './index';
+
+const { apiClient, playbackManager, fixture } = vi.hoisted(() => {
+    const data = { item: null };
+    const client = {
+        getItem: vi.fn(() => Promise.resolve(data.item)),
+        getCurrentUser: vi.fn(() => Promise.resolve({ Id: 'user', Policy: {} })),
+        getCurrentUserId: () => 'user',
+        getSimilarItems: vi.fn(() => Promise.resolve({ Items: [] })),
+        subscribe: vi.fn()
+    };
+    return { apiClient: client, fixture: data, playbackManager: { canPlay: () => true, getSupportedCommands: () => [], play: vi.fn() } };
+});
+const strings = JSON.parse(readFileSync('src/strings/en-us.json', 'utf8'));
+const template = readFileSync('src/apps/legacy/controllers/itemDetails/index.html', 'utf8');
+vi.mock('lib/globalize', () => ({ default: {
+    translate: (key, value) => (strings[key] || key).replace('{0}', value),
+    getCurrentDateTimeLocale: () => 'en-US'
+} }));
+vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: { getApiClient: () => apiClient, currentApiClient: () => apiClient, getApi: () => ({}) } }));
+vi.mock('components/playback/playbackmanager', () => ({ playbackManager }));
+vi.mock('components/apphost', () => ({ appHost: { supports: () => false } }));
+vi.mock('components/backdrop/backdrop', () => ({ clearBackdrop: vi.fn(), setBackdrops: vi.fn() }));
+vi.mock('components/cardbuilder/cardBuilder', () => ({ default: { getCardsHtml: () => '' } }));
+vi.mock('components/cardbuilder/cardImage', () => ({ buildCardImage: () => '' }));
+vi.mock('components/images/imageLoader', () => ({ default: { lazyChildren: vi.fn() } }));
+vi.mock('components/itemContextMenu', () => ({ default: { getCommands: () => Promise.resolve([]) } }));
+vi.mock('components/itemHelper', () => ({ default: {
+    supportsMediaSourceSelection: () => false, canMarkPlayed: () => false, canRate: () => false,
+    getDisplayName: item => item.Name
+} }));
+vi.mock('components/mediainfo/mediainfo', () => ({ default: { fillPrimaryMediaInfo: vi.fn(), fillSecondaryMediaInfo: vi.fn() } }));
+vi.mock('components/homesections/deferSection', () => ({ deferSection: () => vi.fn() }));
+vi.mock('components/focusManager', () => ({ default: {} }));
+vi.mock('components/layoutManager', () => ({ default: { tv: true } }));
+vi.mock('components/listview/listview', () => ({ default: {} }));
+vi.mock('components/loading/loading', () => ({ default: { show: vi.fn(), hide: vi.fn() } }));
+vi.mock('components/itemDetails/ItemDetailsMetadataGroup', () => ({ default: vi.fn() }));
+vi.mock('components/router/appRouter', () => ({ appRouter: {} }));
+vi.mock('components/shortcuts', () => ({ default: { on: vi.fn(), off: vi.fn() } }));
+vi.mock('components/autoFocuser', () => ({ default: { autoFocus: vi.fn() } }));
+vi.mock('scripts/browser', () => ({ default: {} }));
+vi.mock('scripts/libraryMenu', () => ({ default: { setTitle: vi.fn(), setTransparentMenu: vi.fn() } }));
+vi.mock('scripts/settings/userSettings', () => ({ enableBackdrops: () => false }));
+vi.mock('utils/dom', () => ({ default: { getWindowSize: () => ({ innerWidth: 1280 }) } }));
+vi.mock('utils/reactUtils', () => ({ renderComponent: () => vi.fn() }));
+vi.mock('elements/emby-itemscontainer/emby-itemscontainer', () => ({}));
+vi.mock('elements/emby-checkbox/emby-checkbox', () => ({}));
+vi.mock('elements/emby-button/emby-button', () => ({}));
+vi.mock('elements/emby-playstatebutton/emby-playstatebutton', () => ({}));
+vi.mock('elements/emby-ratingbutton/emby-ratingbutton', () => ({}));
+vi.mock('elements/emby-scroller/emby-scroller', () => ({}));
+vi.mock('elements/emby-select/emby-select', () => ({}));
+
+beforeEach(() => {
+    document.body.innerHTML = template.replace(/\$\{(\w+)\}/g, (match, key) => strings[key] || key);
+    document.querySelectorAll('.btnPlaystate, .btnUserRating').forEach(button => {
+        button.setItem = vi.fn();
+    });
+});
+
+describe('Details playback labels and actions', () => {
+    it.each([
+        ['resumable', 13800000000, false, 'Resume · 23:00', true],
+        ['unstarted', 0, false, 'Play', false],
+        ['completed', 0, true, 'Play', false]
+    ])('labels %s items while retaining saved-position and restart semantics', async (state, ticks, played, label, replayVisible) => {
+        const page = document.querySelector('#itemDetailPage');
+        const item = { Id: state, Type: 'Movie', UserData: { PlaybackPositionTicks: ticks, Played: played } };
+        fixture.item = item;
+        const controller = new ItemDetails(page, { id: state });
+        expect(controller).toBeDefined();
+        page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+        await vi.waitFor(() => expect(page.querySelector('.btnPlay').classList.contains('hide')).toBe(false));
+        const resume = page.querySelector('.btnPlay');
+        const restart = page.querySelector('.btnReplay');
+        expect(resume.textContent.trim()).toBe(label);
+        expect(resume.title).toBe(label);
+        expect(restart.textContent.trim()).toBe('Start from beginning');
+        expect(!restart.classList.contains('hide')).toBe(replayVisible);
+        page.querySelector('.selectSource').innerHTML = '<option value="version">Version</option>';
+        page.querySelector('.selectAudio').innerHTML = '<option value="4">English</option>';
+        page.querySelector('.selectSubtitles').innerHTML = '<option value="7">English</option>';
+        resume.click();
+        expect(playbackManager.play).toHaveBeenLastCalledWith({ items: [item], startPositionTicks: ticks, mediaSourceId: 'version', audioStreamIndex: '4', subtitleStreamIndex: '7' });
+        restart.click();
+        expect(playbackManager.play).toHaveBeenLastCalledWith(expect.objectContaining({ startPositionTicks: 0 }));
+    });
+
+    it('provides visible secondary labels with the state-button update hook', () => {
+        const page = document.querySelector('#itemDetailPage');
+        expect(page.querySelector('.btnPlayTrailer .detailButton-text').textContent).toBe('Trailer');
+        expect(page.querySelector('.btnPlaystate .button-text')).not.toBeNull();
+        expect(page.querySelector('.btnUserRating .button-text')).not.toBeNull();
+    });
+});

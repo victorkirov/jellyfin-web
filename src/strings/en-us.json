@@ -1370,7 +1370,7 @@
     "PlaybackRate": "Playback Speed",
     "PlayCount": "Play count",
     "Played": "Played",
-    "PlayFromBeginning": "Play from beginning",
+    "PlayFromBeginning": "Start from beginning",
     "PlaylistError.AddFailed": "Error adding to playlist",
     "PlaylistError.CreateFailed": "Error creating playlist",
     "PlaylistError.UpdateFailed": "Error updating playlist",
