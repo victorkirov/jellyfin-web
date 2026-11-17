@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../lib/focusManager', () => ({ default: { pushScope: vi.fn(), popScope: vi.fn(), autoFocus: vi.fn(), focus: vi.fn() } }));
-vi.mock('../../scripts/browser', () => ({ default: { tv: false, touch: false, supportsCssAnimation: () => true } }));
+vi.mock('../../scripts/browser', () => ({ default: { tv: false, touch: false } }));
 vi.mock('../../lib/layoutManager', () => ({ default: { tv: false } }));
 vi.mock('../../scripts/inputManager', () => ({ default: { on: vi.fn(), off: vi.fn() } }));
 vi.mock('../loading/loading', () => ({ hide: vi.fn() }));
@@ -14,7 +14,7 @@ afterEach(() => {
     document.body.innerHTML = '';
 });
 
-describe('dialog lifecycle without animation support', () => {
+describe('instant dialog lifecycle', () => {
     it('shows the backdrop and releases focus and backdrop when closed', async () => {
         const dialog = createDialog({ enableHistory: false, scrollY: false });
         const closing = vi.fn();

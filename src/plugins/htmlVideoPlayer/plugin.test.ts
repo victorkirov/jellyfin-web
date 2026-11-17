@@ -4,8 +4,6 @@ import HtmlVideoPlayer from './plugin';
 import itemHelper from '../../components/itemHelper';
 
 const motion = vi.hoisted(() => ({
-    supportsCssAnimation: vi.fn(() => true),
-    addEventListener: vi.fn((target: EventTarget, type: string, handler: EventListener, options?: AddEventListenerOptions) => target.addEventListener(type, handler, options)),
     loading: vi.fn()
 }));
 
@@ -17,11 +15,10 @@ vi.mock('constants/pluginType', () => ({ PluginType: {} }));
 vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: {} }));
 vi.mock('scripts/settings/userSettings', () => ({ currentSettings: { getSubtitleAppearanceSettings: () => ({ verticalPosition: '0' }) } }));
 vi.mock('types/mediaError', () => ({ MediaError: {} }));
-vi.mock('../../scripts/browser', () => ({ default: { slow: false, supportsCssAnimation: motion.supportsCssAnimation } }));
+vi.mock('../../scripts/browser', () => ({ default: { slow: false } }));
 vi.mock('../../scripts/settings/appSettings', () => ({ default: {} }));
 vi.mock('../../components/apphost', () => ({ appHost: { supports: () => true } }));
 vi.mock('../../components/loading/loading', () => ({ default: { show: motion.loading } }));
-vi.mock('../../utils/dom', () => ({ default: { addEventListener: motion.addEventListener, whichAnimationEvent: () => 'animationend' } }));
 vi.mock('../../components/playback/playbackmanager', () => ({ playbackManager: { getSubtitleUrl: () => '/subtitles.vtt' } }));
 vi.mock('../../components/router/appRouter', () => ({ appRouter: {} }));
 vi.mock('../../components/htmlMediaHelper', () => ({
@@ -162,7 +159,7 @@ describe('Custom subtitle cues', () => {
 
 it('creates and reuses fullscreen video without an animation completion event', async () => {
     document.body.innerHTML = '';
-    motion.addEventListener.mockClear();
+    const addListener = vi.spyOn(EventTarget.prototype, 'addEventListener');
     const player = new HtmlVideoPlayer();
     const options = { fullscreen: true } as Parameters<HtmlVideoPlayer['createMediaElement']>[0];
     const creation = player.createMediaElement(options);
@@ -172,7 +169,7 @@ it('creates and reuses fullscreen video without an animation completion event', 
     });
     await vi.dynamicImportSettled();
     expect(element).toBe(document.querySelector('video'));
-    expect(motion.addEventListener).not.toHaveBeenCalledWith(expect.anything(), 'animationend', expect.anything(), expect.anything());
+    expect(addListener.mock.calls.some(([type]) => type === 'animationend')).toBe(false);
     expect(document.querySelector<HTMLElement>('.videoPlayerContainer')?.style.animation).toBe('');
     expect(await player.createMediaElement(options)).toBe(element);
 });

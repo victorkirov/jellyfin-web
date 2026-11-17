@@ -66,8 +66,7 @@ export default function (view: HTMLElement) {
             lyric.classList.remove('pastLyric');
             lyric.classList.remove('futureLyric');
             if (autoScroll !== AutoScroll.NoScroll) {
-                // instant scroll is used when the view is first loaded
-                scrollManager.scrollToElement(lyric, autoScroll === AutoScroll.Smooth);
+                scrollManager.scrollToElement(lyric);
                 focusManager.focus(lyric);
                 autoScroll = AutoScroll.Smooth;
             }

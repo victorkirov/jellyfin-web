@@ -76,10 +76,10 @@ it('positions focused elements immediately without animation frames', () => {
     expect(frame).not.toHaveBeenCalled();
 });
 
-it('ignores legacy smooth-scroll requests and saved values', () => {
+it('ignores saved smooth-scroll values', () => {
     const { target, scroller } = createScroller();
     localStorage.setItem('enableSmoothScroll', 'true');
-    scrollToElement(target, true);
+    scrollToElement(target);
     expect(scroller.scrollLeft).toBe(210);
     expect(scroller.scrollTop).toBe(310);
     localStorage.removeItem('enableSmoothScroll');

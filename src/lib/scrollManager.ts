@@ -318,7 +318,6 @@ export function isEnabled() {
      * @param {number} scrollX - Horizontal coordinate.
      * @param {number} scrollY - Vertical coordinate.
      */
-export function scrollTo(scrollX: number, scrollY: number, smooth?: boolean): void;
 export function scrollTo(scrollX: number, scrollY: number) {
     // Scroller is document itself by default
     const scroller = getScrollableParent(null, false);
@@ -352,7 +351,6 @@ function adjustVerticalScroll(scrollY: number, isFixed: boolean, elementRect: DO
     return scrollY;
 }
 
-export function scrollToElement(element: HTMLElement, smooth?: boolean): void;
 export function scrollToElement(element: HTMLElement) {
     // Overflow eligibility can change between focus events as content loads.
     const stylesCache = new WeakMap();
