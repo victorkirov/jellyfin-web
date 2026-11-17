@@ -1,31 +1,12 @@
-import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
-import { getLibraryApi } from '@jellyfin/sdk/lib/utils/api/library-api';
-
-import { AppFeature } from 'constants/appFeature';
-import { ServerConnections } from 'lib/jellyfin-apiclient';
-
-import browser from '../scripts/browser';
-import { copy } from '../scripts/clipboard';
 import globalize from '../lib/globalize';
 import actionsheet from './actionSheet/actionSheet';
-import { appHost } from './apphost';
 import { appRouter } from './router/appRouter';
 import itemHelper from './itemHelper';
 import { playbackManager } from './playback/playbackmanager';
-import toast from './toast/toast';
 import * as userSettings from '../scripts/settings/userSettings';
-
-/** Item types that support downloading all children. */
-const DOWNLOAD_ALL_TYPES = [
-    BaseItemKind.BoxSet,
-    BaseItemKind.MusicAlbum,
-    BaseItemKind.Season,
-    BaseItemKind.Series
-];
 
 export async function getCommands(options) {
     const item = options.item;
-    const user = options.user;
 
     const canPlay = playbackManager.canPlay(item);
 
@@ -105,32 +86,6 @@ export async function getCommands(options) {
         });
     }
 
-    if (appHost.supports(AppFeature.FileDownload)) {
-        // CanDownload should probably be updated to return true for these items?
-        if (user.Policy.EnableContentDownloading && DOWNLOAD_ALL_TYPES.includes(item.Type)) {
-            commands.push({
-                name: globalize.translate('DownloadAll'),
-                id: 'downloadall',
-                icon: 'file_download'
-            });
-        }
-
-        // Books are promoted to major download Button and therefor excluded in the context menu
-        if (item.CanDownload && item.Type !== 'Book') {
-            commands.push({
-                name: globalize.translate('Download'),
-                id: 'download',
-                icon: 'file_download'
-            });
-
-            commands.push({
-                name: globalize.translate('CopyStreamURL'),
-                id: 'copy-stream',
-                icon: 'content_copy'
-            });
-        }
-    }
-
     if (commands.length) {
         commands.push({
             divider: true
@@ -142,14 +97,6 @@ export async function getCommands(options) {
             name: globalize.translate('MoreMediaInfo'),
             id: 'moremediainfo',
             icon: 'info'
-        });
-    }
-
-    if (!browser.tv && options.share === true && itemHelper.canShare(item, user)) {
-        commands.push({
-            name: globalize.translate('Share'),
-            id: 'share',
-            icon: 'share'
         });
     }
 
@@ -192,89 +139,9 @@ function getResolveFunction(resolve, commandId) {
 function executeCommand(item, id, options) {
     const itemId = item.Id;
     const serverId = item.ServerId;
-    const apiClient = ServerConnections.getApiClient(serverId);
-    const api = ServerConnections.getApi(serverId);
 
     return new Promise(function (resolve, reject) {
         switch (id) {
-            case 'download':
-                import('../scripts/fileDownloader').then((fileDownloader) => {
-                    const url = getLibraryApi(api).getDownloadUrl({ itemId });
-                    fileDownloader.download([{
-                        url,
-                        item,
-                        itemId,
-                        serverId,
-                        title: item.Name,
-                        filename: item.Path.replace(/^.*[\\/]/, '')
-                    }]);
-                    getResolveFunction(getResolveFunction(resolve, id), id)();
-                });
-                break;
-            case 'downloadall': {
-                const downloadItems = items => {
-                    import('../scripts/fileDownloader').then((fileDownloader) => {
-                        const downloads = items
-                            .filter(i => i.CanDownload)
-                            .map(i => {
-                                const url = getLibraryApi(api).getDownloadUrl({ itemId: i.Id });
-                                return {
-                                    url,
-                                    item: i,
-                                    itemId: i.Id,
-                                    serverId,
-                                    title: i.Name,
-                                    filename: i.Path.replace(/^.*[\\/]/, '')
-                                };
-                            });
-
-                        fileDownloader.download(downloads);
-                    });
-                };
-                const downloadSeasons = seasons => {
-                    Promise.all(seasons.map(seasonItem => {
-                        return apiClient.getEpisodes(seasonItem.SeriesId, {
-                            seasonId: seasonItem.Id,
-                            userId: options.user.Id,
-                            Fields: 'CanDownload,Path'
-                        });
-                    }
-                    )).then(seasonData => {
-                        downloadItems(seasonData.map(season => season.Items).flat());
-                    });
-                };
-
-                switch (item.Type) {
-                    case BaseItemKind.BoxSet:
-                    case BaseItemKind.MusicAlbum:
-                        apiClient.getItems(options.user.Id, {
-                            ParentId: item.Id,
-                            Fields: 'CanDownload,Path'
-                        }).then(({ Items }) => downloadItems(Items));
-                        break;
-                    case BaseItemKind.Season:
-                        downloadSeasons([item]);
-                        break;
-                    case BaseItemKind.Series:
-                        apiClient.getSeasons(item.Id, {
-                            userId: options.user.Id,
-                            Fields: 'ItemCounts'
-                        }).then(seasons => downloadSeasons(seasons.Items));
-                }
-
-                getResolveFunction(getResolveFunction(resolve, id), id)();
-                break;
-            }
-            case 'copy-stream': {
-                const downloadHref = getLibraryApi(api).getDownloadUrl({ itemId });
-                copy(downloadHref).then(() => {
-                    toast(globalize.translate('CopyStreamURLSuccess'));
-                }).catch(() => {
-                    prompt(globalize.translate('CopyStreamURL'), downloadHref);
-                });
-                getResolveFunction(resolve, id)();
-                break;
-            }
             case 'moremediainfo':
                 import('./itemMediaInfo/itemMediaInfo').then((itemMediaInfo) => {
                     itemMediaInfo.show(itemId, serverId).then(getResolveFunction(resolve, id), getResolveFunction(resolve, id));
@@ -313,13 +180,6 @@ function executeCommand(item, id, options) {
             case 'instantmix':
                 playbackManager.instantMix(item);
                 getResolveFunction(resolve, id)();
-                break;
-            case 'share':
-                navigator.share({
-                    title: item.Name,
-                    text: item.Overview,
-                    url: `${apiClient.serverAddress()}/web/${appRouter.getRouteUrl(item)}`
-                });
                 break;
             case 'album':
                 appRouter.showItem(item.AlbumId, item.ServerId);
@@ -395,8 +255,7 @@ export async function show(options) {
 
     const id = await actionsheet.show({
         items: commands,
-        positionTo: options.positionTo,
-        resolveOnClick: ['share']
+        positionTo: options.positionTo
     });
 
     return executeCommand(options.item, id, options);

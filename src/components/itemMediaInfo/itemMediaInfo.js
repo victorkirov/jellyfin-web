@@ -10,11 +10,8 @@ import dialogHelper from 'components/dialogHelper/dialogHelper';
 import itemHelper from 'components/itemHelper';
 import layoutManager from 'components/layoutManager';
 import loading from 'components/loading/loading';
-import toast from 'components/toast/toast';
 import globalize from 'lib/globalize';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
-import { copy } from 'scripts/clipboard';
-import dom from 'utils/dom';
 import { getReadableSize } from 'utils/file';
 
 import 'components/formdialog.scss';
@@ -28,12 +25,6 @@ import 'styles/flexstyles.scss';
 
 import template from './itemMediaInfo.template.html';
 
-// Do not add extra spaces between tags - they will be copied into the result
-const copyButtonHtml = layoutManager.tv ? '' :
-    `<button is="paper-icon-button-light" class="btnCopy" title="${globalize.translate('Copy')}" aria-label="${globalize.translate('Copy')}"
-        ><span class="material-icons content_copy" aria-hidden="true"></span></button>`;
-const attributeDelimiterHtml = layoutManager.tv ? '' : '<span class="hide">: </span>';
-
 function setMediaInfo(user, page, item) {
     let html = item.MediaSources.map(version => {
         return getMediaSourceHtml(user, item, version);
@@ -43,25 +34,12 @@ function setMediaInfo(user, page, item) {
     }
     const mediaInfoContent = page.querySelector('#mediaInfoContent');
     mediaInfoContent.innerHTML = html;
-
-    for (const btn of mediaInfoContent.querySelectorAll('.btnCopy')) {
-        btn.addEventListener('click', () => {
-            const infoBlock = dom.parentWithClass(btn, 'mediaInfoStream') || dom.parentWithClass(btn, 'mediaInfoSource') || mediaInfoContent;
-
-            copy(infoBlock.textContent).then(() => {
-                toast(globalize.translate('Copied'));
-            }).catch(() => {
-                console.error('Could not copy text');
-                toast(globalize.translate('CopyFailed'));
-            });
-        });
-    }
 }
 
 function getMediaSourceHtml(user, item, version) {
     let html = '<div class="mediaInfoSource">';
     if (version.Name) {
-        html += `<div><h2 class="mediaInfoStreamType">${escapeHtml(version.Name)}${copyButtonHtml}</h2></div>\n`;
+        html += `<div><h2 class="mediaInfoStreamType">${escapeHtml(version.Name)}</h2></div>\n`;
     }
     if (version.Container) {
         html += `${createAttribute(globalize.translate('MediaInfoContainer'), version.Container)}<br/>`;
@@ -98,7 +76,7 @@ function getMediaSourceHtml(user, item, version) {
         }
 
         const displayType = globalize.translate(translateString);
-        html += `\n<h2 class="mediaInfoStreamType">${displayType}${copyButtonHtml}</h2>\n`;
+        html += `\n<h2 class="mediaInfoStreamType">${displayType}</h2>\n`;
         const attributes = [];
         if (stream.DisplayTitle) {
             attributes.push(createAttribute(globalize.translate('MediaInfoTitle'), stream.DisplayTitle));
@@ -222,7 +200,7 @@ function getMediaSourceHtml(user, item, version) {
 
 // File Paths should be always ltr. The isLtr parameter allows this.
 function createAttribute(label, value, isLtr) {
-    return `<span class="mediaInfoLabel">${label}</span>${attributeDelimiterHtml}<span class="mediaInfoAttribute" ${isLtr && 'dir="ltr"'}>${escapeHtml(value)}</span>\n`;
+    return `<span class="mediaInfoLabel">${label}</span><span class="mediaInfoAttribute" ${isLtr && 'dir="ltr"'}>${escapeHtml(value)}</span>\n`;
 }
 
 function loadMediaInfo(itemId, serverId) {

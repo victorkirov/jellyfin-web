@@ -5,7 +5,6 @@
 import { getLibraryApi } from '@jellyfin/sdk/lib/utils/api/library-api';
 import screenfull from 'screenfull';
 
-import { AppFeature } from 'constants/appFeature';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import { randomInt } from 'utils/number';
 
@@ -179,12 +178,6 @@ export default function (options) {
             html += '<div class="slideshowBottomBar hide">';
 
             html += getIcon('play_arrow', 'btnSlideshowPause slideshowButton', true, true);
-            if (appHost.supports(AppFeature.FileDownload) && slideshowOptions?.user.Policy.EnableContentDownloading) {
-                html += getIcon('file_download', 'btnDownload slideshowButton', true);
-            }
-            if (appHost.supports(AppFeature.Sharing)) {
-                html += getIcon('share', 'btnShare slideshowButton', true);
-            }
             if (screenfull.isEnabled) {
                 html += getIcon('fullscreen', 'btnFullscreen', true);
                 html += getIcon('fullscreen_exit', 'btnFullscreenExit hide', true);
@@ -208,16 +201,6 @@ export default function (options) {
             const btnPause = dialog.querySelector('.btnSlideshowPause');
             if (btnPause) {
                 btnPause.addEventListener('click', getClickHandler(playPause));
-            }
-
-            const btnDownload = dialog.querySelector('.btnDownload');
-            if (btnDownload) {
-                btnDownload.addEventListener('click', getClickHandler(download));
-            }
-
-            const btnShare = dialog.querySelector('.btnShare');
-            if (btnShare) {
-                btnShare.addEventListener('click', getClickHandler(share));
             }
 
             const btnFullscreen = dialog.querySelector('.btnFullscreen');
@@ -431,50 +414,6 @@ export default function (options) {
         html += '</div>';
 
         return html;
-    }
-
-    /**
-     * Fetches the information of the currently displayed slide.
-     * @returns {null|{itemId: string, shareUrl: string, serverId: string, url: string}} Object containing the information of the currently displayed slide.
-     */
-    function getCurrentImageInfo() {
-        if (swiperInstance) {
-            const slide = document.querySelector('.swiper-slide-active');
-
-            if (slide) {
-                return {
-                    url: slide.getAttribute('data-original'),
-                    shareUrl: slide.getAttribute('data-original'),
-                    itemId: slide.getAttribute('data-itemid'),
-                    serverId: slide.getAttribute('data-serverid')
-                };
-            }
-            return null;
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * Starts a download for the currently displayed slide.
-     */
-    function download() {
-        const imageInfo = getCurrentImageInfo();
-
-        import('../../scripts/fileDownloader').then((fileDownloader) => {
-            fileDownloader.download([imageInfo]);
-        });
-    }
-
-    /**
-     * Shares the currently displayed slide using the browser's built-in sharing feature.
-     */
-    function share() {
-        const imageInfo = getCurrentImageInfo();
-
-        navigator.share({
-            url: imageInfo.shareUrl
-        });
     }
 
     /**

@@ -33,7 +33,6 @@ import datetime from 'scripts/datetime';
 import dom from 'utils/dom';
 import { renderMarkdown } from 'utils/markdown';
 import { renderComponent } from 'utils/reactUtils';
-import { download } from 'scripts/fileDownloader';
 import libraryMenu from 'scripts/libraryMenu';
 import * as userSettings from 'scripts/settings/userSettings';
 import Events from 'utils/events';
@@ -105,8 +104,7 @@ function getContextMenuOptions(item, user, button) {
         positionTo: button,
         shuffle: false,
         instantMix: false,
-        user: user,
-        share: true
+        user: user
     };
 }
 
@@ -556,10 +554,6 @@ function reloadFromItem(instance, page, params, item, user) {
 
     setPeopleHeader(page, item);
     loading.hide();
-
-    if (item.Type === 'Book' && item.CanDownload && appHost.supports(AppFeature.FileDownload)) {
-        hideAll(page, 'btnDownload', true);
-    }
 
     autoFocus(page);
 }
@@ -1895,24 +1889,6 @@ export default function (view, params) {
         playTrailer();
     }
 
-    function onDownloadClick() {
-        const api = ServerConnections.getApi(currentItem.ServerId);
-        if (!api) {
-            console.error('[ItemDetails] no Api instance available for server', currentItem.ServerId);
-            return;
-        }
-
-        const url = getLibraryApi(api).getDownloadUrl({ itemId: currentItem.Id });
-        download([{
-            url,
-            item: currentItem,
-            itemId: currentItem.Id,
-            serverId: currentItem.ServerId,
-            title: currentItem.Name,
-            filename: currentItem.Path.replace(/^.*[\\/]/, '')
-        }]);
-    }
-
     function onMoreCommandsClick() {
         const button = this;
         let selectedItem = view.querySelector('.selectSource').value || currentItem.Id;
@@ -1963,7 +1939,6 @@ export default function (view, params) {
         bindAll(view, '.btnInstantMix', 'click', onInstantMixClick);
         bindAll(view, '.btnShuffle', 'click', onShuffleClick);
         bindAll(view, '.btnPlayTrailer', 'click', onPlayTrailerClick);
-        bindAll(view, '.btnDownload', 'click', onDownloadClick);
         view.querySelector('.trackSelections').addEventListener('submit', onTrackSelectionsSubmit);
         bindAll(view, '.btnMoreCommands', 'click', onMoreCommandsClick);
         view.querySelector('.selectSource').addEventListener('change', function () {
