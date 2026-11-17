@@ -5,7 +5,7 @@ import './style.scss';
 
 const worker = new Worker();
 const targetDic = {};
-const blurhashEnabled = new WeakMap();
+const imageOptions = new WeakMap();
 const blurhashTargets = new WeakSet();
 worker.addEventListener(
     'message',
@@ -104,7 +104,8 @@ export function fillImage(entry) {
     }
 
     if (entry.isIntersecting) {
-        if (blurhashEnabled.get(target)) {
+        const options = imageOptions.get(target);
+        if (options?.enableBlurhash) {
             const hash = target.getAttribute('data-blurhash');
             if (!target.classList.contains('blurhashed') && !target.classList.contains('non-blurhashable')) {
                 if (hash) {
@@ -115,7 +116,7 @@ export function fillImage(entry) {
             }
         }
         if (source) {
-            fillImageElement(target, source);
+            fillImageElement(target, source, options?.enableFastFadein);
         }
     } else if (!source) {
         emptyImageElement(target);
@@ -136,7 +137,7 @@ function onAnimationEnd(event) {
     elem.removeEventListener('animationend', onAnimationEnd);
 }
 
-function fillImageElement(elem, url) {
+function fillImageElement(elem, url, enableFastFadein = userSettings.enableFastFadein()) {
     if (url === undefined) {
         throw new TypeError('url cannot be undefined');
     }
@@ -156,7 +157,7 @@ function fillImageElement(elem, url) {
             }
             elem.removeAttribute('data-src');
 
-            if (userSettings.enableFastFadein()) {
+            if (enableFastFadein) {
                 elem.classList.add('lazy-image-fadein-fast');
             } else {
                 elem.classList.add('lazy-image-fadein');
@@ -192,9 +193,12 @@ function emptyImageElement(elem) {
 }
 
 export function lazyChildren(elem) {
-    const enableBlurhash = userSettings.enableBlurhash();
+    const options = {
+        enableBlurhash: userSettings.enableBlurhash(),
+        enableFastFadein: userSettings.enableFastFadein()
+    };
     for (const lazyElem of elem.querySelectorAll('.lazy')) {
-        blurhashEnabled.set(lazyElem, enableBlurhash);
+        imageOptions.set(lazyElem, options);
     }
 
     lazyLoader.lazyChildren(elem, fillImage);
