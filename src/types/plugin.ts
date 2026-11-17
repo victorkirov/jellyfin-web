@@ -50,3 +50,27 @@ export abstract class PreplayInterceptPlugin implements Plugin {
      */
     abstract intercept(options: InterceptOptions): Promise<void>;
 }
+
+/** Capabilities exposed by legacy plugins, including optional media operations. */
+export type PlaybackCandidate = {
+    Id?: string | null;
+    MediaType?: string | null;
+    Url?: string | null;
+};
+
+export type RegistryPlugin = Plugin & {
+    packageName?: string;
+    installUrl?: string;
+    baseUrl?: string;
+    supportsAnonymous?: boolean;
+    getTranslations?: () => { lang: string; path: string }[];
+    canPlayMediaType?: (mediaType?: string | null) => boolean;
+    canPlayItem?: (item: PlaybackCandidate) => boolean;
+    canPlayUrl?: (url: string) => boolean;
+    load?: () => Promise<RegistryPlugin | string>;
+    show?: () => void | Promise<void>;
+    hide?: () => void | Promise<void>;
+};
+
+export type PluginConstructor = new (dependencies?: Record<string, unknown>) => RegistryPlugin;
+export type PluginSpec = string | Promise<{ default: PluginConstructor }>;

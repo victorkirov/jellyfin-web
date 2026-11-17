@@ -14,6 +14,9 @@ vi.mock('./dashboard', () => ({}));
 
 import { PluginManager } from './pluginManager';
 import Events from '../utils/events';
+import type { RegistryPlugin } from '../types/plugin';
+
+const stubPlugin = { id: 'test', name: 'test', type: 'test' };
 
 describe('deferred plugins', () => {
     let manager: PluginManager;
@@ -41,14 +44,14 @@ describe('deferred plugins', () => {
         for (const player of ['htmlAudioPlayer', 'htmlVideoPlayer', 'photoPlayer', 'youtubePlayer']) {
             await manager.registerDeferredPlugin(player + '/plugin');
         }
-        const load = vi.spyOn(manager, 'loadPlugin').mockResolvedValue({});
+        const load = vi.spyOn(manager, 'loadPlugin').mockResolvedValue(stubPlugin);
         await Promise.all([manager.prepareForPlayback([item]), manager.prepareForPlayback([item])]);
         expect(load).toHaveBeenCalledExactlyOnceWith(name + '/plugin');
     });
 
     it('retries failed loads and rejects playback preparation', async () => {
         await manager.registerDeferredPlugin('htmlVideoPlayer/plugin');
-        const load = vi.spyOn(manager, 'loadPlugin').mockRejectedValueOnce(new Error('offline')).mockResolvedValue({});
+        const load = vi.spyOn(manager, 'loadPlugin').mockRejectedValueOnce(new Error('offline')).mockResolvedValue(stubPlugin);
         await expect(manager.prepareForPlayback([{ Id: 'video', MediaType: 'Video' }])).rejects.toThrow('offline');
         await manager.prepareForPlayback([{ Id: 'video', MediaType: 'Video' }]);
         expect(load).toHaveBeenCalledTimes(2);
@@ -56,25 +59,27 @@ describe('deferred plugins', () => {
 
     it('waits for screensaver implementation and cancels activation when hidden', async () => {
         const descriptor = await manager.registerDeferredPlugin('logoScreensaver/plugin');
-        const plugin = { show: vi.fn(), hide: vi.fn().mockResolvedValue(undefined) };
-        let finish!: (value: typeof plugin) => void;
+        if (typeof descriptor === 'string') throw new Error('Expected a deferred descriptor');
+        const plugin = { ...stubPlugin, show: vi.fn(), hide: vi.fn().mockResolvedValue(undefined) };
+        let finish!: (value: RegistryPlugin | string | PromiseLike<RegistryPlugin | string>) => void;
         vi.spyOn(manager, 'loadPlugin').mockImplementation(() => new Promise(resolve => {
             finish = resolve;
         }));
-        descriptor.show();
+        void descriptor.show!();
         expect(plugin.show).not.toHaveBeenCalled();
-        await descriptor.hide();
+        await descriptor.hide!();
         finish(plugin);
         await vi.waitFor(() => expect(manager.loadPlugin).toHaveBeenCalledOnce());
         expect(plugin.show).not.toHaveBeenCalled();
-        descriptor.show();
+        void descriptor.show!();
         await vi.waitFor(() => expect(plugin.show).toHaveBeenCalledOnce());
-        await descriptor.hide();
+        await descriptor.hide!();
         expect(plugin.hide).toHaveBeenCalledOnce();
     });
 
     it('hydrates metadata with a real instance and emits registration for playback', async () => {
         const descriptor = await manager.registerDeferredPlugin('htmlVideoPlayer/plugin');
+        if (typeof descriptor === 'string') throw new Error('Expected a deferred descriptor');
         const show = vi.fn();
         const registered = vi.fn();
         Events.on(manager, 'registered', registered);
@@ -85,7 +90,7 @@ describe('deferred plugins', () => {
         }
         window['htmlVideoPlayer/plugin' as keyof Window] = (() => NativePlayer) as never;
         try {
-            const plugin = await descriptor.load();
+            const plugin = await descriptor.load!();
             expect(plugin).toBeInstanceOf(NativePlayer);
             expect(registered).toHaveBeenCalledWith({ type: 'registered' }, plugin);
             expect(manager.ofType('mediaplayer')).toEqual([plugin]);
@@ -96,7 +101,7 @@ describe('deferred plugins', () => {
     });
 
     it('loads required interceptors and NativeShell definitions eagerly', async () => {
-        const load = vi.spyOn(manager, 'loadPlugin').mockResolvedValue({});
+        const load = vi.spyOn(manager, 'loadPlugin').mockResolvedValue(stubPlugin);
         await manager.registerDeferredPlugin('playAccessValidation/plugin');
         window['htmlVideoPlayer/plugin' as keyof Window] = vi.fn() as never;
         try {

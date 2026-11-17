@@ -1,4 +1,5 @@
-import Events from '../utils/events.ts';
+import Events from '../utils/events';
+import type { RegistryPlugin, PluginSpec, PluginConstructor, PlaybackCandidate } from '../types/plugin';
 import globalize from '../lib/globalize';
 import loading from './loading/loading';
 import appSettings from '../scripts/settings/appSettings';
@@ -12,29 +13,30 @@ import { ServerConnections } from 'lib/jellyfin-apiclient';
 import * as dashboard from './dashboard';
 
 export class PluginManager {
-    pluginsList = [];
+    pluginsList: RegistryPlugin[] = [];
 
     get plugins() {
         return this.pluginsList;
     }
 
-    #loadStrings(plugin) {
+    private loadStrings(plugin: RegistryPlugin) {
         const strings = plugin.getTranslations ? plugin.getTranslations() : [];
         return globalize.loadStrings({
-            name: plugin.id || plugin.packageName,
+            // Dictionary names were already coerced to object keys by globalize.
+            name: String(plugin.id || plugin.packageName),
             strings: strings
         });
     }
 
-    async #registerPlugin(plugin) {
-        this.#register(plugin);
+    private async registerPlugin(plugin: RegistryPlugin) {
+        this.register(plugin);
 
         // Skins load translations when selected.
-        if (plugin.type !== 'skin') await this.#loadStrings(plugin);
+        if (plugin.type !== 'skin') await this.loadStrings(plugin);
         return plugin;
     }
 
-    async #preparePlugin(pluginSpec, plugin) {
+    private async preparePlugin(pluginSpec: PluginSpec, plugin: RegistryPlugin) {
         if (typeof pluginSpec === 'string') {
             // See if it's already installed
             const existing = this.plugins.filter(function (p) {
@@ -51,11 +53,11 @@ export class PluginManager {
             plugin.baseUrl = pluginSpec.substring(0, separatorIndex);
         }
 
-        return this.#registerPlugin(plugin);
+        return this.registerPlugin(plugin);
     }
 
-    registerDeferredPlugin(pluginSpec) {
-        const definitions = {
+    registerDeferredPlugin(pluginSpec: PluginSpec) {
+        const definitions: Record<string, [string, string, string?]> = {
             htmlAudioPlayer: ['htmlaudioplayer', 'Html Audio Player', 'Audio'],
             htmlVideoPlayer: ['htmlvideoplayer', 'Html Video Player', 'Video'],
             photoPlayer: ['photoplayer', 'Photo Player', 'Photo'],
@@ -65,18 +67,18 @@ export class PluginManager {
         };
         const definition = typeof pluginSpec === 'string' && pluginSpec.endsWith('/plugin') ?
             definitions[pluginSpec.slice(0, -7)] : undefined;
-        if (!definition || pluginSpec in window) return this.loadPlugin(pluginSpec);
+        if (!definition || typeof pluginSpec !== 'string' || pluginSpec in window) return this.loadPlugin(pluginSpec);
         const [id, name, mediaTypes] = definition;
-        let pending;
-        let implementation;
+        let pending: Promise<RegistryPlugin | string> | undefined;
+        let implementation: RegistryPlugin | string | undefined;
         let activation = 0;
-        const descriptor = {
+        const descriptor: RegistryPlugin & Required<Pick<RegistryPlugin, 'load' | 'show' | 'hide'>> = {
             id,
             name,
             type: mediaTypes ? 'mediaplayer' : 'screensaver',
             priority: 1,
             supportsAnonymous: id === 'logoscreensaver',
-            canPlayMediaType: type => mediaTypes?.toLowerCase().split(',').includes((type || '').toLowerCase()),
+            canPlayMediaType: (type: string | null | undefined) => !!mediaTypes?.toLowerCase().split(',').includes((type || '').toLowerCase()),
             canPlayItem: item => id !== 'youtubeplayer' && !!item.Id,
             canPlayUrl: url => id === 'youtubeplayer' && url.toLowerCase().includes('youtube.com'),
             load: () => {
@@ -94,50 +96,50 @@ export class PluginManager {
             show: () => {
                 const currentActivation = ++activation;
                 return descriptor.load().then(plugin => {
-                    if (currentActivation === activation) return plugin.show();
+                    if (currentActivation === activation) return (plugin as RegistryPlugin).show?.();
                 });
             },
             hide: () => {
                 activation++;
-                return implementation ? implementation.hide() : Promise.resolve();
+                return implementation ? (implementation as RegistryPlugin).hide?.() : Promise.resolve();
             }
         };
         this.pluginsList.push(descriptor);
         return Promise.resolve(descriptor);
     }
 
-    canPlayDeferred(item) {
+    canPlayDeferred(item: PlaybackCandidate) {
         return this.plugins.some(plugin => plugin.load && plugin.type === 'mediaplayer'
-            && plugin.canPlayMediaType(item.MediaType)
-            && (item.Id ? plugin.canPlayItem(item) : item.Url && plugin.canPlayUrl(item.Url)));
+            && plugin.canPlayMediaType?.(item.MediaType)
+            && (item.Id ? plugin.canPlayItem?.(item) : item.Url && plugin.canPlayUrl?.(item.Url)));
     }
 
-    async prepareForPlayback(items) {
+    async prepareForPlayback(items: PlaybackCandidate[]) {
         const plugins = this.plugins.filter(plugin => plugin.load && plugin.type === 'mediaplayer'
-            && items.some(item => plugin.canPlayMediaType(item.MediaType)
-                && (item.Id ? plugin.canPlayItem(item) : item.Url && plugin.canPlayUrl(item.Url))));
-        await Promise.all(plugins.map(plugin => plugin.load()));
+            && items.some(item => plugin.canPlayMediaType?.(item.MediaType)
+                && (item.Id ? plugin.canPlayItem?.(item) : item.Url && plugin.canPlayUrl?.(item.Url))));
+        await Promise.all(plugins.map(plugin => plugin.load?.()));
     }
 
-    async loadPlugin(pluginSpec) {
-        let plugin;
+    async loadPlugin(pluginSpec: PluginSpec): Promise<RegistryPlugin | string> {
+        let plugin: RegistryPlugin;
 
         if (typeof pluginSpec === 'string') {
             if (pluginSpec in window) {
                 console.log(`Loading plugin (via window): ${pluginSpec}`);
 
-                const pluginDefinition = await window[pluginSpec];
+                const pluginDefinition = await (window as unknown as Record<string, unknown>)[pluginSpec];
                 if (typeof pluginDefinition !== 'function') {
                     throw new TypeError('Plugin definitions in window have to be an (async) function returning the plugin class');
                 }
 
-                const PluginClass = await pluginDefinition();
+                const PluginClass: unknown = await pluginDefinition();
                 if (typeof PluginClass !== 'function') {
                     throw new TypeError(`Plugin definition doesn't return a class for '${pluginSpec}'`);
                 }
 
                 // init plugin and pass basic dependencies
-                plugin = new PluginClass({
+                plugin = new (PluginClass as PluginConstructor)({
                     events: Events,
                     loading,
                     appSettings,
@@ -156,34 +158,32 @@ export class PluginManager {
                 const pluginResult = await import(/* webpackChunkName: "[request]" */ `../plugins/${pluginSpec}`);
                 plugin = new pluginResult.default;
             }
-        } else if (pluginSpec.then) {
+        } else {
             console.debug('Loading plugin (via promise/async function)');
 
             const pluginResult = await pluginSpec;
             plugin = new pluginResult.default;
-        } else {
-            throw new TypeError('Plugins have to be a Promise that resolves to a plugin builder function');
         }
 
-        return this.#preparePlugin(pluginSpec, plugin);
+        return this.preparePlugin(pluginSpec, plugin);
     }
 
     // In lieu of automatic discovery, plugins will register dynamic objects
     // Each object will have the following properties:
     // name
     // type (skin, screensaver, etc)
-    #register(obj) {
+    private register(obj: RegistryPlugin) {
         const index = this.pluginsList.findIndex(plugin => plugin.load && plugin.id === obj.id);
         if (index === -1) this.pluginsList.push(obj);
         else this.pluginsList[index] = obj;
         Events.trigger(this, 'registered', [obj]);
     }
 
-    ofType(type) {
+    ofType(type: string) {
         return this.pluginsList.filter(plugin => plugin.type === type);
     }
 
-    firstOfType(type) {
+    firstOfType(type: string) {
         // Get all plugins of the specified type
         return this.ofType(type)
             // Return the plugin with the "highest" (lowest numeric value) priority
