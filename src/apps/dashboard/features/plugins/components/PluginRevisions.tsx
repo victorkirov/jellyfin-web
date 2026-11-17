@@ -25,7 +25,12 @@ const PluginRevisions: FC<PluginRevisionsProps> = ({
     onInstall
 }) => (
     pluginDetails?.versions?.map(version => (
-        <Accordion key={version.checksum}>
+        <Accordion
+            key={version.checksum}
+            slotProps={{
+                transition: { unmountOnExit: true }
+            }}
+        >
             <AccordionSummary
                 expandIcon={<ExpandMore />}
             >

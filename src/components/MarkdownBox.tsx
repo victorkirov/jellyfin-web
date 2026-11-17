@@ -1,6 +1,6 @@
 import Box from '@mui/material/Box/Box';
 import DOMPurify from 'dompurify';
-import React, { type FC } from 'react';
+import React, { type FC, useMemo } from 'react';
 
 import { renderMarkdown } from 'utils/markdown';
 
@@ -13,26 +13,30 @@ interface MarkdownBoxProps {
 const MarkdownBox: FC<MarkdownBoxProps> = ({
     markdown,
     fallback
-}) => (
-    <Box
-        dangerouslySetInnerHTML={
-            markdown ?
-                { __html: DOMPurify.sanitize(renderMarkdown(markdown)) } :
-                undefined
-        }
-        sx={{
-            '> :first-child /* emotion-disable-server-rendering-unsafe-selector-warning-please-do-not-use-this-the-warning-exists-for-a-reason */': {
-                marginTop: 0,
-                paddingTop: 0
-            },
-            '> :last-child': {
-                marginBottom: 0,
-                paddingBottom: 0
-            }
-        }}
-    >
-        {markdown ? undefined : fallback}
-    </Box>
-);
+}) => {
+    const html = useMemo(() => (
+        markdown ?
+            { __html: DOMPurify.sanitize(renderMarkdown(markdown)) } :
+            undefined
+    ), [markdown]);
+
+    return (
+        <Box
+            dangerouslySetInnerHTML={html}
+            sx={{
+                '> :first-child /* emotion-disable-server-rendering-unsafe-selector-warning-please-do-not-use-this-the-warning-exists-for-a-reason */': {
+                    marginTop: 0,
+                    paddingTop: 0
+                },
+                '> :last-child': {
+                    marginBottom: 0,
+                    paddingBottom: 0
+                }
+            }}
+        >
+            {markdown ? undefined : fallback}
+        </Box>
+    );
+};
 
 export default MarkdownBox;
