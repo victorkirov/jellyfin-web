@@ -98,7 +98,10 @@ const ViewManagerPage: FunctionComponent<ViewManagerPageProps> = ({
                 });
         };
 
-        loadPage();
+        loadPage()
+            .catch(err => {
+                console.error('[ViewManagerPage] failed to load view', err);
+            });
     },
     // location.state and navigationType are NOT included as dependencies here since dialogs will update state while the current view stays the same
     // eslint-disable-next-line react-hooks/exhaustive-deps
