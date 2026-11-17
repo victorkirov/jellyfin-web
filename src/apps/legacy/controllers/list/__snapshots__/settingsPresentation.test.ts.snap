@@ -1,0 +1,15 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`List settings to card captions > retains the caption behavior of saved '' 1`] = `""`;
+
+exports[`List settings to card captions > retains the caption behavior of saved 'auto' 1`] = `"<div class='cardText cardTextCentered cardText-first'><bdi>Saved title</bdi></div><div class='cardText cardTextCentered cardText-secondary'><bdi>2020</bdi></div>"`;
+
+exports[`List settings to card captions > retains the caption behavior of saved 'false' 1`] = `""`;
+
+exports[`List settings to card captions > retains the caption behavior of saved 'true' 1`] = `"<div class='cardText cardTextCentered cardText-first'><bdi>Saved title</bdi></div><div class='cardText cardTextCentered cardText-secondary'><bdi>2020</bdi></div>"`;
+
+exports[`List settings to card captions > retains the caption behavior of saved 'unexpected' 1`] = `"<div class='cardText cardTextCentered cardText-first'><bdi>Saved title</bdi></div><div class='cardText cardTextCentered cardText-secondary'><bdi>2020</bdi></div>"`;
+
+exports[`List settings to card captions > retains the caption behavior of saved null 1`] = `""`;
+
+exports[`List settings to card captions > retains the caption behavior of saved undefined 1`] = `""`;

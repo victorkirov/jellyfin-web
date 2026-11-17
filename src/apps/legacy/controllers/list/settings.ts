@@ -51,8 +51,7 @@ export class ListSettings {
 
     getSortValues() {
         const basekey = this.getSettingsKey();
-        // The legacy settings adapter returns Object for its two string fields.
-        return userSettings.getSortValuesLegacy(basekey, this.getDefaultSortBy()) as { sortBy: string; sortOrder: string };
+        return userSettings.getSortValuesLegacy(basekey, this.getDefaultSortBy());
     }
 
     getDefaultSortBy() {
@@ -273,7 +272,7 @@ export class ListSettings {
         const basekey = this.getSettingsKey();
         const params = this.params;
         const item = this.currentItem;
-        let showTitle = userSettings.get(basekey + '-showTitle');
+        let showTitle: boolean | string | null | undefined = userSettings.get(basekey + '-showTitle');
 
         if (showTitle === 'true') {
             showTitle = true;

@@ -44,21 +44,22 @@ function getImageOptions(settings: ViewSettings, params: ListParams): CardOption
 
 function setProgramCaptions(posterOptions: CardOptions, params: ListParams, settings: ViewSettings) {
     let lines: number;
+    const showTitle = Boolean(settings.showTitle);
     const isRecording = params.type === 'Recordings';
-    lines = settings.showTitle ? 1 : 0;
-    const showParentTitle = settings.showTitle && params.IsMovie !== 'true';
+    lines = showTitle ? 1 : 0;
+    const showParentTitle = showTitle && params.IsMovie !== 'true';
 
     if (showParentTitle) {
         lines++;
     }
 
-    const showAirTime = settings.showTitle && !isRecording;
+    const showAirTime = showTitle && !isRecording;
 
     if (showAirTime) {
         lines++;
     }
 
-    const showYear = settings.showTitle && params.IsMovie === 'true' && isRecording;
+    const showYear = showTitle && params.IsMovie === 'true' && isRecording;
 
     if (showYear) {
         lines++;
@@ -79,26 +80,27 @@ function setProgramCaptions(posterOptions: CardOptions, params: ListParams, sett
 }
 
 function setCaptionOptions(posterOptions: CardOptions, params: ListParams, settings: ViewSettings) {
+    const showParentTitle = Boolean(settings.showTitle);
     let lines = settings.showTitle ? 2 : 0;
     if (params.type === 'nextup') {
-        posterOptions.showParentTitle = settings.showTitle;
+        posterOptions.showParentTitle = showParentTitle;
     } else if (params.type === 'Person') {
         posterOptions.showYear = false;
         posterOptions.showParentTitle = false;
         lines = 1;
     } else if (params.type === 'Audio') {
-        posterOptions.showParentTitle = settings.showTitle;
+        posterOptions.showParentTitle = showParentTitle;
     } else if (params.type === 'MusicAlbum') {
-        posterOptions.showParentTitle = settings.showTitle;
+        posterOptions.showParentTitle = showParentTitle;
     } else if (params.type === 'Episode') {
-        posterOptions.showParentTitle = settings.showTitle;
+        posterOptions.showParentTitle = showParentTitle;
     } else if (params.type === 'MusicArtist') {
         posterOptions.showYear = false;
         lines = 1;
     } else if (params.type === 'Programs') {
         lines = setProgramCaptions(posterOptions, params, settings);
     } else {
-        posterOptions.showParentTitle = settings.showTitle;
+        posterOptions.showParentTitle = showParentTitle;
     }
 
     return lines;
@@ -116,8 +118,8 @@ export function getItemsHtml(self: ListSettings, params: ListParams, items: Item
     const posterOptions: CardOptions & { items: ItemDto[] } = {
         ...getImageOptions(settings, params),
         items,
-        showTitle: settings.showTitle,
-        showYear: settings.showTitle,
+        showTitle: settings.showTitle ?? undefined,
+        showYear: settings.showTitle ?? undefined,
         centerText: true,
         coverImage: true,
         overlayPlayButton: false,
