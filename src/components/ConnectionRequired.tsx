@@ -13,9 +13,7 @@ enum AccessLevel {
     /** No access restrictions */
     Public = 'public',
     /** Requires a valid user session */
-    User = 'user',
-    /** Requires the startup wizard to NOT be completed */
-    Wizard = 'wizard'
+    User = 'user'
 };
 
 type AccessLevelValue = `${AccessLevel}`;
@@ -98,27 +96,9 @@ const ConnectionRequired: FunctionComponent<ConnectionRequiredProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ navigateIfNotThere, location.pathname, navigate ]);
 
-    const handleWizard = useCallback(async (firstConnection: ConnectResponse | null) => {
-        const apiClient = firstConnection?.ApiClient || ServerConnections.currentApiClient();
-        if (!apiClient) {
-            throw new Error('No ApiClient available');
-        }
-
-        const systemInfo = await fetchPublicSystemInfo(apiClient);
-        if (systemInfo?.StartupWizardCompleted) {
-            console.info('[ConnectionRequired] startup wizard is complete, redirecting home');
-            navigate(BounceRoutes.Home);
-            return;
-        }
-
-        // Update the current ApiClient
-        ServerConnections.setLocalApiClient(apiClient);
-        setIsLoading(false);
-    }, [ navigate ]);
-
-    const handleIncompleteWizard = useCallback(async (firstConnection: ConnectResponse) => {
+    const handleServerSignIn = useCallback(async (firstConnection: ConnectResponse) => {
         if (firstConnection.State === ConnectionState.ServerSignIn) {
-            // Verify the wizard is complete
+            // Verify server setup is complete
             try {
                 const systemInfo = await fetchPublicSystemInfo(firstConnection.ApiClient);
                 if (!systemInfo?.StartupWizardCompleted) {
@@ -129,7 +109,7 @@ const ConnectionRequired: FunctionComponent<ConnectionRequiredProps> = ({
                     return;
                 }
             } catch (ex) {
-                console.error('[ConnectionRequired] checking wizard status failed', ex);
+                console.error('[ConnectionRequired] checking server setup failed', ex);
                 setErrorState(ConnectionState.Unavailable);
                 return;
             }
@@ -195,17 +175,12 @@ const ConnectionRequired: FunctionComponent<ConnectionRequiredProps> = ({
 
             if (firstConnection && ERROR_STATES.includes(firstConnection.State)) {
                 setErrorState(firstConnection.State);
-            } else if (level === AccessLevel.Wizard) {
-                handleWizard(firstConnection)
-                    .catch(err => {
-                        console.error('[ConnectionRequired] could not validate wizard status', err);
-                    });
             } else if (
                 firstConnection && firstConnection.State !== ConnectionState.SignedIn && !apiClient?.isLoggedIn()
             ) {
-                handleIncompleteWizard(firstConnection)
+                handleServerSignIn(firstConnection)
                     .catch(err => {
-                        console.error('[ConnectionRequired] could not start wizard', err);
+                        console.error('[ConnectionRequired] could not check server setup', err);
                     });
             } else {
                 validateUserAccess()
@@ -217,7 +192,7 @@ const ConnectionRequired: FunctionComponent<ConnectionRequiredProps> = ({
             console.error('[ConnectionRequired] failed to connect', err);
             setErrorState(ConnectionState.Unavailable);
         });
-    }, [handleIncompleteWizard, handleWizard, level, location.pathname, validateUserAccess]);
+    }, [handleServerSignIn, level, location.pathname, validateUserAccess]);
 
     if (errorState) {
         return <ConnectionErrorPage state={errorState} />;

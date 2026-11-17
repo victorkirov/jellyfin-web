@@ -8,7 +8,5 @@ export enum AppType {
     /** The legacy app. */
     Legacy = 'legacy',
     /** The modern React app. */
-    Modern = 'modern',
-    /** The startup wizard app. */
-    Wizard = 'wizard'
+    Modern = 'modern'
 }

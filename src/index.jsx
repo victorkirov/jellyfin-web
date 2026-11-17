@@ -21,7 +21,6 @@ import { initialize as initializeAutoCast } from 'scripts/autocast';
 import browser from './scripts/browser';
 import keyboardNavigation from './scripts/keyboardNavigation';
 import { getPlugins } from './scripts/settings/webSettings';
-import taskButton from './scripts/taskbutton';
 import { pageClassOn, serverAddress } from './utils/dashboard';
 import Events from './utils/events';
 import { updateApiClientSdk } from 'utils/jellyfin-apiclient/compat';
@@ -58,7 +57,6 @@ build: ${__JF_BUILD_VERSION__}`);
 
     // Register globals used in plugins
     window.Events = Events;
-    window.TaskButton = taskButton;
 
     // Register handlers to update header classes
     pageClassOn('viewshow', 'standalonePage', function () {

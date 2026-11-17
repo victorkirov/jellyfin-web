@@ -134,14 +134,6 @@ div[data-role=controlgroup] a.ui-btn-active {
     height: 36px;
 }
 
-.wizardContent h2 img {
-    height: 2.5em;
-    vertical-align: middle;
-    margin-right: 0.5em;
-    position: relative;
-    top: -0.3em;
-}
-
 .header .imageLink {
     display: inline-block;
 }
@@ -247,21 +239,6 @@ div[data-role=controlgroup] a.ui-btn-active {
     .activeRecordingItems > .card {
         width: 25%;
     }
-}
-
-.wizardContent {
-    max-width: 62em;
-    padding: 0.5em 2em 1em;
-    margin: 0 auto;
-    background: #fff;
-}
-
-.wizardNavigation {
-    text-align: right;
-}
-
-.wizardContent form {
-    max-width: 100%;
 }
 
 .scheduledTaskPaperIconItem {

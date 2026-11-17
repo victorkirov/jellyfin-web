@@ -10,7 +10,6 @@ import {
 import { DASHBOARD_APP_PATHS, DASHBOARD_APP_ROUTES } from 'apps/dashboard/routes/routes';
 import { APP_ROUTES as MODERN_APP_ROUTES } from 'apps/modern/routes/routes';
 import { APP_ROUTES as LEGACY_APP_ROUTES } from 'apps/legacy/routes/routes';
-import { WIZARD_APP_ROUTES } from 'apps/wizard/routes/routes';
 import AppHeader from 'components/AppHeader';
 import Backdrop from 'components/Backdrop';
 import ColorSchemeSync from 'components/ColorSchemeSync';
@@ -26,7 +25,6 @@ const router = createHashRouter([
         children: [
             ...(layoutManager.modern ? MODERN_APP_ROUTES : LEGACY_APP_ROUTES),
             ...DASHBOARD_APP_ROUTES,
-            ...WIZARD_APP_ROUTES,
             {
                 path: '!/*',
                 Component: BangRedirect

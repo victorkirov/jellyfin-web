@@ -21,13 +21,7 @@ export const PUBLIC_PATHS = [
     '/selectserver',
     '/login',
     '/forgotpassword',
-    '/forgotpasswordpin',
-    '/wizardremoteaccess',
-    '/wizardfinish',
-    '/wizardlibrary',
-    '/wizardsettings',
-    '/wizardstart',
-    '/wizarduser'
+    '/forgotpasswordpin'
 ];
 
 class AppRouter {
@@ -248,10 +242,6 @@ class AppRouter {
 
         if (item === 'settings') {
             return '#/mypreferencesmenu';
-        }
-
-        if (item === 'wizard') {
-            return '#/wizardstart';
         }
 
         if (item === 'manageserver') {
