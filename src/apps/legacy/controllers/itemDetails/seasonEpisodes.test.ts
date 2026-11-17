@@ -103,11 +103,24 @@ describe('Compact season episodes', () => {
         expect(page.querySelector('[data-id="episode-3"]')).toBe(rows[1]);
     });
 
-    it('retains the separate image resume target in the existing pointer layout', () => {
-        layout.tv = false;
+    it('opens episode details when the Magic Remote pointer clicks the row image', () => {
         const container = page.querySelector<HTMLElement>('.itemsContainer')!;
         container.innerHTML = listView.getListViewHtml({ items: [items[1]], imageSize: 'episode', action: ItemAction.Link, imagePlayButton: true, enableUserDataButtons: false, moreButton: false });
-        container.querySelector<HTMLElement>('.listItemImageButton')!.click();
-        expect(play).toHaveBeenCalledWith(expect.objectContaining({ ids: ['episode-3'], startPositionTicks: 9000000000 }));
+        const row = container.querySelector<HTMLButtonElement>('.listItem')!;
+        const image = row.querySelector<HTMLElement>('.listItemImage')!;
+        expect(layout.tv).toBe(true);
+        expect(row.dataset.action).toBe(ItemAction.Link);
+        expect(row.dataset.positionticks).toBe('9000000000');
+        expect(image.classList.contains('itemAction')).toBe(false);
+        expect(image.hasAttribute('tabindex')).toBe(false);
+        expect(row.querySelector('.listItemImageButton')).toBeNull();
+        expect(container.querySelectorAll('button')).toHaveLength(1);
+        image.click();
+        expect(showItem).toHaveBeenCalledOnce();
+        expect(showItem).toHaveBeenCalledWith(expect.objectContaining({
+            Id: 'episode-3', Type: 'Episode', ServerId: 'server',
+            UserData: { PlaybackPositionTicks: 9000000000 }
+        }), expect.any(Object));
+        expect(play).not.toHaveBeenCalled();
     });
 });

@@ -1,67 +1,27 @@
 import type { ItemDto } from 'types/base/models/item-dto';
 import type { CardOptions } from 'types/cardOptions';
 import escapeHtml from 'escape-html';
-import { ItemAction } from 'constants/itemAction';
-import layoutManager from 'lib/layoutManager';
 import globalize from 'lib/globalize';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
+
+function getNameIndex(name: string) {
+    const initial = name[0].toUpperCase();
+    const code = initial.charCodeAt(0);
+    return code < 65 || code > 90 ? '#' : initial;
+}
 
 export function getIndex(item: ItemDto, options: CardOptions) {
     if (options.index === 'disc') {
         return item.ParentIndexNumber == null ? '' : globalize.translate('ValueDiscNumber', item.ParentIndexNumber);
     }
-
     const sortBy = (options.sortBy || '').toLowerCase();
-    let code;
-    let name;
-
-    if (sortBy.indexOf('sortname') === 0) {
-        if (item.Type === 'Episode') {
-            return '';
-        }
-
-        // SortName
-        name = (item.SortName || item.Name || '?')[0].toUpperCase();
-
-        code = name.charCodeAt(0);
-        if (code < 65 || code > 90) {
-            return '#';
-        }
-
-        return name.toUpperCase();
+    if (sortBy.startsWith('sortname')) {
+        return item.Type === 'Episode' ? '' : getNameIndex(item.SortName || item.Name || '?');
     }
-    if (sortBy.indexOf('officialrating') === 0) {
-        return item.OfficialRating || globalize.translate('Unrated');
-    }
-    if (sortBy.indexOf('communityrating') === 0) {
-        if (item.CommunityRating == null) {
-            return globalize.translate('Unrated');
-        }
-
-        return Math.floor(item.CommunityRating);
-    }
-    if (sortBy.indexOf('criticrating') === 0) {
-        if (item.CriticRating == null) {
-            return globalize.translate('Unrated');
-        }
-
-        return Math.floor(item.CriticRating);
-    }
-    if (sortBy.indexOf('albumartist') === 0) {
-        // SortName
-        if (!item.AlbumArtist) {
-            return '';
-        }
-
-        name = item.AlbumArtist[0].toUpperCase();
-
-        code = name.charCodeAt(0);
-        if (code < 65 || code > 90) {
-            return '#';
-        }
-
-        return name.toUpperCase();
-    }
+    if (sortBy.startsWith('officialrating')) return item.OfficialRating || globalize.translate('Unrated');
+    if (sortBy.startsWith('communityrating')) return item.CommunityRating == null ? globalize.translate('Unrated') : Math.floor(item.CommunityRating);
+    if (sortBy.startsWith('criticrating')) return item.CriticRating == null ? globalize.translate('Unrated') : Math.floor(item.CriticRating);
+    if (sortBy.startsWith('albumartist') && item.AlbumArtist) return getNameIndex(item.AlbumArtist);
     return '';
 }
 
@@ -115,7 +75,7 @@ export function getChannelImageUrl(item: ItemDto, size: number) {
 export function getTextLinesHtml(textlines: (string | null | undefined)[], isLargeStyle: boolean) {
     let html = '';
 
-    const largeTitleTagName = layoutManager.tv ? 'h2' : 'div';
+    const largeTitleTagName = 'h2';
 
     for (const [i, text] of textlines.entries()) {
         if (!text) {
@@ -140,18 +100,6 @@ export function getTextLinesHtml(textlines: (string | null | undefined)[], isLar
         elem.innerHTML = '<bdi>' + escapeHtml(text) + '</bdi>';
 
         html += elem.outerHTML;
-    }
-
-    return html;
-}
-
-export function getRightButtonsHtml(options: CardOptions) {
-    let html = '';
-
-    for (let i = 0, length = options.rightButtons!.length; i < length; i++) {
-        const button = options.rightButtons![i];
-
-        html += `<button is="paper-icon-button-light" class="listItemButton itemAction" data-action="${ItemAction.Custom}" data-customaction="${button.id}" title="${button.title}"><span class="material-icons ${button.icon}" aria-hidden="true"></span></button>`;
     }
 
     return html;
