@@ -101,4 +101,18 @@ describe('Deferred sections', () => {
         expect(focus).toHaveBeenCalledWith(next);
         destroy();
     });
+
+    it('observes an already visible row without replacing its restored content', async () => {
+        const section = document.querySelector<HTMLElement>('section')!;
+        section.classList.remove('hide');
+        section.innerHTML = '<button>Existing item</button>';
+        const load = vi.fn();
+        const destroy = deferSection(section, load);
+        expect(document.querySelector('.focusable')).toBeNull();
+        expect(observe).toHaveBeenCalledWith(section);
+        section.querySelector('button')!.focus();
+        await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(1));
+        expect(section.textContent).toBe('Existing item');
+        destroy();
+    });
 });
