@@ -1,5 +1,4 @@
 import { MediaSegmentType } from '@jellyfin/sdk/lib/generated-client/models/media-segment-type';
-import escapeHTML from 'escape-html';
 
 import { MediaSegmentAction } from 'apps/legacy/features/playback/constants/mediaSegmentAction';
 import { getId, getMediaSegmentAction } from 'apps/legacy/features/playback/utils/mediaSegmentSettings';
@@ -120,23 +119,6 @@ function setMaxBitrateIntoField(select, isInNetwork, mediatype) {
     }
 }
 
-function fillChromecastQuality(select, maxVideoWidth) {
-    const options = qualityoptions.getVideoQualityOptions({
-
-        currentMaxBitrate: appSettings.maxChromecastBitrate(),
-        isAutomaticBitrateEnabled: !appSettings.maxChromecastBitrate(),
-        enableAuto: true,
-        maxVideoWidth
-    });
-
-    select.innerHTML = options.map(i => {
-        // render empty string instead of 0 for the auto option
-        return `<option value="${i.bitrate || ''}">${i.name}</option>`;
-    }).join('');
-
-    select.value = appSettings.maxChromecastBitrate() || '';
-}
-
 function fillStillWatchingOptions(select, selectedOption) {
     select.innerHTML = Object.values(StillWatchingOptions).map(value => {
         let label;
@@ -203,7 +185,7 @@ function showHideQualityFields(context, user, apiClient) {
     });
 }
 
-function loadForm(context, user, userSettings, systemInfo, apiClient) {
+function loadForm(context, user, userSettings, apiClient) {
     const loggedInUserId = apiClient.getCurrentUserId();
     const userId = user.Id;
 
@@ -235,15 +217,8 @@ function loadForm(context, user, userSettings, systemInfo, apiClient) {
 
     if (userId === loggedInUserId && (user.Policy.EnableVideoPlaybackTranscoding || user.Policy.EnableAudioPlaybackTranscoding)) {
         context.querySelector('.qualitySections').classList.remove('hide');
-
-        if (appHost.supports(AppFeature.Chromecast) && user.Policy.EnableVideoPlaybackTranscoding) {
-            context.querySelector('.fldChromecastQuality').classList.remove('hide');
-        } else {
-            context.querySelector('.fldChromecastQuality').classList.add('hide');
-        }
     } else {
         context.querySelector('.qualitySections').classList.add('hide');
-        context.querySelector('.fldChromecastQuality').classList.add('hide');
     }
 
     // Only show the Still Watching option if the plugin is loaded
@@ -275,16 +250,6 @@ function loadForm(context, user, userSettings, systemInfo, apiClient) {
     setMaxBitrateIntoField(context.querySelector('.selectVideoInternetQuality'), false, 'Video');
     setMaxBitrateIntoField(context.querySelector('.selectMusicInternetQuality'), false, 'Audio');
 
-    fillChromecastQuality(context.querySelector('.selectChromecastVideoQuality'));
-
-    const selectChromecastVersion = context.querySelector('.selectChromecastVersion');
-    let ccAppsHtml = '';
-    for (const app of systemInfo.CastReceiverApplications) {
-        ccAppsHtml += `<option value='${escapeHTML(app.Id)}'>${escapeHTML(app.Name)}</option>`;
-    }
-    selectChromecastVersion.innerHTML = ccAppsHtml;
-    selectChromecastVersion.value = user.Configuration.CastReceiverId;
-
     const selectMaxVideoWidth = context.querySelector('.selectMaxVideoWidth');
     selectMaxVideoWidth.value = appSettings.maxVideoWidth();
 
@@ -305,7 +270,6 @@ function loadForm(context, user, userSettings, systemInfo, apiClient) {
 function saveUser(context, user, userSettingsInstance, apiClient) {
     appSettings.enableSystemExternalPlayers(context.querySelector('.chkExternalVideoPlayer').checked);
 
-    appSettings.maxChromecastBitrate(context.querySelector('.selectChromecastVideoQuality').value);
     appSettings.maxVideoWidth(context.querySelector('.selectMaxVideoWidth').value);
     appSettings.limitSupportedVideoResolution(context.querySelector('.chkLimitSupportedVideoResolution').checked);
     appSettings.preferredTranscodeVideoCodec(context.querySelector('#selectPreferredTranscodeVideoCodec').value);
@@ -335,7 +299,6 @@ function saveUser(context, user, userSettingsInstance, apiClient) {
     userSettingsInstance.enableNextVideoInfoOverlay(context.querySelector('.chkEnableNextVideoOverlay').checked);
     user.Configuration.RememberAudioSelections = context.querySelector('.chkRememberAudioSelections').checked;
     user.Configuration.RememberSubtitleSelections = context.querySelector('.chkRememberSubtitleSelections').checked;
-    user.Configuration.CastReceiverId = context.querySelector('.selectChromecastVersion').value;
     userSettingsInstance.skipForwardLength(context.querySelector('.selectSkipForwardLength').value);
     userSettingsInstance.skipBackLength(context.querySelector('.selectSkipBackLength').value);
 
@@ -415,12 +378,10 @@ class PlaybackSettings {
         const userSettings = self.options.userSettings;
 
         apiClient.getUser(userId).then(user => {
-            apiClient.getSystemInfo().then(systemInfo => {
-                userSettings.setUserInfo(userId, apiClient).then(() => {
-                    self.dataLoaded = true;
+            userSettings.setUserInfo(userId, apiClient).then(() => {
+                self.dataLoaded = true;
 
-                    loadForm(context, user, userSettings, systemInfo, apiClient);
-                });
+                loadForm(context, user, userSettings, apiClient);
             });
         });
     }

@@ -23,8 +23,6 @@
     "backdropScreensaver/plugin",
     "pdfPlayer/plugin",
     "logoScreensaver/plugin",
-    "sessionPlayer/plugin",
-    "chromecastPlayer/plugin",
     "stillWatching/plugin"
   ]
 }

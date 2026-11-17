@@ -17,7 +17,6 @@ import { EventType } from 'constants/eventType';
 import globalize from './lib/globalize';
 import { loadCoreDictionary } from 'lib/globalize/loader';
 import getServerAddress from 'lib/jellyfin-apiclient/utils/getServerAddress';
-import { initialize as initializeAutoCast } from 'scripts/autocast';
 import browser from './scripts/browser';
 import keyboardNavigation from './scripts/keyboardNavigation';
 import { getPlugins } from './scripts/settings/webSettings';
@@ -34,8 +33,6 @@ import './elements/emby-button/emby-button';
 
 // Import auto-running components
 // NOTE: This is an anti-pattern
-import './components/playback/displayMirrorManager';
-import './components/playback/playerSelectionMenu';
 import './components/themeMediaPlayer';
 import './scripts/mouseManager';
 import './scripts/screensavermanager';
@@ -78,9 +75,6 @@ build: ${__JF_BUILD_VERSION__}`);
     }
     // Initialize the api client
     if (serverUrl) ServerConnections.initApiClient(serverUrl);
-
-    // Initialize automatic (default) cast target
-    initializeAutoCast();
 
     // Load the translation dictionary
     await loadCoreDictionary();
@@ -140,15 +134,6 @@ async function loadPlugins() {
     console.dir(pluginManager);
 
     let list = await getPlugins();
-    if (!appHost.supports(AppFeature.RemoteControl)) {
-        // Disable remote player plugins if not supported
-        list = list.filter(plugin => !plugin.startsWith('sessionPlayer')
-            && !plugin.startsWith('chromecastPlayer'));
-    } else if (!browser.chrome && !browser.edgeChromium && !browser.opera) {
-        // Disable chromecast player in unsupported browsers
-        list = list.filter(plugin => !plugin.startsWith('chromecastPlayer'));
-    }
-
     // add any native plugins
     if (window.NativeShell) {
         list = list.concat(window.NativeShell.getPlugins());
@@ -167,11 +152,6 @@ async function loadPlugins() {
 function loadPlatformFeatures() {
     if (!browser.tv && !browser.xboxOne && !browser.ps4) {
         import('./components/nowPlayingBar/nowPlayingBar');
-    }
-
-    if (appHost.supports(AppFeature.RemoteControl)) {
-        import('./components/playback/playerSelectionMenu');
-        import('./components/playback/remotecontrolautoplay');
     }
 
     if (!appHost.supports(AppFeature.PhysicalVolumeControl) || browser.touch) {

@@ -3917,20 +3917,6 @@ export class PlaybackManager {
         }
     }
 
-    toggleDisplayMirroring() {
-        this.enableDisplayMirroring(!this.enableDisplayMirroring());
-    }
-
-    enableDisplayMirroring(enabled) {
-        if (enabled != null) {
-            const val = enabled ? '1' : '0';
-            appSettings.set('displaymirror', val);
-            return;
-        }
-
-        return (appSettings.get('displaymirror') || '') !== '0';
-    }
-
     nextChapter(player = this._currentPlayer) {
         const item = this.currentItem(player);
 

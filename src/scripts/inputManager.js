@@ -214,15 +214,6 @@ export function handleCommand(commandName, options) {
         'togglefullscreen': () => {
             playbackManager.toggleFullscreen();
         },
-        'disabledisplaymirror': () => {
-            playbackManager.enableDisplayMirroring(false);
-        },
-        'enabledisplaymirror': () => {
-            playbackManager.enableDisplayMirroring(true);
-        },
-        'toggledisplaymirror': () => {
-            playbackManager.toggleDisplayMirroring();
-        },
         'nowplaying': () => {
             appRouter.showNowPlaying();
         },

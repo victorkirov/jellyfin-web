@@ -97,15 +97,6 @@ class AppSettings {
         return parseInt(this.get('maxStaticMusicBitrate') || defaultValue.toString(), 10) || defaultValue;
     }
 
-    maxChromecastBitrate(val) {
-        if (val !== undefined) {
-            this.set('chromecastBitrate1', val);
-        }
-
-        val = this.get('chromecastBitrate1');
-        return val ? parseInt(val, 10) : null;
-    }
-
     /**
      * Get or set 'Maximum video width'
      * @param {number|undefined} val - Maximum video width or undefined.

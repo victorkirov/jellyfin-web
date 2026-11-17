@@ -39,9 +39,7 @@ function renderHeader() {
     html += '<h3 class="pageTitle" aria-hidden="true"></h3>';
     html += '</div>';
     html += '<div class="headerRight">';
-    html += '<span class="headerSelectedPlayer"></span>';
     html += '<button is="paper-icon-button-light" class="headerAudioPlayerButton audioPlayerButton headerButton headerButtonRight hide"><span class="material-icons music_note" aria-hidden="true"></span></button>';
-    html += '<button is="paper-icon-button-light" class="headerCastButton castButton headerButton headerButtonRight hide"><span class="material-icons cast" aria-hidden="true"></span></button>';
     html += '<button type="button" is="paper-icon-button-light" class="headerButton headerButtonRight headerSearchButton hide"><span class="material-icons search" aria-hidden="true"></span></button>';
     html += '<button is="paper-icon-button-light" class="headerButton headerButtonRight headerUserButton hide"><span class="material-icons person" aria-hidden="true"></span></button>';
     html += '<div class="currentTimeText hide"></div>';
@@ -60,7 +58,6 @@ function renderHeader() {
     headerHomeButton = skinHeader.querySelector('.headerHomeButton');
     mainDrawerButton = skinHeader.querySelector('.mainDrawerButton');
     headerUserButton = skinHeader.querySelector('.headerUserButton');
-    headerCastButton = skinHeader.querySelector('.headerCastButton');
     headerAudioPlayerButton = skinHeader.querySelector('.headerAudioPlayerButton');
     headerSearchButton = skinHeader.querySelector('.headerSearchButton');
     currentTimeText = skinHeader.querySelector('.currentTimeText');
@@ -68,7 +65,6 @@ function renderHeader() {
     retranslateUi();
     lazyLoadViewMenuBarImages();
     bindMenuEvents();
-    updateCastIcon();
     updateClock();
 }
 
@@ -105,10 +101,6 @@ function retranslateUi() {
 
     if (headerAudioPlayerButton) {
         headerAudioPlayerButton.title = globalize.translate('ButtonPlayer');
-    }
-
-    if (headerCastButton) {
-        headerCastButton.title = globalize.translate('ButtonCast');
     }
 
     if (headerSearchButton) {
@@ -149,13 +141,8 @@ function updateUserInHeader(user) {
         if (headerSearchButton) {
             headerSearchButton.classList.remove('hide');
         }
-
-        if (!layoutManager.tv) {
-            headerCastButton.classList.remove('hide');
-        }
     } else {
         headerHomeButton.classList.add('hide');
-        headerCastButton.classList.add('hide');
 
         if (headerSearchButton) {
             headerSearchButton.classList.add('hide');
@@ -224,10 +211,6 @@ function bindMenuEvents() {
     headerUserButton.addEventListener('click', onHeaderUserButtonClick);
     headerHomeButton.addEventListener('click', onHeaderHomeButtonClick);
 
-    if (!layoutManager.tv) {
-        headerCastButton.addEventListener('click', onCastButtonClicked);
-    }
-
     headerAudioPlayerButton.addEventListener('click', showAudioPlayer);
 
     if (layoutManager.mobile) {
@@ -249,14 +232,6 @@ function onPlaybackStop(e, stopInfo) {
     if (stopInfo.nextMediaType != 'Audio') {
         headerAudioPlayerButton.classList.add('hide');
     }
-}
-
-function onCastButtonClicked() {
-    const btn = this;
-
-    import('../components/playback/playerSelectionMenu').then((playerSelectionMenu) => {
-        playerSelectionMenu.show(btn);
-    });
 }
 
 function getItemHref(item, context) {
@@ -495,24 +470,6 @@ function onLogoutClick() {
     Dashboard.logout();
 }
 
-function updateCastIcon() {
-    const context = document;
-    const info = playbackManager.getPlayerInfo();
-    const icon = headerCastButton.querySelector('.material-icons');
-
-    icon.classList.remove('cast_connected', 'cast');
-
-    if (info && !info.isLocalPlayer) {
-        icon.classList.add('cast_connected');
-        headerCastButton.classList.add('castButton-active');
-        context.querySelector('.headerSelectedPlayer').innerText = info.deviceName || info.name;
-    } else {
-        icon.classList.add('cast');
-        headerCastButton.classList.remove('castButton-active');
-        context.querySelector('.headerSelectedPlayer').innerHTML = '';
-    }
-}
-
 function updateLibraryNavLinks(page) {
     if (layoutManager.tv) return;
 
@@ -677,7 +634,6 @@ let pageTitleElement;
 let headerBackButton;
 let headerUserButton;
 let currentUser;
-let headerCastButton;
 let headerSearchButton;
 let headerAudioPlayerButton;
 let currentTimeText;
@@ -828,8 +784,6 @@ Events.on(ServerConnections, 'localusersignedout', function () {
     currentUser = {};
     updateUserInHeader();
 });
-
-Events.on(playbackManager, 'playerchange', updateCastIcon);
 
 fetchServerName(getCurrentApiClient());
 loadNavDrawer();
