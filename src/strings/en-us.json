@@ -591,6 +591,7 @@
     "InstantMix": "Instant mix",
     "ItemCount": "{0} items",
     "ItemDetails": "Item Details",
+    "ItemDetailsLoadError": "Couldn't load this title",
     "Items": "Items",
     "Kids": "Kids",
     "KnownProxiesHelp": "Comma separated list of IP addresses or hostnames of known proxies used when connecting to your Jellyfin instance. This is required to make proper use of 'X-Forwarded-For' headers. Requires a reboot after saving.",

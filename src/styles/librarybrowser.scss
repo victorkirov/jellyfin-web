@@ -626,11 +626,18 @@ div.itemDetailGalleryLink.defaultCardBackground {
     white-space: nowrap;
 }
 
+.detailButton:not(.detailButton-primary):not(.detailButton-iconOnly) {
+    flex-shrink: 1;
+    min-width: 0;
+}
+
 [dir="rtl"] .detailButton {
     margin: 0 0 0 0.4em !important;
 }
 
 .detailButton-content {
+    min-width: 0;
+    max-width: 100%;
     display: flex;
     flex-direction: row;
     justify-content: center;
@@ -638,6 +645,7 @@ div.itemDetailGalleryLink.defaultCardBackground {
 }
 
 .detailButton-icon {
+    flex-shrink: 0;
     font-size: 1.2em !important;
     width: 1em;
     height: 1em;
@@ -688,6 +696,9 @@ div.itemDetailGalleryLink.defaultCardBackground {
 }
 
 .detailButton-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     margin: 0 0 0 0.35em;
     font-size: 1em;
     font-weight: 600;

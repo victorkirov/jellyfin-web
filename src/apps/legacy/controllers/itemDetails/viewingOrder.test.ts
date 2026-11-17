@@ -32,3 +32,10 @@ describe('Details viewing choices', () => {
         expect(isBefore(document.querySelector('.trackSelections')!, document.querySelector('.nextUpSection')!)).toBe(true);
     });
 });
+
+it('resolves the load-error heading through the template translation key', () => {
+    const template = readFileSync('src/apps/legacy/controllers/itemDetails/index.html', 'utf8');
+    const translatedHeading = 'Translated title load error';
+    document.body.innerHTML = template.replace('${ItemDetailsLoadError}', translatedHeading);
+    expect(document.querySelector('.detailLoadError h2')!.textContent).toBe(translatedHeading);
+});

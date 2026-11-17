@@ -25,3 +25,12 @@
 .itemDetailPage .detailLoadError {
     padding: 2em 3.3%;
 }
+
+.itemDetailPage .overview,
+.itemDetailPage .overview p:last-child {
+    margin-bottom: 0;
+}
+
+.itemDetailPage .tagline {
+    margin: 1.5rem 0 0;
+}

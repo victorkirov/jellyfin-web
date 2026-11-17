@@ -6,6 +6,7 @@ import { type ItemDto, type TrackSelect, type StateButton, getElement } from './
 import { type Api } from '@jellyfin/sdk';
 import ItemDetails from './index';
 import focusManager from 'lib/focusManager';
+import type { UserDataChangedMessage } from '@jellyfin/sdk/lib/generated-client';
 
 const { apiClient, playbackManager, fixture, hideLoading, getListViewHtml, getSdkItem, api, getCommands, showMenu, goBack } = vi.hoisted(() => {
     const data = { item: null as (ItemDto & { allowRating?: boolean }) | null };
@@ -20,7 +21,7 @@ const { apiClient, playbackManager, fixture, hideLoading, getListViewHtml, getSd
         getNextUpEpisodes: vi.fn<(...args: unknown[]) => Promise<{ Items: ItemDto[] }>>().mockResolvedValue({ Items: [] }),
 
         getSimilarItems: vi.fn(() => Promise.resolve({ Items: [] })),
-        subscribe: vi.fn()
+        subscribe: vi.fn<(_types: unknown, listener: (message: UserDataChangedMessage) => void) => void>()
     };
     return { getCommands: vi.fn().mockResolvedValue([]), showMenu: vi.fn().mockResolvedValue(undefined), goBack: vi.fn(), api: { basePath: 'https://test' } as Api, getSdkItem: vi.fn(() => Promise.resolve({ data: data.item })), apiClient: client, fixture: data, hideLoading: vi.fn(), getListViewHtml: vi.fn(() => ''), playbackManager: { canPlay: vi.fn(() => true), getSupportedCommands: vi.fn(() => ['PlayMediaSource']), play: vi.fn() } };
 });
@@ -383,22 +384,62 @@ describe('Details action eligibility and resolved series target', () => {
         expect(playbackManager.play).toHaveBeenCalledWith(expect.objectContaining({ items: [fixture.item] }));
     });
 
-    it('binds the series label to the exact episode from the existing Next Up response', async () => {
+    it.each([[0, 'Play S14:E8'], [7200000000, 'Resume from 12:00 · S14:E8']])('binds the series label and position to the exact Next Up episode: %s', async (ticks, label) => {
         fixture.item = { Id: 'series', Type: 'Series', IsFolder: true };
-        const episode: ItemDto = { Id: 'next', SeriesId: 'series', Type: 'Episode', ParentIndexNumber: 14, IndexNumber: 8, UserData: { Key: 'next', PlaybackPositionTicks: 20000000 } };
+        const episode: ItemDto = { Id: 'next', SeriesId: 'series', Type: 'Episode', ParentIndexNumber: 14, IndexNumber: 8, UserData: { Key: 'next', PlaybackPositionTicks: ticks } };
         apiClient.getNextUpEpisodes.mockResolvedValue({ Items: [episode] });
         const page = getElement(document, '#itemDetailPage');
         expect(new ItemDetails(page, { id: 'series' })).toBeDefined();
         page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
-        await vi.waitFor(() => expect(getElement(page, '.btnPlay').title).toBe('Play S14:E8'));
+        await vi.waitFor(() => expect(getElement(page, '.btnPlay').title).toBe(label));
         getElement(page, '.btnPlay').click();
-        expect(playbackManager.play).toHaveBeenCalledWith(expect.objectContaining({ items: [episode], startPositionTicks: 20000000 }));
+        expect(playbackManager.play).toHaveBeenCalledWith(expect.objectContaining({ items: [episode], startPositionTicks: ticks }));
         expect(apiClient.getNextUpEpisodes).toHaveBeenCalledTimes(1);
         page.dispatchEvent(new CustomEvent('viewshow', { detail: { isRestored: true } }));
         await vi.waitFor(() => expect(getElement(page, '.btnPlay').title).toBe('Play'));
         // A previously resolved episode may have been completed while the view was hidden.
         getElement(page, '.btnPlay').click();
         expect(playbackManager.play).toHaveBeenLastCalledWith(expect.objectContaining({ items: [fixture.item] }));
+    });
+
+    it.each([
+        ['series', 'user', 'Play'],
+        ['next', 'user', 'Play'],
+        ['other', 'user', 'Resume from 12:00 · S14:E8'],
+        ['next', 'another-user', 'Resume from 12:00 · S14:E8']
+    ])('invalidates a resolved target only for relevant user-data changes: %s / %s', async (itemId, userId, label) => {
+        fixture.item = { Id: 'series', Type: 'Series', IsFolder: true };
+        const episode: ItemDto = { Id: 'next', SeriesId: 'series', Type: 'Episode', ParentIndexNumber: 14, IndexNumber: 8, UserData: { Key: 'next', PlaybackPositionTicks: 7200000000 } };
+        apiClient.getNextUpEpisodes.mockResolvedValue({ Items: [episode] });
+        const page = getElement(document, '#itemDetailPage');
+        expect(new ItemDetails(page, { id: 'series' })).toBeDefined();
+        page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+        await vi.waitFor(() => expect(getElement(page, '.btnPlay').title).toBe('Resume from 12:00 · S14:E8'));
+        const listener = apiClient.subscribe.mock.calls[apiClient.subscribe.mock.calls.length - 1][1];
+        listener({ Data: { UserId: userId, UserDataList: [{ ItemId: itemId, Key: itemId, Played: true }] } });
+        expect(getElement(page, '.btnPlay').title).toBe(label);
+        getElement(page, '.btnPlay').click();
+        expect(playbackManager.play).toHaveBeenLastCalledWith(expect.objectContaining({ items: [label === 'Play' ? expect.objectContaining({ Id: 'series' }) : episode] }));
+        expect(apiClient.getNextUpEpisodes).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not rebind a stale pending Next Up response after the series changes', async () => {
+        fixture.item = { Id: 'series', Type: 'Series', IsFolder: true };
+        let resolveNextUp!: (value: { Items: ItemDto[] }) => void;
+        apiClient.getNextUpEpisodes.mockReturnValueOnce(new Promise(resolve => {
+            resolveNextUp = resolve;
+        }));
+        const page = getElement(document, '#itemDetailPage');
+        expect(new ItemDetails(page, { id: 'series' })).toBeDefined();
+        page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+        await vi.waitFor(() => expect(hideLoading).toHaveBeenCalled());
+        const listener = apiClient.subscribe.mock.calls[apiClient.subscribe.mock.calls.length - 1][1];
+        listener({ Data: { UserId: 'user', UserDataList: [{ ItemId: 'series', Key: 'series', Played: true }] } });
+        resolveNextUp({ Items: [{ Id: 'old', SeriesId: 'series', Type: 'Episode', ParentIndexNumber: 1, IndexNumber: 2 }] });
+        await Promise.resolve();
+        expect(getElement(page, '.btnPlay').title).toBe('Play');
+        getElement(page, '.btnPlay').click();
+        expect(playbackManager.play).toHaveBeenLastCalledWith(expect.objectContaining({ items: [expect.objectContaining({ Id: 'series' })] }));
     });
 
     it('leaves Play generic when Next Up lacks a verified episode number', async () => {

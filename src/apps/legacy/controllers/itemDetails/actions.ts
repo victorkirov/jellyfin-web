@@ -55,10 +55,12 @@ export function reloadPlayButtons(page: DetailsPage, item: ItemDto, nextUpEpisod
         hideAll(page, 'btnShuffle');
     }
 
-    const positionTicks = item.Type === 'Program' ? 0 : (item.UserData?.PlaybackPositionTicks || 0);
+    const playbackItem = nextUpEpisode || item;
+    const positionTicks = item.Type === 'Program' ? 0 : (playbackItem.UserData?.PlaybackPositionTicks || 0);
     const episodeLabel = nextUpEpisode ? ' S' + nextUpEpisode.ParentIndexNumber + ':E' + nextUpEpisode.IndexNumber : '';
+    const resumeEpisodeLabel = episodeLabel ? ' ·' + episodeLabel : '';
     const label = positionTicks > 0 ?
-        globalize.translate('ResumeAt', datetime.getDisplayRunningTime(positionTicks)) :
+        globalize.translate('ResumeAt', datetime.getDisplayRunningTime(positionTicks)) + resumeEpisodeLabel :
         globalize.translate('Play') + episodeLabel;
     for (const btnPlay of queryAll(page, '.btnPlay')) {
         btnPlay.title = label;

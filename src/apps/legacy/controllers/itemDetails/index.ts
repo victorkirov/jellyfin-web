@@ -108,7 +108,7 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
         currentItem = item;
         nextUpEpisode = undefined;
         reloadFromItem(self, view, params, item, user, episode => {
-            if (!currentItem || currentItem.Id !== item.Id) return;
+            if (currentItem !== item) return;
             // Only advertise an episode identity verified by the existing Next Up response.
             nextUpEpisode = episode?.Type === 'Episode' && episode.SeriesId === item.Id
                 && episode.Id && episode.ParentIndexNumber != null && episode.IndexNumber != null ? episode : undefined;
@@ -231,11 +231,15 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
 
         // Match by item id: alternate versions share the same user data key, so a key match
         // would apply another version's progress to the displayed item.
-        const userData = (Data?.UserDataList ?? []).find(u => u.ItemId == currentItem!.Id);
+        const changes = Data.UserDataList ?? [];
+        const userData = changes.find(update => update.ItemId === currentItem!.Id);
+        const nextUpChanged = nextUpEpisode && changes.some(update => update.ItemId === nextUpEpisode!.Id);
 
-        if (userData) {
-            currentItem = { ...currentItem, UserData: userData };
-            reloadPlayButtons(view, currentItem, nextUpEpisode);
+        if (userData || nextUpChanged) {
+            if (userData) currentItem = { ...currentItem, UserData: userData };
+            // Generic series playback resolves the live Next Up instead of using stale data.
+            nextUpEpisode = undefined;
+            reloadPlayButtons(view, currentItem);
             reloadUserDataButtons(view, currentItem);
             autoFocus(view);
         }
