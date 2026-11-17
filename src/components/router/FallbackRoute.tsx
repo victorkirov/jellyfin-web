@@ -43,7 +43,8 @@ const FallbackRoute = () => {
                 <h1>{globalize.translate('HeaderPageNotFound')}</h1>
                 <p>{globalize.translate('PageNotFound')}</p>
                 <LinkButton
-                    className='button-link'
+                    className='raised'
+                    style={{ margin: 0 }}
                     href='#/home'
                 >
                     {globalize.translate('GoHome')}
