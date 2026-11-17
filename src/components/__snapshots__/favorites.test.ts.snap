@@ -1,0 +1,248 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`keeps preview parent scoping, artist fetching, limits and section identities 1`] = `
+[
+  {
+    "action": undefined,
+    "allowBottomPadding": false,
+    "cardLayout": false,
+    "centerText": true,
+    "coverImage": true,
+    "overlayMoreButton": undefined,
+    "overlayPlayButton": true,
+    "overlayText": false,
+    "preferThumb": false,
+    "scalable": true,
+    "shape": "overflowSquare",
+    "showParentTitle": false,
+    "showTitle": true,
+  },
+  {
+    "action": undefined,
+    "allowBottomPadding": false,
+    "cardLayout": false,
+    "centerText": true,
+    "coverImage": true,
+    "overlayMoreButton": undefined,
+    "overlayPlayButton": true,
+    "overlayText": false,
+    "preferThumb": false,
+    "scalable": true,
+    "shape": "overflowSquare",
+    "showParentTitle": true,
+    "showTitle": true,
+  },
+  {
+    "action": "instantmix",
+    "allowBottomPadding": false,
+    "cardLayout": false,
+    "centerText": true,
+    "coverImage": true,
+    "overlayMoreButton": true,
+    "overlayPlayButton": undefined,
+    "overlayText": false,
+    "preferThumb": false,
+    "scalable": true,
+    "shape": "overflowSquare",
+    "showParentTitle": true,
+    "showTitle": true,
+  },
+]
+`;
+
+exports[`preserves the full page All routes and card options for the overlapping sections 1`] = `
+[
+  [
+    {
+      "action": undefined,
+      "allowBottomPadding": false,
+      "cardLayout": false,
+      "centerText": true,
+      "coverImage": undefined,
+      "items": [
+        {
+          "Id": "item",
+        },
+      ],
+      "leadingButtons": [
+        {
+          "icon": "favorite",
+          "id": "more",
+          "name": "All",
+          "routeUrl": "#/list?itemTypes=Movie",
+        },
+      ],
+      "lines": 2,
+      "overlayMoreButton": undefined,
+      "overlayPlayButton": true,
+      "overlayText": false,
+      "preferThumb": undefined,
+      "scalable": true,
+      "shape": "overflowPortrait",
+      "showParentTitle": undefined,
+      "showTitle": true,
+      "showYear": true,
+    },
+  ],
+  [
+    {
+      "action": undefined,
+      "allowBottomPadding": false,
+      "cardLayout": false,
+      "centerText": true,
+      "coverImage": undefined,
+      "items": [
+        {
+          "Id": "item",
+        },
+      ],
+      "leadingButtons": [
+        {
+          "icon": "favorite",
+          "id": "more",
+          "name": "All",
+          "routeUrl": "#/list?itemTypes=Series",
+        },
+      ],
+      "lines": 2,
+      "overlayMoreButton": undefined,
+      "overlayPlayButton": true,
+      "overlayText": false,
+      "preferThumb": undefined,
+      "scalable": true,
+      "shape": "overflowPortrait",
+      "showParentTitle": undefined,
+      "showTitle": true,
+      "showYear": true,
+    },
+  ],
+  [
+    {
+      "action": undefined,
+      "allowBottomPadding": false,
+      "cardLayout": false,
+      "centerText": true,
+      "coverImage": undefined,
+      "items": [
+        {
+          "Id": "item",
+        },
+      ],
+      "leadingButtons": [
+        {
+          "icon": "favorite",
+          "id": "more",
+          "name": "All",
+          "routeUrl": "#/list?itemTypes=Episode",
+        },
+      ],
+      "lines": 2,
+      "overlayMoreButton": undefined,
+      "overlayPlayButton": true,
+      "overlayText": false,
+      "preferThumb": false,
+      "scalable": true,
+      "shape": "overflowBackdrop",
+      "showParentTitle": true,
+      "showTitle": true,
+      "showYear": undefined,
+    },
+  ],
+  [
+    {
+      "action": undefined,
+      "allowBottomPadding": false,
+      "cardLayout": false,
+      "centerText": true,
+      "coverImage": true,
+      "items": [
+        {
+          "Id": "item",
+        },
+      ],
+      "leadingButtons": [
+        {
+          "icon": "favorite",
+          "id": "more",
+          "name": "All",
+          "routeUrl": "#/list?itemTypes=MusicArtist",
+        },
+      ],
+      "lines": 1,
+      "overlayMoreButton": undefined,
+      "overlayPlayButton": true,
+      "overlayText": false,
+      "preferThumb": false,
+      "scalable": true,
+      "shape": "overflowSquare",
+      "showParentTitle": false,
+      "showTitle": true,
+      "showYear": undefined,
+    },
+  ],
+  [
+    {
+      "action": undefined,
+      "allowBottomPadding": false,
+      "cardLayout": false,
+      "centerText": true,
+      "coverImage": true,
+      "items": [
+        {
+          "Id": "item",
+        },
+      ],
+      "leadingButtons": [
+        {
+          "icon": "favorite",
+          "id": "more",
+          "name": "All",
+          "routeUrl": "#/list?itemTypes=MusicAlbum",
+        },
+      ],
+      "lines": 2,
+      "overlayMoreButton": undefined,
+      "overlayPlayButton": true,
+      "overlayText": false,
+      "preferThumb": false,
+      "scalable": true,
+      "shape": "overflowSquare",
+      "showParentTitle": true,
+      "showTitle": true,
+      "showYear": undefined,
+    },
+  ],
+  [
+    {
+      "action": "instantmix",
+      "allowBottomPadding": false,
+      "cardLayout": false,
+      "centerText": true,
+      "coverImage": true,
+      "items": [
+        {
+          "Id": "item",
+        },
+      ],
+      "leadingButtons": [
+        {
+          "icon": "favorite",
+          "id": "more",
+          "name": "All",
+          "routeUrl": "#/list?itemTypes=Audio",
+        },
+      ],
+      "lines": 2,
+      "overlayMoreButton": true,
+      "overlayPlayButton": undefined,
+      "overlayText": false,
+      "preferThumb": false,
+      "scalable": true,
+      "shape": "overflowSquare",
+      "showParentTitle": true,
+      "showTitle": true,
+      "showYear": undefined,
+    },
+  ],
+]
+`;

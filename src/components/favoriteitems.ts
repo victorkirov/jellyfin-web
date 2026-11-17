@@ -1,4 +1,5 @@
-import { getBackdropShape, getPortraitShape, getSquareShape } from 'components/cardbuilder/utils/shape';
+import type { BaseItemDtoQueryResult } from '@jellyfin/sdk/lib/generated-client/models/base-item-dto-query-result';
+import { getPreviewFavoriteSections, type FavoriteSection } from './favoriteSectionCatalog';
 import dom from 'utils/dom';
 import globalize from 'lib/globalize';
 import { getParameterByName } from 'utils/url';
@@ -16,85 +17,9 @@ function enableScrollX() {
     return true;
 }
 
-function getSections() {
-    return [{
-        name: 'Movies',
-        types: 'Movie',
-        id: 'favoriteMovies',
-        shape: getPortraitShape(enableScrollX()),
-        showTitle: false,
-        overlayPlayButton: true
-    }, {
-        name: 'Shows',
-        types: 'Series',
-        id: 'favoriteShows',
-        shape: getPortraitShape(enableScrollX()),
-        showTitle: false,
-        overlayPlayButton: true
-    }, {
-        name: 'Episodes',
-        types: 'Episode',
-        id: 'favoriteEpisode',
-        shape: getBackdropShape(enableScrollX()),
-        preferThumb: false,
-        showTitle: true,
-        showParentTitle: true,
-        overlayPlayButton: true,
-        overlayText: false,
-        centerText: true
-    }, {
-        name: 'Videos',
-        types: 'Video,MusicVideo',
-        id: 'favoriteVideos',
-        shape: getBackdropShape(enableScrollX()),
-        preferThumb: true,
-        showTitle: true,
-        overlayPlayButton: true,
-        overlayText: false,
-        centerText: true
-    }, {
-        name: 'Artists',
-        types: 'MusicArtist',
-        id: 'favoriteArtists',
-        shape: getSquareShape(enableScrollX()),
-        preferThumb: false,
-        showTitle: true,
-        overlayText: false,
-        showParentTitle: false,
-        centerText: true,
-        overlayPlayButton: true,
-        coverImage: true
-    }, {
-        name: 'Albums',
-        types: 'MusicAlbum',
-        id: 'favoriteAlbums',
-        shape: getSquareShape(enableScrollX()),
-        preferThumb: false,
-        showTitle: true,
-        overlayText: false,
-        showParentTitle: true,
-        centerText: true,
-        overlayPlayButton: true,
-        coverImage: true
-    }, {
-        name: 'Songs',
-        types: 'Audio',
-        id: 'favoriteSongs',
-        shape: getSquareShape(enableScrollX()),
-        preferThumb: false,
-        showTitle: true,
-        overlayText: false,
-        showParentTitle: true,
-        centerText: true,
-        overlayMoreButton: true,
-        action: 'instantmix',
-        coverImage: true
-    }];
-}
-
-function loadSection(elem, userId, topParentId, section, isSingleSection) {
+function loadSection(elem: HTMLElement, userId: string, topParentId: string | undefined, section: FavoriteSection, isSingleSection: boolean) {
     const screenWidth = dom.getWindowSize().innerWidth;
-    const options = {
+    const options: Record<string, string | number | boolean> = {
         SortBy: 'SortName',
         SortOrder: 'Ascending',
         Filters: 'IsFavorite',
@@ -121,23 +46,23 @@ function loadSection(elem, userId, topParentId, section, isSingleSection) {
         }
     }
 
-    let promise;
+    let promise: Promise<BaseItemDtoQueryResult>;
 
     if (section.types === 'MusicArtist') {
-        promise = ApiClient.getArtists(userId, options);
+        promise = window.ApiClient.getArtists(userId, options);
     } else {
         options.IncludeItemTypes = section.types;
-        promise = ApiClient.getItems(userId, options);
+        promise = window.ApiClient.getItems(userId, options);
     }
 
     return promise.then(function (result) {
         let html = '';
 
-        if (result.Items.length) {
+        if (result.Items!.length) {
             html += '<div class="sectionTitleContainer sectionTitleContainer-cards padded-left">';
 
-            if (!layoutManager.tv && options.Limit && result.Items.length >= options.Limit) {
-                html += '<a is="emby-linkbutton" href="' + ('#/list?serverId=' + ApiClient.serverId() + '&type=' + section.types + '&IsFavorite=true') + '" class="more button-flat button-flat-mini sectionTitleTextButton">';
+            if (!layoutManager.tv && options.Limit && result.Items!.length >= Number(options.Limit)) {
+                html += '<a is="emby-linkbutton" href="' + ('#/list?serverId=' + window.ApiClient.serverId() + '&type=' + section.types + '&IsFavorite=true') + '" class="more button-flat button-flat-mini sectionTitleTextButton">';
                 html += '<h2 class="sectionTitle sectionTitle-cards">';
                 html += globalize.translate(section.name);
                 html += '</h2>';
@@ -163,7 +88,7 @@ function loadSection(elem, userId, topParentId, section, isSingleSection) {
             // let cardLayout = appHost.preferVisualCards && section.autoCardLayout && section.showTitle;
             const cardLayout = false;
 
-            html += cardBuilder.getCardsHtml(result.Items, {
+            html += cardBuilder.getCardsHtml(result.Items!, {
                 preferThumb: section.preferThumb,
                 shape: section.shape,
                 centerText: section.centerText && !cardLayout,
@@ -186,9 +111,9 @@ function loadSection(elem, userId, topParentId, section, isSingleSection) {
     });
 }
 
-export function loadSections(page, userId, topParentId, types) {
+export function loadSections(page: HTMLElement, userId: string, topParentId?: string, types?: string[]) {
     loading.show();
-    let sections = getSections();
+    let sections = getPreviewFavoriteSections();
     const sectionid = getParameterByName('sectionid');
 
     if (sectionid) {
@@ -199,11 +124,11 @@ export function loadSections(page, userId, topParentId, types) {
 
     if (types) {
         sections = sections.filter(function (s) {
-            return types.indexOf(s.id) !== -1;
+            return types.indexOf(s.id!) !== -1;
         });
     }
 
-    let elem = page.querySelector('.favoriteSections');
+    let elem = page.querySelector<HTMLElement>('.favoriteSections')!;
 
     if (!elem.innerHTML) {
         let html = '';
@@ -219,11 +144,11 @@ export function loadSections(page, userId, topParentId, types) {
 
     for (let i = 0, length = sections.length; i < length; i++) {
         const section = sections[i];
-        elem = page.querySelector('.section' + section.id);
+        elem = page.querySelector<HTMLElement>('.section' + section.id)!;
         promises.push(loadSection(elem, userId, topParentId, section, sections.length === 1));
     }
 
-    Promise.all(promises).then(function () {
+    void Promise.all(promises).then(function () {
         loading.hide();
     });
 }

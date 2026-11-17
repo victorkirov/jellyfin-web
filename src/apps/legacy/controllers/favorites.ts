@@ -5,7 +5,10 @@ import { ItemSortBy } from '@jellyfin/sdk/lib/generated-client/models/item-sort-
 import { getStudioApi } from '@jellyfin/sdk/lib/utils/api/studio-api';
 
 import cardBuilder from 'components/cardbuilder/cardBuilder';
-import { getBackdropShape, getPortraitShape, getSquareShape } from 'components/cardbuilder/utils/shape';
+import type { ApiClient } from 'jellyfin-apiclient';
+import type { ItemDto } from 'types/base/models/item-dto';
+import type { BaseItemDtoQueryResult } from '@jellyfin/sdk/lib/generated-client/models/base-item-dto-query-result';
+import { getFullFavoriteSections, type FavoriteSection } from 'components/favoriteSectionCatalog';
 import focusManager from 'lib/focusManager';
 import layoutManager from 'lib/layoutManager';
 import { appRouter } from 'components/router/appRouter';
@@ -20,175 +23,10 @@ function enableScrollX() {
     return true;
 }
 
-function getSections() {
-    return [{
-        name: 'Movies',
-        types: 'Movie',
-        shape: getPortraitShape(enableScrollX()),
-        showTitle: true,
-        showYear: true,
-        overlayPlayButton: true,
-        overlayText: false,
-        centerText: true
-    }, {
-        name: 'Shows',
-        types: 'Series',
-        shape: getPortraitShape(enableScrollX()),
-        showTitle: true,
-        showYear: true,
-        overlayPlayButton: true,
-        overlayText: false,
-        centerText: true
-    }, {
-        name: 'HeaderSeasons',
-        types: BaseItemKind.Season,
-        shape: getPortraitShape(enableScrollX()),
-        showTitle: true,
-        showParentTitle: true,
-        overlayPlayButton: true,
-        overlayText: false,
-        centerText: true
-    }, {
-        name: 'Episodes',
-        types: 'Episode',
-        shape: getBackdropShape(enableScrollX()),
-        preferThumb: false,
-        showTitle: true,
-        showParentTitle: true,
-        overlayPlayButton: true,
-        overlayText: false,
-        centerText: true
-    }, {
-        name: 'HeaderVideos',
-        types: 'Video',
-        shape: getBackdropShape(enableScrollX()),
-        preferThumb: true,
-        showTitle: true,
-        overlayPlayButton: true,
-        overlayText: false,
-        centerText: true
-    }, {
-        name: 'MusicVideos',
-        types: 'MusicVideo',
-        shape: getBackdropShape(enableScrollX()),
-        preferThumb: true,
-        showTitle: true,
-        overlayPlayButton: true,
-        overlayText: false,
-        centerText: true
-    }, {
-        name: 'Collections',
-        types: 'BoxSet',
-        shape: getPortraitShape(enableScrollX()),
-        showTitle: true,
-        overlayPlayButton: true,
-        overlayText: false,
-        centerText: true
-    }, {
-        name: 'Playlists',
-        types: 'Playlist',
-        shape: getSquareShape(enableScrollX()),
-        preferThumb: false,
-        showTitle: true,
-        overlayText: false,
-        showParentTitle: false,
-        centerText: true,
-        overlayPlayButton: true,
-        coverImage: true
-    }, {
-        name: 'Studios',
-        types: BaseItemKind.Studio,
-        shape: getBackdropShape(enableScrollX()),
-        preferThumb: true,
-        showTitle: true,
-        overlayText: false,
-        centerText: true,
-        overlayPlayButton: true
-    }, {
-        name: 'People',
-        types: 'Person',
-        shape: getPortraitShape(enableScrollX()),
-        preferThumb: false,
-        showTitle: true,
-        overlayText: false,
-        showParentTitle: false,
-        centerText: true,
-        overlayPlayButton: true,
-        coverImage: true
-    }, {
-        name: 'Artists',
-        types: 'MusicArtist',
-        shape: getSquareShape(enableScrollX()),
-        preferThumb: false,
-        showTitle: true,
-        overlayText: false,
-        showParentTitle: false,
-        centerText: true,
-        overlayPlayButton: true,
-        coverImage: true
-    }, {
-        name: 'Albums',
-        types: 'MusicAlbum',
-        shape: getSquareShape(enableScrollX()),
-        preferThumb: false,
-        showTitle: true,
-        overlayText: false,
-        showParentTitle: true,
-        centerText: true,
-        overlayPlayButton: true,
-        coverImage: true
-    }, {
-        name: 'Songs',
-        types: 'Audio',
-        shape: getSquareShape(enableScrollX()),
-        preferThumb: false,
-        showTitle: true,
-        overlayText: false,
-        showParentTitle: true,
-        centerText: true,
-        overlayMoreButton: true,
-        action: 'instantmix',
-        coverImage: true
-    }, {
-        name: 'Books',
-        types: 'Book',
-        shape: getPortraitShape(enableScrollX()),
-        showTitle: true,
-        showYear: true,
-        overlayPlayButton: true,
-        overlayText: false,
-        centerText: true
-    }, {
-        name: 'Channels',
-        types: 'LiveTVChannel',
-        shape: getBackdropShape(enableScrollX()),
-        showTitle: true,
-        overlayPlayButton: true,
-        overlayText: false,
-        centerText: true
-    }, {
-        name: 'HeaderPhotoAlbums',
-        types: 'PhotoAlbum',
-        shape: getBackdropShape(enableScrollX()),
-        showTitle: true,
-        overlayPlayButton: true,
-        overlayText: false,
-        centerText: true
-    }, {
-        name: 'Photos',
-        types: 'Photo',
-        shape: getBackdropShape(enableScrollX()),
-        showTitle: true,
-        overlayPlayButton: true,
-        overlayText: false,
-        centerText: true
-    }];
-}
-
-function getFetchDataFn(section) {
-    return function () {
-        const apiClient = this.apiClient;
-        const options = {
+function getFetchDataFn(section: FavoriteSection) {
+    return function (this: FavoritesTab) {
+        const apiClient = this.apiClient!;
+        const options: Record<string, string | number | boolean> = {
             SortBy: [ItemSortBy.SeriesSortName, ItemSortBy.SortName].join(','),
             SortOrder: 'Ascending',
             Filters: 'IsFavorite',
@@ -233,7 +71,7 @@ function getFetchDataFn(section) {
     };
 }
 
-function getRouteUrl(section, serverId) {
+function getRouteUrl(section: FavoriteSection, serverId: string) {
     return appRouter.getRouteUrl('list', {
         serverId: serverId,
         itemTypes: section.types,
@@ -241,12 +79,12 @@ function getRouteUrl(section, serverId) {
     });
 }
 
-function getItemsHtmlFn(section) {
-    return function (items) {
+function getItemsHtmlFn(section: FavoriteSection) {
+    return function (this: FavoritesTab, items: ItemDto[]) {
         // NOTE: Why is card layout always disabled?
         // let cardLayout = appHost.preferVisualCards && section.autoCardLayout && section.showTitle;
         const cardLayout = false;
-        const serverId = this.apiClient.serverId();
+        const serverId = this.apiClient!.serverId();
         const leadingButtons = layoutManager.tv ? [{
             name: globalize.translate('All'),
             id: 'more',
@@ -289,8 +127,8 @@ function getItemsHtmlFn(section) {
     };
 }
 
-function createSections(instance, elem, apiClient) {
-    const sections = getSections();
+function createSections(instance: FavoritesTab, elem: HTMLElement, apiClient: ApiClient) {
+    const sections = getFullFavoriteSections();
     let html = '';
 
     for (const section of sections) {
@@ -320,9 +158,9 @@ function createSections(instance, elem, apiClient) {
     }
 
     elem.innerHTML = html;
-    window.CustomElements.upgradeSubtree(elem);
+    (window as unknown as Window & { CustomElements: { upgradeSubtree: (element: Element) => void } }).CustomElements.upgradeSubtree(elem);
 
-    const elems = elem.querySelectorAll('.itemsContainer');
+    const elems = elem.querySelectorAll<FavoriteItemsContainer>('.itemsContainer');
 
     for (let i = 0, length = elems.length; i < length; i++) {
         const itemsContainer = elems[i];
@@ -332,25 +170,39 @@ function createSections(instance, elem, apiClient) {
     }
 }
 
+type FavoriteResumeOptions = { autoFocus?: boolean };
+type FavoriteItemsContainer = HTMLElement & {
+    fetchData: (() => Promise<BaseItemDtoQueryResult | undefined>) | null;
+    getItemsHtml: ((items: ItemDto[]) => string) | null;
+    parentContainer: Element | null;
+    resume: (options: FavoriteResumeOptions) => Promise<void>;
+    pause: () => void;
+};
+
 class FavoritesTab {
-    constructor(view, params) {
+    view: HTMLElement | null;
+    params: unknown;
+    apiClient: ApiClient | null | undefined;
+    sectionsContainer: HTMLElement | null;
+
+    constructor(view: HTMLElement, params: unknown) {
         this.view = view;
         this.params = params;
         this.apiClient = ServerConnections.currentApiClient();
-        this.sectionsContainer = view.querySelector('.sections');
-        createSections(this, this.sectionsContainer, this.apiClient);
+        this.sectionsContainer = view.querySelector<HTMLElement>('.sections')!;
+        createSections(this, this.sectionsContainer, this.apiClient!);
     }
 
-    onResume(options) {
+    onResume(options: FavoriteResumeOptions) {
         const promises = [];
-        const view = this.view;
-        const elems = this.sectionsContainer.querySelectorAll('.itemsContainer');
+        const view = this.view!;
+        const elems = this.sectionsContainer!.querySelectorAll<FavoriteItemsContainer>('.itemsContainer');
 
         for (const elem of elems) {
             promises.push(elem.resume(options));
         }
 
-        Promise.all(promises).then(function () {
+        void Promise.all(promises).then(function () {
             if (options.autoFocus) {
                 focusManager.autoFocus(view);
             }
@@ -359,7 +211,7 @@ class FavoritesTab {
 
     onPause() {
         if (this.sectionsContainer) {
-            Array.from(this.sectionsContainer.querySelectorAll('.itemsContainer'))
+            Array.from(this.sectionsContainer!.querySelectorAll<FavoriteItemsContainer>('.itemsContainer'))
                 .forEach(e => { e.pause(); });
         }
     }
@@ -368,7 +220,7 @@ class FavoritesTab {
         this.view = null;
         this.params = null;
         this.apiClient = null;
-        const elems = this.sectionsContainer.querySelectorAll('.itemsContainer');
+        const elems = this.sectionsContainer!.querySelectorAll<FavoriteItemsContainer>('.itemsContainer');
 
         for (const elem of elems) {
             elem.fetchData = null;
