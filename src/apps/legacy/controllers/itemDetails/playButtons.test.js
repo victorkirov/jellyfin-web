@@ -1,8 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ItemDetails from './index';
+import { getItemQuery } from 'hooks/useItem';
+import { queryClient } from 'utils/query/queryClient';
 
-const { apiClient, playbackManager, fixture, hideLoading, getListViewHtml } = vi.hoisted(() => {
+const { apiClient, playbackManager, fixture, hideLoading, getListViewHtml, getSdkItem, api } = vi.hoisted(() => {
     const data = { item: null };
     const client = {
         getItem: vi.fn(() => Promise.resolve(data.item)),
@@ -17,7 +19,7 @@ const { apiClient, playbackManager, fixture, hideLoading, getListViewHtml } = vi
         getSimilarItems: vi.fn(() => Promise.resolve({ Items: [] })),
         subscribe: vi.fn()
     };
-    return { apiClient: client, fixture: data, hideLoading: vi.fn(), getListViewHtml: vi.fn(() => ''), playbackManager: { canPlay: () => true, getSupportedCommands: () => ['PlayMediaSource'], play: vi.fn() } };
+    return { api: { basePath: 'https://test' }, getSdkItem: vi.fn(() => Promise.resolve({ data: data.item })), apiClient: client, fixture: data, hideLoading: vi.fn(), getListViewHtml: vi.fn(() => ''), playbackManager: { canPlay: () => true, getSupportedCommands: () => ['PlayMediaSource'], play: vi.fn() } };
 });
 const strings = JSON.parse(readFileSync('src/strings/en-us.json', 'utf8'));
 const template = readFileSync('src/apps/legacy/controllers/itemDetails/index.html', 'utf8');
@@ -25,7 +27,8 @@ vi.mock('lib/globalize', () => ({ default: {
     translate: (key, value) => (strings[key] || key).replace('{0}', value),
     getCurrentDateTimeLocale: () => 'en-US'
 } }));
-vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: { getApiClient: () => apiClient, currentApiClient: () => apiClient, getApi: () => ({}) } }));
+vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: { getApiClient: () => apiClient, currentApiClient: () => apiClient, getApi: () => api } }));
+vi.mock('@jellyfin/sdk/lib/utils/api/library-api', () => ({ getLibraryApi: () => ({ getItem: getSdkItem }) }));
 vi.mock('components/playback/playbackmanager', () => ({ playbackManager }));
 vi.mock('components/apphost', () => ({ appHost: { supports: () => false } }));
 vi.mock('components/backdrop/backdrop', () => ({ clearBackdrop: vi.fn(), setBackdrops: vi.fn() }));
@@ -34,7 +37,7 @@ vi.mock('components/cardbuilder/cardImage', () => ({ buildCardImage: () => '' })
 vi.mock('components/images/imageLoader', () => ({ default: { lazyChildren: vi.fn() } }));
 vi.mock('components/itemContextMenu', () => ({ default: { getCommands: () => Promise.resolve([]) } }));
 vi.mock('components/itemHelper', () => ({ default: {
-    supportsMediaSourceSelection: () => true, canMarkPlayed: () => false, canRate: () => false,
+    supportsMediaSourceSelection: () => true, canMarkPlayed: item => !!item.allowRating, canRate: item => !!item.allowRating,
     getDisplayName: item => item.Name, sortTracks: (first, second) => first.Index - second.Index
 } }));
 vi.mock('components/mediainfo/mediainfo', async importOriginal => {
@@ -67,6 +70,7 @@ vi.mock('elements/emby-select/emby-select', () => ({}));
 
 beforeEach(() => {
     vi.clearAllMocks();
+    queryClient.clear();
     document.body.innerHTML = template.replace(/\$\{(\w+)\}/g, (match, key) => strings[key] || key);
     document.querySelectorAll('select').forEach(select => {
         select.setLabel = vi.fn();
@@ -225,5 +229,81 @@ describe('Track accessibility and range distinctions', () => {
         subtitles.value = '4';
         page.querySelector('.btnPlay').click();
         expect(playbackManager.play).toHaveBeenLastCalledWith(expect.objectContaining({ subtitleStreamIndex: '4', mediaSourceId: 'flags' }));
+    });
+});
+
+describe('Details item query reuse and freshness', () => {
+    it('reuses the item fetched by navigation without a legacy item request', async () => {
+        fixture.item = { Id: 'cached', Type: 'Movie', ServerId: 'server' };
+        await queryClient.fetchQuery(getItemQuery(api, 'cached', 'user'));
+        const page = document.querySelector('#itemDetailPage');
+        new ItemDetails(page, { id: 'cached', serverId: 'server' });
+        page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+        await vi.waitFor(() => expect(hideLoading).toHaveBeenCalled());
+        expect(getSdkItem).toHaveBeenCalledTimes(1);
+        expect(apiClient.getItem).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        [{ basePath: 'https://other' }, 'user'],
+        [{ basePath: 'https://test' }, 'other-user']
+    ])('does not reuse another server or user item cache: %j / %s', async (previousApi, previousUser) => {
+        fixture.item = { Id: 'switched', Type: 'Movie', ServerId: 'old-server' };
+        await queryClient.fetchQuery(getItemQuery(previousApi, 'switched', previousUser));
+        fixture.item = { Id: 'switched', Type: 'Movie', ServerId: 'server', UserData: { IsFavorite: true } };
+        const page = document.querySelector('#itemDetailPage');
+        new ItemDetails(page, { id: 'switched', serverId: 'server' });
+        page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+        await vi.waitFor(() => expect(hideLoading).toHaveBeenCalled());
+        expect(getSdkItem).toHaveBeenCalledTimes(2);
+        expect(queryClient.getQueryData(getItemQuery(api, 'switched', 'user').queryKey)).toEqual(fixture.item);
+    });
+
+    it('refetches invalidated user data when navigating to details again', async () => {
+        fixture.item = { Id: 'invalidated', Type: 'Movie', ServerId: 'server' };
+        const query = getItemQuery(api, 'invalidated', 'user');
+        await queryClient.fetchQuery(query);
+        await queryClient.invalidateQueries({ queryKey: query.queryKey });
+        fixture.item = { ...fixture.item, UserData: { Played: true, IsFavorite: true } };
+        const page = document.querySelector('#itemDetailPage');
+        new ItemDetails(page, { id: 'invalidated', serverId: 'server' });
+        page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+        await vi.waitFor(() => expect(hideLoading).toHaveBeenCalled());
+        expect(getSdkItem).toHaveBeenCalledTimes(2);
+        expect(queryClient.getQueryData(query.queryKey).UserData).toEqual({ Played: true, IsFavorite: true });
+    });
+
+    it('fetches an alternate version through the item cache and keeps its playback identity', async () => {
+        const sources = ['first', 'second'].map(Id => ({ Id, Name: Id, MediaStreams: [] }));
+        fixture.item = { Id: 'first', Type: 'Movie', ServerId: 'server', MediaSources: sources };
+        const page = document.querySelector('#itemDetailPage');
+        new ItemDetails(page, { id: 'first', serverId: 'server' });
+        page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+        await vi.waitFor(() => expect(hideLoading).toHaveBeenCalled());
+        fixture.item = { ...fixture.item, Id: 'second', UserData: { PlaybackPositionTicks: 10000000 } };
+        const select = page.querySelector('.selectSource');
+        select.value = 'second';
+        select.dispatchEvent(new Event('change'));
+        await vi.waitFor(() => expect(getSdkItem).toHaveBeenCalledTimes(2));
+        await vi.waitFor(() => expect(page.querySelector('.btnPlay').textContent.trim()).toBe('Resume · 0:01'));
+        page.querySelector('.btnPlay').click();
+        expect(playbackManager.play).toHaveBeenLastCalledWith(expect.objectContaining({
+            items: [fixture.item], mediaSourceId: 'second', startPositionTicks: 10000000
+        }));
+        expect(queryClient.getQueryData(getItemQuery(api, 'second', 'user').queryKey)).toEqual(fixture.item);
+    });
+
+    it('refreshes a restored item after playback or favourite changes without a version selector', async () => {
+        fixture.item = { Id: 'restore', Type: 'Movie', ServerId: 'server', allowRating: true, UserData: { PlaybackPositionTicks: 0 } };
+        const page = document.querySelector('#itemDetailPage');
+        new ItemDetails(page, { id: 'restore', serverId: 'server' });
+        page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+        await vi.waitFor(() => expect(hideLoading).toHaveBeenCalled());
+        fixture.item = { ...fixture.item, UserData: { PlaybackPositionTicks: 13800000000, IsFavorite: true, Played: true } };
+        page.dispatchEvent(new CustomEvent('viewshow', { detail: { isRestored: true } }));
+        await vi.waitFor(() => expect(page.querySelector('.btnPlay').textContent.trim()).toBe('Resume · 23:00'));
+        expect(getSdkItem).toHaveBeenCalledTimes(2);
+        expect(page.querySelector('.btnUserRating').setItem).toHaveBeenLastCalledWith(fixture.item);
+        expect(page.querySelector('.btnPlaystate').setItem).toHaveBeenLastCalledWith(fixture.item);
     });
 });

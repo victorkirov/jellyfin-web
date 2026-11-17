@@ -27,6 +27,8 @@ import itemShortcuts from 'components/shortcuts';
 import { AppFeature } from 'constants/appFeature';
 import { ItemAction } from 'constants/itemAction';
 import globalize from 'lib/globalize';
+import { getItemQuery } from 'hooks/useItem';
+import { queryClient } from 'utils/query/queryClient';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import browser from 'scripts/browser';
 import datetime from 'scripts/datetime';
@@ -67,7 +69,9 @@ function getPromise(apiClient, params) {
     const id = params.id;
 
     if (id) {
-        return apiClient.getItem(apiClient.getCurrentUserId(), id);
+        return queryClient.fetchQuery(getItemQuery(
+            ServerConnections.getApi(params.serverId), id, apiClient.getCurrentUserId()
+        ));
     }
 
     if (params.genre) {
@@ -1951,8 +1955,9 @@ export default function (view, params) {
         const userData = (Data?.UserDataList ?? []).find(u => u.ItemId == currentItem.Id);
 
         if (userData) {
-            currentItem.UserData = userData;
+            currentItem = { ...currentItem, UserData: userData };
             reloadPlayButtons(view, currentItem);
+            reloadUserDataButtons(view, currentItem);
             autoFocus(view);
         }
     }
@@ -2019,12 +2024,8 @@ export default function (view, params) {
     }
 
     function refreshSelectedVersion() {
-        const selectedId = view.querySelector('.selectSource').value;
-        if (!selectedId || !currentItem || selectedId === currentItem.Id) {
-            reloadPlayButtons(view, currentItem);
-            reloadUserDataButtons(view, currentItem);
-            return;
-        }
+        if (!currentItem) return;
+        const selectedId = view.querySelector('.selectSource').value || currentItem.Id;
 
         const apiClient = ServerConnections.getApiClient(currentItem.ServerId);
         const api = ServerConnections.getApi(currentItem.ServerId);
@@ -2034,17 +2035,24 @@ export default function (view, params) {
         }
 
         Promise.all([
-            getLibraryApi(api).getItem({
-                userId: apiClient?.getCurrentUserId(),
-                itemId: selectedId
+            queryClient.fetchQuery({
+                ...getItemQuery(api, selectedId, apiClient.getCurrentUserId()),
+                // Restored views must reflect playback and mutations while hidden.
+                staleTime: 0
             }),
             apiClient.getCurrentUser()
-        ]).then(function ([{ data: versionItem }, user]) {
-            if (view.querySelector('.selectSource').value !== selectedId) {
+        ]).then(function ([versionItem, user]) {
+            if ((view.querySelector('.selectSource').value || currentItem?.Id) !== selectedId) {
                 return;
             }
 
+            const sameItem = versionItem.Id === currentItem.Id;
             currentItem = versionItem;
+            if (sameItem) {
+                reloadPlayButtons(view, currentItem);
+                reloadUserDataButtons(view, currentItem);
+                return;
+            }
             reloadFromItem(self, view, params, versionItem, user);
             renderVideoSelections(view, self._currentPlaybackMediaSources);
             renderAudioSelections(view, self._currentPlaybackMediaSources);
