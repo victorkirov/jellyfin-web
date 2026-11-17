@@ -12,7 +12,6 @@ import globalize from '../lib/globalize';
 import * as webSettings from '../scripts/settings/webSettings';
 import datetime from '../scripts/datetime';
 import { setBackdropTransparency } from '../components/backdrop/backdrop';
-import DirectoryBrowser from '../components/directorybrowser/directorybrowser';
 import dialogHelper from '../components/dialogHelper/dialogHelper';
 import itemIdentifier from '../components/itemidentifier/itemidentifier';
 import { getLocationSearch } from './url.ts';
@@ -256,7 +255,6 @@ const Dashboard = {
     serverAddress,
     showLoadingMsg,
     datetime,
-    DirectoryBrowser,
     dialogHelper,
     itemIdentifier,
     setBackdropTransparency

@@ -43,7 +43,6 @@ import './scripts/screensavermanager';
 // Import site styles
 import './styles/site.scss';
 import './styles/livetv.scss';
-import './styles/dashboard.scss';
 import './styles/detailtable.scss';
 import './styles/librarybrowser.scss';
 

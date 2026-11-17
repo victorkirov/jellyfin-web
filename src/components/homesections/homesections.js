@@ -3,7 +3,6 @@ import { DEFAULT_SECTIONS, HomeSectionType } from 'constants/homeSectionType';
 import { getUserViewsQuery } from 'hooks/api/useUserViews';
 import globalize from 'lib/globalize';
 import ServerConnections from 'lib/jellyfin-apiclient/ServerConnections';
-import Dashboard from 'utils/dashboard';
 import { queryClient } from 'utils/query/queryClient';
 
 import { deferSection } from './deferSection';
@@ -86,25 +85,13 @@ export function loadSections(elem, apiClient, user, userSettings) {
                     .then(() => new Promise((resolve) => setTimeout(resolve, 0)))
                     .then(() => resume(elem, { refresh: true }));
             } else {
-                let noLibDescription;
-                if (user.Policy?.IsAdministrator) {
-                    noLibDescription = globalize.translate('NoCreatedLibraries', '<br><a id="button-createLibrary" class="button-link">', '</a>');
-                } else {
-                    noLibDescription = globalize.translate('AskAdminToCreateLibrary');
-                }
+                const noLibDescription = globalize.translate('AskAdminToCreateLibrary');
 
                 html += '<div class="centerMessage padded-left padded-right">';
                 html += '<h2>' + globalize.translate('MessageNothingHere') + '</h2>';
                 html += '<p>' + noLibDescription + '</p>';
                 html += '</div>';
                 elem.innerHTML = html;
-
-                const createNowLink = elem.querySelector('#button-createLibrary');
-                if (createNowLink) {
-                    createNowLink.addEventListener('click', function () {
-                        Dashboard.navigate('dashboard/libraries');
-                    });
-                }
             }
         });
 }

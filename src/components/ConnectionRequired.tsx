@@ -8,8 +8,6 @@ import ConnectionErrorPage from './ConnectionErrorPage';
 import Loading from './loading/LoadingComponent';
 
 enum AccessLevel {
-    /** Requires a user with administrator access */
-    Admin = 'admin',
     /** No access restrictions */
     Public = 'public',
     /** Requires a valid user session */
@@ -49,7 +47,7 @@ const fetchPublicSystemInfo = async (apiClient: ApiClient) => {
 
 /**
  * A component that ensures a server connection has been established.
- * Additional parameters exist to verify a user or admin have authenticated.
+ * Additional parameters exist to verify a user has authenticated.
  * If a condition fails, this component will navigate to the appropriate page.
  */
 const ConnectionRequired: FunctionComponent<ConnectionRequiredProps> = ({
@@ -126,7 +124,7 @@ const ConnectionRequired: FunctionComponent<ConnectionRequiredProps> = ({
         const client = ServerConnections.currentApiClient();
 
         // If this is a user route, ensure a user is logged in
-        if ((level === AccessLevel.Admin || level === AccessLevel.User) && !client?.isLoggedIn()) {
+        if (level === AccessLevel.User && !client?.isLoggedIn()) {
             try {
                 console.warn('[ConnectionRequired] unauthenticated user attempted to access user route');
                 bounce(await ServerConnections.connect())
@@ -137,24 +135,6 @@ const ConnectionRequired: FunctionComponent<ConnectionRequiredProps> = ({
                 console.warn('[ConnectionRequired] error bouncing from user route', ex);
             }
             return;
-        }
-
-        // If this is an admin route, ensure the user has access
-        if (level === AccessLevel.Admin) {
-            try {
-                const user = await client?.getCurrentUser();
-                if (!user?.Policy?.IsAdministrator) {
-                    console.warn('[ConnectionRequired] normal user attempted to access admin route');
-                    bounce(await ServerConnections.connect())
-                        .catch(err => {
-                            console.error('[ConnectionRequired] failed to bounce', err);
-                        });
-                    return;
-                }
-            } catch (ex) {
-                console.warn('[ConnectionRequired] error bouncing from admin route', ex);
-                return;
-            }
         }
 
         setIsLoading(false);

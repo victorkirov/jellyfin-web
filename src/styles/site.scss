@@ -182,3 +182,45 @@ form {
     margin-top: auto;
     margin-bottom: auto;
 }
+
+progress {
+    appearance: none;
+    margin: 0;
+    background: #ccc !important;
+    border-radius: 0.2em;
+    border: none;
+}
+
+progress[role]::after {
+    background-image: none;
+}
+
+progress::-webkit-progress-bar {
+    background: #ccc;
+}
+
+progress::-moz-progress-bar {
+    background-color: #00a4dc;
+}
+
+progress::-webkit-progress-value {
+    background-color: #00a4dc;
+}
+
+progress[aria-valuenow]::before {
+    border-radius: 0.4em;
+    background-color: #00a4dc;
+}
+
+.content-primary {
+    padding-right: 1em;
+    padding-left: 1em;
+}
+
+.content-primary ul:first-child {
+    margin-top: 0;
+}
+
+.customCssContainer textarea {
+    resize: none;
+}

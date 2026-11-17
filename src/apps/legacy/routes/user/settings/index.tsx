@@ -74,25 +74,6 @@ const UserSettingsPage: FC = () => {
                             {user.Name}
                         </h2>
 
-                        <LinkButton
-                            href={`#/userprofile?userId=${userId}`}
-                            className='lnkUserProfile listItem-border'
-                            style={{
-                                display: 'block',
-                                margin: 0,
-                                padding: 0
-                            }}
-                        >
-                            <div className='listItem'>
-                                <span className='material-icons listItemIcon listItemIcon-transparent person' aria-hidden='true' />
-                                <div className='listItemBody'>
-                                    <div className='listItemBodyText'>
-                                        {globalize.translate('Profile')}
-                                    </div>
-                                </div>
-                            </div>
-                        </LinkButton>
-
                         {isQuickConnectEnabled && (
                             <LinkButton
                                 href={`#/quickconnect?userId=${userId}`}

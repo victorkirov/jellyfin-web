@@ -1,14 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { pause, resume } from './homesections';
+import { loadSections, pause, resume } from './homesections';
 import { deferSection } from './deferSection';
+
+const emptyLibraries = vi.hoisted(() => ({ fetchQuery: vi.fn(), translate: vi.fn((key: string) => key) }));
 
 vi.mock('./deferSection', () => ({ deferSection: vi.fn(() => vi.fn()) }));
 vi.mock('components/layoutManager', () => ({ default: { tv: true } }));
 vi.mock('hooks/api/useUserViews', () => ({ getUserViewsQuery: vi.fn() }));
-vi.mock('lib/globalize', () => ({ default: {} }));
-vi.mock('lib/jellyfin-apiclient/ServerConnections', () => ({ default: {} }));
-vi.mock('utils/dashboard', () => ({ default: {} }));
-vi.mock('utils/query/queryClient', () => ({ queryClient: {} }));
+vi.mock('lib/globalize', () => ({ default: { translate: emptyLibraries.translate } }));
+vi.mock('lib/jellyfin-apiclient/ServerConnections', () => ({ default: { getApi: () => ({}) } }));
+vi.mock('utils/query/queryClient', () => ({ queryClient: { fetchQuery: emptyLibraries.fetchQuery } }));
 vi.mock('./sections/activeRecordings', () => ({ loadRecordings: vi.fn() }));
 vi.mock('./sections/libraryButtons', () => ({ loadLibraryButtons: vi.fn() }));
 vi.mock('./sections/libraryTiles', () => ({ loadLibraryTiles: vi.fn() }));
@@ -86,5 +87,17 @@ describe('TV home row resume', () => {
         await load();
         expect(rows[2].resume).toHaveBeenCalledWith(options);
         expect(rows[2].fetchData).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('Empty libraries', () => {
+    it.each([true, false])('shows setup guidance without an admin link (administrator: %s)', async isAdministrator => {
+        emptyLibraries.fetchQuery.mockResolvedValue({ Items: [] });
+        const container = document.createElement('div');
+        await loadSections(container, { serverId: () => 'server' }, {
+            Id: 'user', Policy: { IsAdministrator: isAdministrator }
+        }, {});
+        expect(container.textContent).toContain('AskAdminToCreateLibrary');
+        expect(container.querySelector('a, button, #button-createLibrary')).toBeNull();
     });
 });

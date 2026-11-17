@@ -244,10 +244,6 @@ class AppRouter {
             return '#/mypreferencesmenu';
         }
 
-        if (item === 'manageserver') {
-            return '#/dashboard';
-        }
-
         if (item === 'recordedtv') {
             return '#/livetv?tab=3&serverId=' + serverId;
         }

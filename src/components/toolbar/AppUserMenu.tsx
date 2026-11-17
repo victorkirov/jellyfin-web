@@ -1,9 +1,6 @@
-import AccountCircle from '@mui/icons-material/AccountCircle';
 import AppSettingsAlt from '@mui/icons-material/AppSettingsAlt';
 import Close from '@mui/icons-material/Close';
-import DashboardIcon from '@mui/icons-material/Dashboard';
 import Download from '@mui/icons-material/Download';
-import Edit from '@mui/icons-material/Edit';
 import Logout from '@mui/icons-material/Logout';
 import PhonelinkLock from '@mui/icons-material/PhonelinkLock';
 import Settings from '@mui/icons-material/Settings';
@@ -18,7 +15,6 @@ import { Link } from 'react-router-dom';
 
 import { appHost } from 'components/apphost';
 import { AppFeature } from 'constants/appFeature';
-import { useApi } from 'hooks/useApi';
 import { useQuickConnectEnabled } from 'hooks/useQuickConnect';
 import globalize from 'lib/globalize';
 import shell from 'scripts/shell';
@@ -35,7 +31,6 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
     open,
     onMenuClose
 }) => {
-    const { user } = useApi();
     const { data: isQuickConnectEnabled } = useQuickConnectEnabled();
 
     const onDownloadManagerClick = useCallback(() => {
@@ -81,18 +76,6 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
         >
             <MenuItem
                 component={Link}
-                to={`/userprofile?userId=${user?.Id}`}
-                onClick={onMenuClose}
-            >
-                <ListItemIcon>
-                    <AccountCircle />
-                </ListItemIcon>
-                <ListItemText>
-                    {globalize.translate('Profile')}
-                </ListItemText>
-            </MenuItem>
-            <MenuItem
-                component={Link}
                 to='/mypreferencesmenu'
                 onClick={onMenuClose}
             >
@@ -133,34 +116,6 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
                     </ListItemText>
                 </MenuItem>
             )}
-
-            {/* ADMIN LINKS */}
-            {user?.Policy?.IsAdministrator && ([
-                <Divider key='admin-links-divider' />,
-                <MenuItem
-                    key='admin-dashboard-link'
-                    component={Link}
-                    to='/dashboard'
-                    onClick={onMenuClose}
-                >
-
-                    <ListItemIcon>
-                        <DashboardIcon />
-                    </ListItemIcon>
-                    <ListItemText primary={globalize.translate('TabDashboard')} />
-                </MenuItem>,
-                <MenuItem
-                    key='admin-metadata-link'
-                    component={Link}
-                    to='/metadata'
-                    onClick={onMenuClose}
-                >
-                    <ListItemIcon>
-                        <Edit />
-                    </ListItemIcon>
-                    <ListItemText primary={globalize.translate('MetadataManager')} />
-                </MenuItem>
-            ])}
 
             <Divider />
             {isQuickConnectEnabled && (
