@@ -16,6 +16,7 @@ import { PlaybackSubscriber } from './playbackSubscriber';
 import { MediaSegmentAction } from '../constants/mediaSegmentAction';
 
 class MediaSegmentManager extends PlaybackSubscriber {
+    private playbackGeneration = 0;
     private hasSegments = false;
     private isLastSegmentIgnored = false;
     private lastSegmentIndex = 0;
@@ -23,14 +24,14 @@ class MediaSegmentManager extends PlaybackSubscriber {
     private mediaSegmentTypeActions: Record<Partial<MediaSegmentType>, MediaSegmentAction> | undefined;
     private mediaSegments: MediaSegmentDto[] = [];
 
-    private async fetchMediaSegments(api: Api, itemId: string, includeSegmentTypes: MediaSegmentType[]) {
+    private async fetchMediaSegments(api: Api, itemId: string, includeSegmentTypes: MediaSegmentType[], generation: number) {
         try {
             const { data: mediaSegments } = await getMediaSegmentApi(api)
                 .getItemSegments({ itemId, includeSegmentTypes });
-            this.mediaSegments = mediaSegments.Items || [];
+            if (generation === this.playbackGeneration) this.mediaSegments = mediaSegments.Items || [];
         } catch (err) {
             console.error('[MediaSegmentManager] failed to fetch segments', err);
-            this.mediaSegments = [];
+            if (generation === this.playbackGeneration) this.mediaSegments = [];
         }
     }
 
@@ -80,7 +81,21 @@ class MediaSegmentManager extends PlaybackSubscriber {
         }
     }
 
+    private clearSegments() {
+        this.playbackGeneration++;
+        this.hasSegments = false;
+        this.mediaSegments = [];
+        this.mediaSegmentTypeActions = undefined;
+    }
+
+    onPlaybackCancelled() { this.clearSegments(); }
+    onPlaybackStop() { this.clearSegments(); }
+    onPlayerChange() { this.clearSegments(); }
+    onPlayerStopped() { this.clearSegments(); }
+    onPlayerPlaybackStop() { this.clearSegments(); }
+
     onPlayerPlaybackStart(_e: Event, state: PlayerState) {
+        this.clearSegments();
         this.isLastSegmentIgnored = false;
         this.lastSegmentIndex = 0;
         this.lastTime = -1;
@@ -117,7 +132,8 @@ class MediaSegmentManager extends PlaybackSubscriber {
         void this.fetchMediaSegments(
             api,
             itemId,
-            Object.keys(this.mediaSegmentTypeActions).map(t => t as keyof typeof MediaSegmentType));
+            Object.keys(this.mediaSegmentTypeActions).map(t => t as keyof typeof MediaSegmentType),
+            this.playbackGeneration);
     }
 
     onPlayerTimeUpdate() {
