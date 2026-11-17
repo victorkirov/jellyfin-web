@@ -156,6 +156,7 @@ function buildCardsHtmlInternal(items, options) {
 
     const sectionTitleTagName = options.sectionTitleTagName || 'div';
     let apiClient;
+    let api;
     let lastServerId;
 
     for (const [i, item] of items.entries()) {
@@ -164,6 +165,7 @@ function buildCardsHtmlInternal(items, options) {
         if (serverId !== lastServerId) {
             lastServerId = serverId;
             apiClient = ServerConnections.getApiClient(lastServerId);
+            api = ServerConnections.getApi(apiClient.serverId());
         }
 
         if (options.indexBy) {
@@ -226,7 +228,7 @@ function buildCardsHtmlInternal(items, options) {
             hasOpenRow = true;
         }
 
-        html += buildCard(i, item, apiClient, options);
+        html += buildCard(i, item, apiClient, options, api);
 
         itemsInRow++;
 
@@ -731,9 +733,10 @@ function importRefreshIndicator() {
  * @param {object} item - Item used to generate the card.
  * @param {object} apiClient - API client instance.
  * @param {object} options - Options used to generate the card.
+ * @param {object} api - SDK API instance.
  * @returns {string} HTML markup for the generated card.
  */
-function buildCard(index, item, apiClient, options) {
+function buildCard(index, item, apiClient, options, api) {
     const action = resolveAction({
         defaultAction: options.action || ItemAction.Link,
         isFolder: item.IsFolder,
@@ -748,7 +751,7 @@ function buildCard(index, item, apiClient, options) {
 
     // TODO move card creation code to Card component
 
-    const imgInfo = getCardImageUrl({ api: ServerConnections.getApi(apiClient.serverId()), item, options, shape });
+    const imgInfo = getCardImageUrl({ api, item, options, shape });
     const imgUrl = imgInfo.imgUrl;
     const blurhash = imgInfo.blurhash;
     const forceName = imgInfo.forceName;
@@ -881,11 +884,8 @@ function buildCard(index, item, apiClient, options) {
 
     // TV Channel logos are transparent so skip the placeholder to avoid overlapping
     if (imgUrl && item.Type !== 'TvChannel') {
-        cardPadderIcon = getDefaultText(item, {
-            // Always use an icon
-            defaultCardImageIcon: 'folder',
-            ...options
-        });
+        // Always use an icon unless the caller overrides it.
+        cardPadderIcon = getDefaultText(item, options, 'folder');
     }
 
     cardImageContainerOpen = `<div class="${cardBoxClass}"><div class="${cardScalableClass}"><div class="cardPadder cardPadder-${shape}">${cardPadderIcon}</div>${cardImageContainerOpen}`;
@@ -1032,9 +1032,10 @@ function getHoverMenuHtml(item, action) {
  * Generates the text or icon used for default card backgrounds.
  * @param {object} item - Item used to generate the card overlay.
  * @param {object} options - Options used to generate the card overlay.
+ * @param {string} [defaultCardImageIcon] - Fallback icon when no option is supplied.
  * @returns {string} HTML markup of the card overlay.
  */
-export function getDefaultText(item, options) {
+export function getDefaultText(item, options, defaultCardImageIcon) {
     let icon;
 
     if (item.Type === BaseItemKind.CollectionFolder || item.CollectionType) {
@@ -1042,7 +1043,8 @@ export function getDefaultText(item, options) {
     }
 
     if (!icon) {
-        icon = getItemTypeIcon(item.Type, options?.defaultCardImageIcon);
+        const iconName = options && 'defaultCardImageIcon' in options ? options.defaultCardImageIcon : defaultCardImageIcon;
+        icon = getItemTypeIcon(item.Type, iconName);
     }
 
     if (icon) {

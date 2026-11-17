@@ -4,6 +4,13 @@ import '../../elements/emby-progressbar/emby-progressbar';
 import './indicators.scss';
 import 'material-design-icons-iconfont';
 
+const typeIcons = {
+    'Video' : 'videocam',
+    'Folder' : 'folder',
+    'PhotoAlbum' : 'photo_album',
+    'Photo' : 'photo'
+};
+
 export function enableProgressIndicator(item) {
     return (item.MediaType === 'Video' && item.Type !== 'TvChannel')
         || item.Type === 'Book'
@@ -138,14 +145,7 @@ export function getSyncIndicator(item) {
 }
 
 export function getTypeIndicator(item) {
-    const iconT = {
-        'Video' : 'videocam',
-        'Folder' : 'folder',
-        'PhotoAlbum' : 'photo_album',
-        'Photo' : 'photo'
-    };
-
-    const icon = iconT[item.Type];
+    const icon = typeIcons[item.Type];
     return icon ? '<div class="indicator videoIndicator"><span class="material-icons indicatorIcon ' + icon + '" aria-hidden="true"></span></div>' : '';
 }
 
