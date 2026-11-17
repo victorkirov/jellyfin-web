@@ -6,14 +6,10 @@ import 'intersection-observer';
 import 'classlist.js';
 import 'whatwg-fetch';
 import 'abortcontroller-polyfill'; // requires fetch
-import 'resize-observer-polyfill';
 import 'proxy-polyfill';
 
-import './domParserTextHtml';
 import './elementAppendPrepend';
 import './focusPreventScroll';
 import './htmlMediaElement';
 import './keyboardEvent';
 import './mediaQueryList';
-import './patchHeaders';
-import './vendorStyles';
