@@ -158,6 +158,23 @@ function buildCardsHtmlInternal(items, options) {
     let api;
     let lastServerId;
 
+    let secondaryCaptionClass = '';
+    if (items.length > 1 && !options.overlayText && (options.showParentTitle || options.showParentTitleOrTitle)) {
+        let hasTallSecondary = false;
+        let hasShortSecondary = false;
+        for (const item of items) {
+            if (item.Type === 'Episode' || item.Type === 'Season' || isUsingLiveTvNaming(item.Type)) {
+                hasTallSecondary = true;
+            } else {
+                hasShortSecondary = true;
+            }
+            if (hasTallSecondary && hasShortSecondary) {
+                secondaryCaptionClass = ' card-tallSecondary';
+                break;
+            }
+        }
+    }
+
     for (const [i, item] of items.entries()) {
         const serverId = item.ServerId || options.serverId;
 
@@ -227,7 +244,7 @@ function buildCardsHtmlInternal(items, options) {
             hasOpenRow = true;
         }
 
-        html += buildCard(i, item, apiClient, options, api);
+        html += buildCard(i, item, apiClient, options, api, secondaryCaptionClass);
 
         itemsInRow++;
 
@@ -705,9 +722,10 @@ function importRefreshIndicator() {
  * @param {object} apiClient - API client instance.
  * @param {object} options - Options used to generate the card.
  * @param {object} api - SDK API instance.
+ * @param {string} secondaryCaptionClass - Batch caption sizing class.
  * @returns {string} HTML markup for the generated card.
  */
-function buildCard(index, item, apiClient, options, api) {
+function buildCard(index, item, apiClient, options, api, secondaryCaptionClass) {
     const action = resolveAction({
         defaultAction: options.action || ItemAction.Link,
         isFolder: item.IsFolder,
@@ -912,7 +930,7 @@ function buildCard(index, item, apiClient, options, api) {
         childCount: item.ChildCount,
         tagName: tagName,
         itemType: item.Type
-    });
+    }) + secondaryCaptionClass;
 
     const positionTicksData = item.UserData?.PlaybackPositionTicks ? (' data-positionticks="' + item.UserData.PlaybackPositionTicks + '"') : '';
     const playlistIdData = options.playlistId ? (' data-playlistid="' + options.playlistId + '"') : '';

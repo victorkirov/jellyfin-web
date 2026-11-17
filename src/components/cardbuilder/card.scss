@@ -317,6 +317,37 @@ button::-moz-focus-inner {
     padding-top: 0.24em;
 }
 
+// Keep metadata compact; only mixed batches need taller shared caption slots.
+.cardText-first + .cardText {
+    font-size: 86%;
+    line-height: 1.25;
+    min-height: 1.25em;
+}
+
+.card-tallSecondary .cardText-first + .cardText {
+    min-height: 2.5em;
+    max-height: 2.5em;
+}
+
+// Episodic and live media put the item title below its parent title.
+.cardText-first > bdi,
+.card[data-type="Episode"] .cardText-first + .cardText-secondary > bdi,
+.card[data-type="Season"] .cardText-first + .cardText-secondary > bdi,
+.card[data-type="Program"] .cardText-first + .cardText-secondary > bdi,
+.card[data-type="Timer"] .cardText-first + .cardText-secondary > bdi,
+.card[data-type="Recording"] .cardText-first + .cardText-secondary > bdi {
+    display: block;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+    word-wrap: break-word;
+    line-height: 1.25;
+    min-height: 2.5em;
+    max-height: 2.5em;
+    overflow: hidden;
+}
+
 .textActionButton {
     border: 0 !important;
     background: transparent;
