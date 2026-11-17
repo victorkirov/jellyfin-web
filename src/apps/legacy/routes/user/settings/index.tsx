@@ -3,7 +3,6 @@ import React, { useEffect, useMemo, useState, type FC } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { appHost } from 'components/apphost';
-import layoutManager from 'components/layoutManager';
 import Loading from 'components/loading/LoadingComponent';
 import Page from 'components/Page';
 import { AppFeature } from 'constants/appFeature';
@@ -15,7 +14,6 @@ import globalize from 'lib/globalize';
 import browser from 'scripts/browser';
 import Dashboard from 'utils/dashboard';
 import shell from 'scripts/shell';
-import keyboardNavigation from 'scripts/keyboardNavigation';
 
 const UserSettingsPage: FC = () => {
     const { user: currentUser } = useApi();
@@ -46,9 +44,6 @@ const UserSettingsPage: FC = () => {
             <Loading />
         );
     }
-
-    // gamepad toggle unavailable on EdgeUWP, and smoothscroll unavailable on non-TV layout
-    const isControlsPageEmpty = !keyboardNavigation.canEnableGamepad() && !layoutManager.tv;
 
     return (
         <Page
@@ -194,7 +189,7 @@ const UserSettingsPage: FC = () => {
                             </LinkButton>
                         )}
 
-                        {isLoggedInUser && !browser.mobile && !isControlsPageEmpty && (
+                        {isLoggedInUser && !browser.mobile && (
                             <LinkButton
                                 href={`#/mypreferencescontrols?userId=${userId}`}
                                 className='lnkControlsPreferences listItem-border'
@@ -215,57 +210,6 @@ const UserSettingsPage: FC = () => {
                             </LinkButton>
                         )}
                     </div>
-
-                    {isLoggedInUser && user.Policy?.IsAdministrator && !layoutManager.tv && (
-                        <div className='adminSection verticalSection verticalSection-extrabottompadding'>
-                            <h2
-                                className='sectionTitle headerUsername'
-                                style={{
-                                    paddingLeft: '0.25em'
-                                }}
-                            >
-                                {globalize.translate('HeaderAdmin')}
-                            </h2>
-
-                            <LinkButton
-                                href='#/dashboard'
-                                className='listItem-border'
-                                style={{
-                                    display: 'block',
-                                    margin: 0,
-                                    padding: 0
-                                }}
-                            >
-                                <div className='listItem'>
-                                    <span className='material-icons listItemIcon listItemIcon-transparent dashboard' aria-hidden='true' />
-                                    <div className='listItemBody'>
-                                        <div className='listItemBodyText'>
-                                            {globalize.translate('TabDashboard')}
-                                        </div>
-                                    </div>
-                                </div>
-                            </LinkButton>
-
-                            <LinkButton
-                                href='#/metadata'
-                                className='listItem-border'
-                                style={{
-                                    display: 'block',
-                                    margin: 0,
-                                    padding: 0
-                                }}
-                            >
-                                <div className='listItem'>
-                                    <span className='material-icons listItemIcon listItemIcon-transparent mode_edit' aria-hidden='true' />
-                                    <div className='listItemBody'>
-                                        <div className='listItemBodyText'>
-                                            {globalize.translate('MetadataManager')}
-                                        </div>
-                                    </div>
-                                </div>
-                            </LinkButton>
-                        </div>
-                    )}
 
                     {isLoggedInUser && (
                         <div className='userSection verticalSection verticalSection-extrabottompadding'>

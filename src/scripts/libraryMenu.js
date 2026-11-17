@@ -2,7 +2,6 @@ import globalize from 'lib/globalize';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import { EventType } from 'constants/eventType';
 
-import layoutManager from '../components/layoutManager';
 import inputManager from './inputManager';
 import viewManager from '../components/viewManager/viewManager';
 import { appRouter } from '../components/router/appRouter';
@@ -147,20 +146,16 @@ function updateHeaderUserButton(src) {
 }
 
 function updateClock() {
-    if (layoutManager.tv) {
-        currentTimeText.classList.remove('hide');
-        let lastMinute;
-        setInterval(function() {
-            const now = new Date();
-            // Formatting the time is slow on low-end TVs, so only update it when the minute changes
-            if (now.getMinutes() !== lastMinute) {
-                lastMinute = now.getMinutes();
-                currentTimeText.innerText = datetime.getDisplayTime(now);
-            }
-        }, 1000);
-    } else {
-        currentTimeText.classList.add('hide');
-    }
+    currentTimeText.classList.remove('hide');
+    let lastMinute;
+    setInterval(function() {
+        const now = new Date();
+        // Formatting the time is slow on low-end TVs, so only update it when the minute changes
+        if (now.getMinutes() !== lastMinute) {
+            lastMinute = now.getMinutes();
+            currentTimeText.innerText = datetime.getDisplayTime(now);
+        }
+    }, 1000);
 }
 
 function showSearch() {
@@ -198,7 +193,7 @@ function bindMenuEvents() {
 }
 
 function onPlaybackStart() {
-    if (playbackManager.isPlayingAudio() && layoutManager.tv) {
+    if (playbackManager.isPlayingAudio()) {
         headerAudioPlayerButton.classList.remove('hide');
     } else {
         headerAudioPlayerButton.classList.add('hide');
@@ -215,13 +210,8 @@ function getTopParentId() {
     return getParameterByName('topParentId') || null;
 }
 
-function updateMenuForPageType(isDashboardPage, isLibraryPage) {
-    let newPageType = 3;
-    if (isDashboardPage) {
-        newPageType = 2;
-    } else if (isLibraryPage) {
-        newPageType = 1;
-    }
+function updateMenuForPageType(isLibraryPage) {
+    const newPageType = isLibraryPage ? 1 : 3;
 
     if (currentPageType !== newPageType) {
         currentPageType = newPageType;
@@ -354,10 +344,9 @@ pageClassOn('pagebeforeshow', 'page', function () {
 
 pageClassOn('pageshow', 'page', function (e) {
     const page = this;
-    const isDashboardPage = page.classList.contains('type-interior');
-    const isLibraryPage = !isDashboardPage && page.classList.contains('libraryPage');
+    const isLibraryPage = page.classList.contains('libraryPage');
 
-    updateMenuForPageType(isDashboardPage, isLibraryPage);
+    updateMenuForPageType(isLibraryPage);
 
     // TODO: Seems to do nothing? Check if needed (also in other views).
     if (!e.detail.isRestored) {

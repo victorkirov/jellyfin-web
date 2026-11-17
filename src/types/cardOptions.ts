@@ -71,8 +71,6 @@ export interface CardOptions {
     showProgressBar?: boolean;
     showPremiereDate?: boolean;
     showRuntime?: boolean;
-    showSeriesTimerTime?: boolean;
-    showSeriesTimerChannel?: boolean;
     showSongCount?: boolean;
     width?: number;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -80,7 +78,6 @@ export interface CardOptions {
     showChannelLogo?: boolean;
     showLogo?: boolean;
     serverId?: NullableString;
-    collectionId?: string | null;
     playlistId?: string | null;
     defaultCardImageIcon?: string;
     disableHoverMenu?: boolean;

@@ -240,42 +240,11 @@
     background-color: #f2f2f2 !important;
 }
 
-.dashboardDocument .skinBody {
-    transition: left ease-in-out 0.3s, padding ease-in-out 0.3s;
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    pointer-events: none;
-
-    [dir="rtl"] & {
-        transition: right ease-in-out 0.3s, padding ease-in-out 0.3s;
-    }
-
-    > .page {
-        // Fix pointer events being swallowed by the react root when a dashboard page is not rendered by react
-        pointer-events: all;
-    }
-}
-
 .centerMessage {
     margin: auto;
     width: 30%;
     padding: 5em 0;
     text-align: center;
-}
-
-@media all and (min-width: 40em) {
-    .dashboardDocument .skinBody {
-        [dir="ltr"] & {
-            left: 20em;
-        }
-
-        [dir="rtl"] & {
-            right: 20em;
-        }
-    }
 }
 
 @media all and (max-width: 100em) {
