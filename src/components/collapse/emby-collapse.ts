@@ -2,9 +2,10 @@ import '../../elements/emby-collapse/emby-collapse.scss';
 import 'webcomponents.js/webcomponents-lite';
 import '../buttons/emby-button';
 
-const EmbyButtonPrototype = Object.create(HTMLDivElement.prototype);
+type CollapseContent = HTMLElement & { expanded?: boolean };
+const EmbyButtonPrototype: HTMLDivElement & { attachedCallback?: () => void } = Object.create(HTMLDivElement.prototype);
 
-function slideDownToShow(button, elem) {
+function slideDownToShow(button: HTMLButtonElement, elem: CollapseContent) {
     requestAnimationFrame(() => {
         elem.classList.remove('hide');
         elem.classList.add('expanded');
@@ -26,12 +27,12 @@ function slideDownToShow(button, elem) {
             elem.style.height = 'auto';
         }, 300);
 
-        const icon = button.querySelector('.material-icons');
+        const icon = button.querySelector<HTMLElement>('.material-icons')!;
         icon.classList.add('emby-collapse-expandIconExpanded');
     });
 }
 
-function slideUpToHide(button, elem) {
+function slideUpToHide(button: HTMLButtonElement, elem: CollapseContent) {
     requestAnimationFrame(() => {
         elem.style.height = elem.offsetHeight + 'px';
         // trigger reflow
@@ -49,14 +50,14 @@ function slideUpToHide(button, elem) {
             }
         }, 300);
 
-        const icon = button.querySelector('.material-icons');
+        const icon = button.querySelector<HTMLElement>('.material-icons')!;
         icon.classList.remove('emby-collapse-expandIconExpanded');
     });
 }
 
-function onButtonClick() {
+function onButtonClick(this: HTMLButtonElement) {
     const button = this;
-    const collapseContent = button.parentNode.querySelector('.collapseContent');
+    const collapseContent = button.parentElement!.querySelector<CollapseContent>('.collapseContent')!;
 
     if (collapseContent.expanded) {
         collapseContent.expanded = false;
@@ -85,7 +86,7 @@ EmbyButtonPrototype.attachedCallback = function () {
 
     this.insertAdjacentHTML('afterbegin', html);
 
-    const button = this.querySelector('.emby-collapsible-button');
+    const button = this.querySelector<HTMLButtonElement>('.emby-collapsible-button')!;
 
     button.addEventListener('click', onButtonClick);
 
@@ -94,7 +95,7 @@ EmbyButtonPrototype.attachedCallback = function () {
     }
 };
 
-document.registerElement('emby-collapse', {
+(document as Document & { registerElement: (name: string, options: { prototype: HTMLDivElement; extends: string }) => void }).registerElement('emby-collapse', {
     prototype: EmbyButtonPrototype,
     extends: 'div'
 });

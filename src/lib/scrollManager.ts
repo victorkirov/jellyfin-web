@@ -4,8 +4,17 @@
  */
 
 import dom from '../utils/dom';
+import DocumentScroller from './DocumentScroller';
+
+type Scroller = Pick<HTMLElement, 'scrollLeft' | 'scrollTop' | 'scrollWidth' | 'scrollHeight' | 'clientWidth' | 'clientHeight' | 'getAttribute'> & {
+    getBoundingClientRect(): Rect;
+    scrollTo?: { (options: ScrollToOptions): void; (x: number, y: number): void };
+};
+type Rect = Pick<DOMRect, 'left' | 'top' | 'width' | 'height'>;
+type ScrollerData = { scrollPos: number; scrollSize: number; clientSize: number; mode: string | null; custom: boolean };
+type StylesCache = WeakMap<Element, CSSStyleDeclaration>;
 import appSettings from 'scripts/settings/appSettings';
-import Events from '../utils/events.ts';
+import Events from '../utils/events';
 import layoutManager from './layoutManager';
 
 /**
@@ -57,7 +66,7 @@ try {
      * @param {number} max - Ending of range.
      * @return {number} Clamped value.
      */
-function clamp(value, min, max) {
+function clamp(value: number, min: number, max: number) {
     if (value <= min) {
         return min;
     } else if (value >= max) {
@@ -76,7 +85,7 @@ function clamp(value, min, max) {
      * @param {number} end2 - Ending of range 2.
      * @return {number} Delta: <0 move range1 to the left, >0 - to the right.
      */
-function fitRange(begin1, end1, begin2, end2) {
+function fitRange(begin1: number, end1: number, begin2: number, end2: number) {
     const delta1 = begin1 - begin2;
     const delta2 = end2 - end1;
     if (delta1 < 0 && delta1 < delta2) {
@@ -93,7 +102,7 @@ function fitRange(begin1, end1, begin2, end2) {
      * @param {number} t - Value in range [0, 1].
      * @return {number} Eased value in range [0, 1].
      */
-function ease(t) {
+function ease(t: number) {
     return t * (2 - t); // easeOutQuad === ease-out
 }
 
@@ -118,94 +127,6 @@ function ease(t) {
      *
      * Tizen 5 Browser/Native: scrolls documentElement (and window); has a document.scrollingElement
      */
-class DocumentScroller {
-    /**
-         * Horizontal scroll position.
-         * @type {number}
-         */
-    get scrollLeft() {
-        return window.pageXOffset;
-    }
-
-    set scrollLeft(val) {
-        window.scroll(val, window.pageYOffset);
-    }
-
-    /**
-         * Vertical scroll position.
-         * @type {number}
-         */
-    get scrollTop() {
-        return window.pageYOffset;
-    }
-
-    set scrollTop(val) {
-        window.scroll(window.pageXOffset, val);
-    }
-
-    /**
-         * Horizontal scroll size (scroll width).
-         * @type {number}
-         */
-    get scrollWidth() {
-        return Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
-    }
-
-    /**
-         * Vertical scroll size (scroll height).
-         * @type {number}
-         */
-    get scrollHeight() {
-        return Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
-    }
-
-    /**
-         * Horizontal client size (client width).
-         * @type {number}
-         */
-    get clientWidth() {
-        return Math.min(document.documentElement.clientWidth, document.body.clientWidth);
-    }
-
-    /**
-         * Vertical client size (client height).
-         * @type {number}
-         */
-    get clientHeight() {
-        return Math.min(document.documentElement.clientHeight, document.body.clientHeight);
-    }
-
-    /**
-         * Returns attribute value.
-         * @param {string} attributeName - Attibute name.
-         * @return {string} Attibute value.
-         */
-    getAttribute(attributeName) {
-        return document.body.getAttribute(attributeName);
-    }
-
-    /**
-         * Returns bounding client rect.
-         * @return {Rect} Bounding client rect.
-         */
-    getBoundingClientRect() {
-        // Make valid viewport coordinates: documentElement.getBoundingClientRect returns rect of entire document relative to viewport
-        return {
-            left: 0,
-            top: 0,
-            width: this.clientWidth,
-            height: this.clientHeight
-        };
-    }
-
-    /**
-         * Scrolls window.
-         * @param {...mixed} args See window.scrollTo.
-         */
-    scrollTo() {
-        window.scrollTo.apply(window, arguments);
-    }
-}
 
 /**
      * Default (document) scroller.
@@ -225,9 +146,9 @@ const scrollerHints = {
         nameStyle: 'overflowY',
         nameScrollMode: 'data-scroll-mode-y'
     }
-};
+} as const;
 
-function getStyles(element, stylesCache) {
+function getStyles(element: Element, stylesCache: StylesCache) {
     let styles = stylesCache.get(element);
     if (!styles) {
         styles = window.getComputedStyle(element);
@@ -243,7 +164,11 @@ function getStyles(element, stylesCache) {
      * @param {boolean} vertical - Search for vertical scrollable parent.
      * @param {HTMLElement|DocumentScroller} Parent element that can be scrolled or document scroller.
      */
-function getScrollableParent(element, vertical, stylesCache) {
+function isScrollableOverflow(overflow: string, scrollSize: number, clientSize: number) {
+    return overflow === 'scroll' || overflow === 'auto' && scrollSize > clientSize;
+}
+
+function getScrollableParent(element: HTMLElement | null, vertical: boolean, stylesCache: StylesCache = new WeakMap()): Scroller {
     if (element) {
         const scrollerHint = vertical ? scrollerHints.y : scrollerHints.x;
 
@@ -266,7 +191,7 @@ function getScrollableParent(element, vertical, stylesCache) {
 
             const overflow = styles[scrollerHint.nameStyle];
 
-            if (overflow === 'scroll' || overflow === 'auto' && parent[scrollerHint.nameScroll] > parent[scrollerHint.nameClient]) {
+            if (isScrollableOverflow(overflow, parent[scrollerHint.nameScroll], parent[scrollerHint.nameClient])) {
                 return parent;
             }
 
@@ -293,8 +218,8 @@ function getScrollableParent(element, vertical, stylesCache) {
      * @param {boolean} vertical - Vertical scroller data.
      * @return {ScrollerData} Scroller data.
      */
-function getScrollerData(scroller, vertical) {
-    const data = {};
+function getScrollerData(scroller: Scroller, vertical: boolean) {
+    const data: ScrollerData = { scrollPos: 0, scrollSize: 0, clientSize: 0, mode: null, custom: false };
 
     if (!vertical) {
         data.scrollPos = scroller.scrollLeft;
@@ -322,7 +247,7 @@ function getScrollerData(scroller, vertical) {
      * @param {boolean} vertical - Vertical scroll.
      * @return {number} Child position.
      */
-function getScrollerChildPos(scroller, elementRect, scrollerRect, vertical) {
+function getScrollerChildPos(scroller: Scroller, elementRect: Rect, scrollerRect: Rect, vertical: boolean) {
     if (!vertical) {
         return scroller.scrollLeft + elementRect.left - scrollerRect.left;
     } else {
@@ -339,7 +264,7 @@ function getScrollerChildPos(scroller, elementRect, scrollerRect, vertical) {
      * @param {boolean} centered - Scroll to center.
      * @return {number} Scroll position.
      */
-function calcScroll(scrollerData, elementPos, elementSize, centered) {
+function calcScroll(scrollerData: ScrollerData, elementPos: number, elementSize: number, centered: boolean) {
     const maxScroll = scrollerData.scrollSize - scrollerData.clientSize;
 
     let scroll;
@@ -360,8 +285,8 @@ function calcScroll(scrollerData, elementPos, elementSize, centered) {
      * @param {HTMLElement} scroller - Scroller.
      * @param {ScrollToOptions} options - Scroll options.
      */
-function scrollToHelper(scroller, options) {
-    if ('scrollTo' in scroller) {
+function scrollToHelper(scroller: Scroller, options: ScrollToOptions) {
+    if (scroller.scrollTo) {
         if (!supportsScrollToOptions) {
             const scrollX = (options.left !== undefined ? options.left : scroller.scrollLeft);
             const scrollY = (options.top !== undefined ? options.top : scroller.scrollTop);
@@ -388,7 +313,7 @@ function scrollToHelper(scroller, options) {
      * @param {number} scrollY - Vertical coordinate.
      * @param {boolean} smooth - Smooth scrolling.
      */
-function builtinScroll(xScroller, scrollX, yScroller, scrollY, smooth) {
+function builtinScroll(xScroller: Scroller | null, scrollX: number, yScroller: Scroller | null, scrollY: number, smooth: boolean) {
     const scrollBehavior = smooth ? 'smooth' : 'instant';
 
     if (xScroller !== yScroller) {
@@ -406,13 +331,13 @@ function builtinScroll(xScroller, scrollX, yScroller, scrollY, smooth) {
 /**
      * Requested frame for animated scroll.
      */
-let scrollTimer;
+let scrollTimer: number | undefined;
 
 /**
      * Resets scroll timer to stop scrolling.
      */
 function resetScrollTimer() {
-    cancelAnimationFrame(scrollTimer);
+    if (scrollTimer !== undefined) cancelAnimationFrame(scrollTimer);
     scrollTimer = undefined;
 }
 
@@ -424,7 +349,7 @@ function resetScrollTimer() {
      * @param {HTMLElement} yScroller - Vertical scroller.
      * @param {number} scrollY - Vertical coordinate.
      */
-function animateScroll(xScroller, scrollX, yScroller, scrollY) {
+function animateScroll(xScroller: Scroller | null, scrollX: number, yScroller: Scroller | null, scrollY: number) {
     const ox = xScroller ? xScroller.scrollLeft : scrollX;
     const oy = yScroller ? yScroller.scrollTop : scrollY;
     const dx = scrollX - ox;
@@ -434,9 +359,9 @@ function animateScroll(xScroller, scrollX, yScroller, scrollY) {
         return;
     }
 
-    let start;
+    let start: number | undefined;
 
-    function scrollAnim(currentTimestamp) {
+    function scrollAnim(currentTimestamp: number) {
         start = start || currentTimestamp;
 
         let k = Math.min(1, (currentTimestamp - start) / ScrollTime);
@@ -469,7 +394,7 @@ function animateScroll(xScroller, scrollX, yScroller, scrollY) {
      * @param {number} scrollY - Vertical coordinate.
      * @param {boolean} smooth - Smooth scrolling.
      */
-function doScroll(xScroller, scrollX, yScroller, scrollY, smooth) {
+function doScroll(xScroller: Scroller | null, scrollX: number, yScroller: Scroller | null, scrollY: number, smooth: boolean) {
     resetScrollTimer();
 
     if (smooth) {
@@ -479,9 +404,9 @@ function doScroll(xScroller, scrollX, yScroller, scrollY, smooth) {
     }
 }
 
-let smoothScroll;
+let smoothScroll: boolean | undefined;
 
-Events.on(appSettings, 'change', function (e, name) {
+Events.on(appSettings, 'change', function (e, name: string) {
     if (name === 'enableSmoothScroll') {
         smoothScroll = undefined;
     }
@@ -511,7 +436,7 @@ export function isEnabled() {
      * @param {number} scrollY - Vertical coordinate.
      * @param {boolean} [smooth=false] - Smooth scrolling.
      */
-export function scrollTo(scrollX, scrollY, smooth) {
+export function scrollTo(scrollX: number, scrollY: number, smooth?: boolean) {
     smooth = !!smooth;
 
     // Scroller is document itself by default
@@ -532,13 +457,28 @@ export function scrollTo(scrollX, scrollY, smooth) {
      * @param {HTMLElement} element - Target element of scroll task.
      * @param {boolean} [smooth=false] - Smooth scrolling.
      */
-export function scrollToElement(element, smooth) {
+function adjustVerticalScroll(scrollY: number, isFixed: boolean, elementRect: DOMRect, yScroller: Scroller) {
+    // HACK: Scroll to top for top menu because it is hidden
+    // FIXME: Need a marker to scroll top/bottom
+    if (isFixed && elementRect.bottom < 0) {
+        scrollY = 0;
+    }
+
+    // HACK: Ensure we are at the top
+    // FIXME: Need a marker to scroll top/bottom
+    if (scrollY < minimumScrollY() && yScroller === documentScroller) {
+        scrollY = 0;
+    }
+    return scrollY;
+}
+
+export function scrollToElement(element: HTMLElement, smooth?: boolean) {
     smooth = !!smooth;
 
     // Overflow eligibility can change between focus events as content loads.
     const stylesCache = new WeakMap();
-    let xScroller = getScrollableParent(element, false, stylesCache);
-    let yScroller = getScrollableParent(element, true, stylesCache);
+    let xScroller: Scroller | null = getScrollableParent(element, false, stylesCache);
+    let yScroller: Scroller | null = getScrollableParent(element, true, stylesCache);
 
     const xScrollerData = getScrollerData(xScroller, false);
     const yScrollerData = getScrollerData(yScroller, true);
@@ -555,7 +495,7 @@ export function scrollToElement(element, smooth) {
 
     let scrollCenterX = true;
     let scrollCenterY = true;
-    const offsetParent = element.offsetParent;
+    const offsetParent = element.offsetParent as HTMLElement | null;
 
     // In Firefox offsetParent.offsetParent is BODY
     const isFixed = offsetParent && (!offsetParent.offsetParent || getStyles(offsetParent, stylesCache).position === 'fixed');
@@ -576,27 +516,17 @@ export function scrollToElement(element, smooth) {
     let scrollY = 0;
 
     if (!xScrollerData.custom) {
-        const xPos = getScrollerChildPos(xScroller, elementRect, xScrollerRect, false);
+        const xPos = getScrollerChildPos(xScroller, elementRect, xScrollerRect!, false);
         scrollX = calcScroll(xScrollerData, xPos, elementRect.width, scrollCenterX);
     } else {
         xScroller = null;
     }
 
     if (!yScrollerData.custom) {
-        const yPos = getScrollerChildPos(yScroller, elementRect, yScrollerRect, true);
+        const yPos = getScrollerChildPos(yScroller, elementRect, yScrollerRect!, true);
         scrollY = calcScroll(yScrollerData, yPos, elementRect.height, scrollCenterY);
 
-        // HACK: Scroll to top for top menu because it is hidden
-        // FIXME: Need a marker to scroll top/bottom
-        if (isFixed && elementRect.bottom < 0) {
-            scrollY = 0;
-        }
-
-        // HACK: Ensure we are at the top
-        // FIXME: Need a marker to scroll top/bottom
-        if (scrollY < minimumScrollY() && yScroller === documentScroller) {
-            scrollY = 0;
-        }
+        scrollY = adjustVerticalScroll(scrollY, !!isFixed, elementRect, yScroller);
     } else {
         yScroller = null;
     }
@@ -605,9 +535,9 @@ export function scrollToElement(element, smooth) {
 }
 
 if (isEnabled()) {
-    dom.addEventListener(window, 'focusin', function(e) {
+    dom.addEventListener(window, 'focusin', function(e: FocusEvent) {
         setTimeout(function() {
-            scrollToElement(e.target, useSmoothScroll());
+            scrollToElement(e.target as HTMLElement, useSmoothScroll());
         }, 0);
     }, { capture: true });
 }

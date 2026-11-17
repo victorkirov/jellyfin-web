@@ -1,20 +1,9 @@
 import browser from 'scripts/browser';
-import Events from '../../utils/events.ts';
-import { toBoolean } from '../../utils/string.ts';
+import AppSettingsStorage from './AppSettingsStorage';
+import { toBoolean } from '../../utils/string';
 
-class AppSettings {
-    // Denied/quota-limited storage keeps failed writes available for this session.
-    #storageFallback = new Map();
-
-    #getKey(name, userId) {
-        if (userId) {
-            name = userId + '-' + name;
-        }
-
-        return name;
-    }
-
-    enableAutoLogin(val) {
+class AppSettings extends AppSettingsStorage {
+    enableAutoLogin(val?: boolean) {
         if (val !== undefined) {
             this.set('enableAutoLogin', val.toString());
         }
@@ -27,7 +16,7 @@ class AppSettings {
      * @param {boolean|undefined} val - Flag to enable 'Enable smooth scroll' or undefined.
      * @return {boolean} 'Enable smooth scroll' state.
      */
-    enableSmoothScroll(val) {
+    enableSmoothScroll(val?: boolean) {
         if (val !== undefined) {
             return this.set('enableSmoothScroll', val.toString());
         }
@@ -35,7 +24,7 @@ class AppSettings {
         return toBoolean(this.get('enableSmoothScroll'), !!browser.tizen);
     }
 
-    enableSystemExternalPlayers(val) {
+    enableSystemExternalPlayers(val?: boolean) {
         if (val !== undefined) {
             this.set('enableSystemExternalPlayers', val.toString());
         }
@@ -43,7 +32,7 @@ class AppSettings {
         return toBoolean(this.get('enableSystemExternalPlayers'), false);
     }
 
-    enableAutomaticBitrateDetection(isInNetwork, mediaType, val) {
+    enableAutomaticBitrateDetection(isInNetwork: boolean | undefined, mediaType: string | null | undefined, val?: boolean) {
         const key = 'enableautobitratebitrate-' + mediaType + '-' + isInNetwork;
         if (val !== undefined) {
             if (isInNetwork && mediaType === 'Audio') {
@@ -60,7 +49,7 @@ class AppSettings {
         }
     }
 
-    maxStreamingBitrate(isInNetwork, mediaType, val) {
+    maxStreamingBitrate(isInNetwork: boolean | undefined, mediaType: string | null | undefined, val?: number | string) {
         const key = 'maxbitrate-' + mediaType + '-' + isInNetwork;
         if (val !== undefined) {
             if (isInNetwork && mediaType === 'Audio') {
@@ -78,7 +67,7 @@ class AppSettings {
         }
     }
 
-    maxStaticMusicBitrate(val) {
+    maxStaticMusicBitrate(val?: number) {
         if (val !== undefined) {
             this.set('maxStaticMusicBitrate', val);
         }
@@ -92,7 +81,10 @@ class AppSettings {
      * @param {number|undefined} val - Maximum video width or undefined.
      * @return {number} Maximum video width.
      */
-    maxVideoWidth(val) {
+    maxVideoWidth(val?: undefined): number;
+    maxVideoWidth(val: number): boolean;
+    /** @returns The saved value when reading, or persistence success when writing. */
+    maxVideoWidth(val?: number): number | boolean {
         if (val !== undefined) {
             return this.set('maxVideoWidth', val.toString());
         }
@@ -105,7 +97,7 @@ class AppSettings {
      * @param {boolean|undefined} val - Flag to enable 'Limit maximum supported video resolution' or undefined.
      * @return {boolean} 'Limit maximum supported video resolution' state.
      */
-    limitSupportedVideoResolution(val) {
+    limitSupportedVideoResolution(val?: boolean) {
         if (val !== undefined) {
             return this.set('limitSupportedVideoResolution', val.toString());
         }
@@ -118,7 +110,10 @@ class AppSettings {
      * @param {string|undefined} val - Preferred transcode video codec or undefined.
      * @return {string} Preferred transcode video codec.
      */
-    preferredTranscodeVideoCodec(val) {
+    preferredTranscodeVideoCodec(val?: undefined): string;
+    preferredTranscodeVideoCodec(val: string): boolean;
+    /** @returns The saved value when reading, or persistence success when writing. */
+    preferredTranscodeVideoCodec(val?: string): string | boolean {
         if (val !== undefined) {
             return this.set('preferredTranscodeVideoCodec', val);
         }
@@ -130,7 +125,10 @@ class AppSettings {
      * @param {string|undefined} val - Preferred transcode audio codec or undefined.
      * @return {string} Preferred transcode audio codec.
      */
-    preferredTranscodeVideoAudioCodec(val) {
+    preferredTranscodeVideoAudioCodec(val?: undefined): string;
+    preferredTranscodeVideoAudioCodec(val: string): boolean;
+    /** @returns The saved value when reading, or persistence success when writing. */
+    preferredTranscodeVideoAudioCodec(val?: string): string | boolean {
         if (val !== undefined) {
             return this.set('preferredTranscodeVideoAudioCodec', val);
         }
@@ -142,7 +140,7 @@ class AppSettings {
      * @param {boolean|undefined} val - Flag to enable 'Always burn in subtitle when transcoding' or undefined.
      * @return {boolean} 'Always burn in subtitle when transcoding' state.
      */
-    alwaysBurnInSubtitleWhenTranscoding(val) {
+    alwaysBurnInSubtitleWhenTranscoding(val?: boolean) {
         if (val !== undefined) {
             return this.set('alwaysBurnInSubtitleWhenTranscoding', val.toString());
         }
@@ -155,7 +153,7 @@ class AppSettings {
      * @param {boolean|undefined} val - Flag to enable 'Enable DTS' or undefined.
      * @return {boolean} 'Enable DTS' state.
      */
-    enableDts(val) {
+    enableDts(val?: boolean) {
         if (val !== undefined) {
             return this.set('enableDts', val.toString());
         }
@@ -168,7 +166,7 @@ class AppSettings {
      * @param {boolean|undefined} val - Flag to enable 'Enable TrueHD' or undefined.
      * @return {boolean} 'Enable TrueHD' state.
      */
-    enableTrueHd(val) {
+    enableTrueHd(val?: boolean) {
         if (val !== undefined) {
             return this.set('enableTrueHd', val.toString());
         }
@@ -181,7 +179,7 @@ class AppSettings {
      * @param {boolean|undefined} val - Flag to enable 'Enable H.264 High 10 Profile' or undefined.
      * @return {boolean} 'Enable H.264 High 10 Profile' state.
      */
-    enableHi10p(val) {
+    enableHi10p(val?: boolean) {
         if (val !== undefined) {
             return this.set('enableHi10p', val.toString());
         }
@@ -194,7 +192,7 @@ class AppSettings {
      * @param {boolean|undefined} val - Flag to enable 'Disable VBR audio encoding' or undefined.
      * @return {boolean} 'Disable VBR audio encoding' state.
      */
-    disableVbrAudio(val) {
+    disableVbrAudio(val?: boolean) {
         if (val !== undefined) {
             return this.set('disableVbrAudio', val.toString());
         }
@@ -207,7 +205,7 @@ class AppSettings {
      * @param {boolean|undefined} val - Flag to enable 'Always remux FLAC audio files' or undefined.
      * @return {boolean} 'Always remux FLAC audio files' state.
      */
-    alwaysRemuxFlac(val) {
+    alwaysRemuxFlac(val?: boolean) {
         if (val !== undefined) {
             return this.set('alwaysRemuxFlac', val.toString());
         }
@@ -220,7 +218,7 @@ class AppSettings {
      * @param {boolean|undefined} val - Flag to enable 'Always remux MP3 audio files' or undefined.
      * @return {boolean} 'Always remux MP3 audio files' state.
      */
-    alwaysRemuxMp3(val) {
+    alwaysRemuxMp3(val?: boolean) {
         if (val !== undefined) {
             return this.set('alwaysRemuxMp3', val.toString());
         }
@@ -233,44 +231,15 @@ class AppSettings {
      * @param {string|undefined} val - The aspect ratio or undefined.
      * @returns {string} The saved aspect ratio state.
      */
-    aspectRatio(val) {
+    aspectRatio(val?: undefined): string;
+    aspectRatio(val: string): boolean;
+    /** @returns The saved value when reading, or persistence success when writing. */
+    aspectRatio(val?: string): string | boolean {
         if (val !== undefined) {
             return this.set('aspectRatio', val);
         }
 
         return this.get('aspectRatio') || '';
-    }
-
-    set(name, value, userId) {
-        const currentValue = this.get(name, userId);
-        const key = this.#getKey(name, userId);
-        let persisted = true;
-        try {
-            localStorage.setItem(key, value);
-            this.#storageFallback.delete(key);
-        } catch {
-            persisted = false;
-            this.#storageFallback.set(key, String(value));
-            Events.trigger(this, 'storageerror', [name, 'write']);
-        }
-
-        if (currentValue !== value) {
-            Events.trigger(this, 'change', [name]);
-        }
-        return persisted;
-    }
-
-    get(name, userId) {
-        const key = this.#getKey(name, userId);
-        if (this.#storageFallback.has(key)) {
-            return this.#storageFallback.get(key);
-        }
-        try {
-            return localStorage.getItem(key);
-        } catch {
-            Events.trigger(this, 'storageerror', [name, 'read']);
-            return null;
-        }
     }
 }
 

@@ -8,7 +8,7 @@ import appSettings from '../scripts/settings/appSettings';
 import Events from '../utils/events';
 
 export function getSavedVolume() {
-    return appSettings.get('volume') || 1;
+    return Number(appSettings.get('volume') || 1);
 }
 
 export function saveVolume(value: number) {

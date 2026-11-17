@@ -132,7 +132,7 @@ export default class RecommendedPage {
             const containers = tabContent.querySelectorAll<HTMLElement>('.itemsContainer');
 
             for (let i = 0, length = containers.length; i < length; i++) {
-                setScrollClasses(containers[i], browser.mobile);
+                setScrollClasses(containers[i], !!browser.mobile);
             }
         };
 

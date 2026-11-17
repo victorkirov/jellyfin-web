@@ -23,7 +23,7 @@ function rootImportPath(file: string, visited = new Set<string>()): string[] | u
 }
 
 describe('shared navigation imports', () => {
-    it.each(['router/appRouter.js', 'dialogHelper/dialogHelper.js'])(
+    it.each(['router/appRouter.js', 'dialogHelper/dialogHelper.ts'])(
         '%s cannot reach the application root through static imports', file => {
             expect(rootImportPath(resolve(sourceRoot, 'components', file))).toBeUndefined();
         }

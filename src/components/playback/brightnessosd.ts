@@ -1,17 +1,18 @@
+import type { PlaybackPlayer } from 'types/plugin';
 import { playbackManager } from './playbackmanager';
 import dom from '../../utils/dom';
 import browser from '../../scripts/browser';
-import Events from '../../utils/events.ts';
+import Events from '../../utils/events';
 
 import './iconosd.scss';
 import 'material-design-icons-iconfont';
 
-let currentPlayer;
-let osdElement;
-let iconElement;
-let progressElement;
+let currentPlayer: PlaybackPlayer | null;
+let osdElement: HTMLElement | undefined;
+let iconElement: HTMLElement | null;
+let progressElement: HTMLElement | null;
 
-let enableAnimation;
+let enableAnimation: boolean;
 
 function getOsdElementHtml() {
     let html = '';
@@ -43,15 +44,15 @@ function ensureOsdElement() {
     }
 }
 
-function onHideComplete() {
+function onHideComplete(this: HTMLElement) {
     this.classList.add('hide');
 }
 
-let hideTimeout;
+let hideTimeout: ReturnType<typeof setTimeout> | null;
 function showOsd() {
     clearHideTimeout();
 
-    const elem = osdElement;
+    const elem = osdElement!;
 
     dom.removeEventListener(elem, dom.whichTransitionEvent(), onHideComplete, {
         once: true
@@ -79,7 +80,7 @@ function clearHideTimeout() {
 function hideOsd() {
     clearHideTimeout();
 
-    const elem = osdElement;
+    const elem = osdElement!;
     if (elem) {
         if (enableAnimation) {
             // trigger reflow
@@ -98,12 +99,12 @@ function hideOsd() {
     }
 }
 
-function setIcon(iconHtmlElement, icon) {
+function setIcon(iconHtmlElement: HTMLElement, icon: string) {
     iconHtmlElement.classList.remove('brightness_high', 'brightness_medium', 'brightness_low');
     iconHtmlElement.classList.add(icon);
 }
 
-function updateElementsFromPlayer(brightness) {
+function updateElementsFromPlayer(brightness: number) {
     if (iconElement) {
         if (brightness >= 80) {
             setIcon(iconElement, 'brightness_high');
@@ -128,24 +129,24 @@ function releaseCurrentPlayer() {
     }
 }
 
-function onBrightnessChanged() {
+function onBrightnessChanged(this: PlaybackPlayer) {
     const player = this;
 
     ensureOsdElement();
 
-    updateElementsFromPlayer(playbackManager.getBrightness(player));
+    updateElementsFromPlayer(playbackManager.getBrightness(player)!);
 
     showOsd();
 }
 
-function bindToPlayer(player) {
+function bindToPlayer(player: PlaybackPlayer | null | undefined) {
     if (player === currentPlayer) {
         return;
     }
 
     releaseCurrentPlayer();
 
-    currentPlayer = player;
+    currentPlayer = player || null;
 
     if (!player) {
         return;

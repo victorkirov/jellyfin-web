@@ -2,8 +2,8 @@ import focusManager from '../../lib/focusManager';
 import browser from '../../scripts/browser';
 import layoutManager from '../../lib/layoutManager';
 import inputManager from '../../scripts/inputManager';
-import { toBoolean } from '../../utils/string.ts';
-import { hide } from '../loading/loading.ts';
+import { toBoolean } from '../../utils/string';
+import { hide } from '../loading/loading';
 import dom from '../../utils/dom';
 
 import { history } from 'lib/navigationHistory';
@@ -11,18 +11,13 @@ import { history } from 'lib/navigationHistory';
 import './dialoghelper.scss';
 import '../../styles/scrollstyles.scss';
 
-let globalOnOpenCallback;
+import type { DialogElement, DialogOptions } from './dialogTypes';
+import type { Update } from 'history';
+import { animateDialogOpen, animateDialogClose, enableAnimation } from './dialogAnimation';
 
-function enableAnimation() {
-    // too slow
-    if (browser.tv) {
-        return false;
-    }
+let globalOnOpenCallback: ((dialog: DialogElement) => void) | undefined;
 
-    return browser.supportsCssAnimation();
-}
-
-function removeCenterFocus(dlg) {
+function removeCenterFocus(dlg: DialogElement) {
     if (layoutManager.tv) {
         if (dlg.classList.contains('scrollX')) {
             centerFocus(dlg, true, false);
@@ -32,7 +27,7 @@ function removeCenterFocus(dlg) {
     }
 }
 
-function tryRemoveElement(elem) {
+function tryRemoveElement(elem: Element) {
     const parentNode = elem.parentNode;
     if (parentNode) {
         // Seeing crashes in edge webview
@@ -44,15 +39,15 @@ function tryRemoveElement(elem) {
     }
 }
 
-function DialogHashHandler(dlg, hash, resolve) {
+function DialogHashHandler(this: { originalUrl?: string }, dlg: DialogElement, hash: string, resolve: (result: { element: DialogElement }) => void) {
     const self = this;
     self.originalUrl = window.location.href;
     const activeElement = document.activeElement;
     let removeScrollLockOnClose = false;
-    let unlisten;
+    let unlisten: (() => void) | null = null;
 
-    function onHashChange({ location }) {
-        const dialogs = location.state?.dialogs || [];
+    function onHashChange({ location }: Update) {
+        const dialogs = (location.state as { dialogs?: string[] } | null)?.dialogs || [];
         const shouldClose = !dialogs.includes(hash);
 
         if ((shouldClose || !isOpened(dlg)) && unlisten) {
@@ -81,8 +76,8 @@ function DialogHashHandler(dlg, hash, resolve) {
         });
     }
 
-    function onBackCommand(e) {
-        if (e.detail.command === 'back') {
+    function onBackCommand(e: Event) {
+        if ((e as CustomEvent<{ command: string }>).detail.command === 'back') {
             e.preventDefault();
             e.stopPropagation();
             close(dlg);
@@ -124,7 +119,7 @@ function DialogHashHandler(dlg, hash, resolve) {
                         `${history.location.pathname}${history.location.search}`,
                         {
                             ...state,
-                            dialogs: state.dialogs.filter(dialog => dialog !== hash)
+                            dialogs: state.dialogs.filter((dialog: string) => dialog !== hash)
                         }
                     );
                 }
@@ -196,25 +191,25 @@ function DialogHashHandler(dlg, hash, resolve) {
     }
 }
 
-function addBackdropOverlay(dlg) {
+function addBackdropOverlay(dlg: DialogElement) {
     const backdrop = document.createElement('div');
     backdrop.classList.add('dialogBackdrop');
 
     const backdropParent = dlg.dialogContainer || dlg;
-    backdropParent.parentNode.insertBefore(backdrop, backdropParent);
+    backdropParent.parentNode!.insertBefore(backdrop, backdropParent);
     dlg.backdrop = backdrop;
 
     // trigger reflow or the backdrop will not animate
     void backdrop.offsetWidth;
     backdrop.classList.add('dialogBackdropOpened');
 
-    let clickedElement;
+    let clickedElement: EventTarget | null;
 
-    dom.addEventListener((dlg.dialogContainer || backdrop), 'mousedown', e => {
+    dom.addEventListener((dlg.dialogContainer || backdrop), 'mousedown', (e: MouseEvent) => {
         clickedElement = e.target;
     });
 
-    dom.addEventListener((dlg.dialogContainer || backdrop), 'click', e => {
+    dom.addEventListener((dlg.dialogContainer || backdrop), 'click', (e: MouseEvent) => {
         if (e.target === dlg.dialogContainer && e.target == clickedElement) {
             close(dlg);
         }
@@ -222,7 +217,7 @@ function addBackdropOverlay(dlg) {
         passive: true
     });
 
-    dom.addEventListener((dlg.dialogContainer || backdrop), 'contextmenu', e => {
+    dom.addEventListener((dlg.dialogContainer || backdrop), 'contextmenu', (e: MouseEvent) => {
         if (e.target === dlg.dialogContainer) {
             // Close the application dialog menu
             close(dlg);
@@ -232,11 +227,11 @@ function addBackdropOverlay(dlg) {
     });
 }
 
-function isHistoryEnabled(dlg) {
+function isHistoryEnabled(dlg: DialogElement) {
     return dlg.getAttribute('data-history') === 'true';
 }
 
-export function open(dlg) {
+export function open(dlg: DialogElement) {
     if (globalOnOpenCallback) {
         globalOnOpenCallback(dlg);
     }
@@ -252,16 +247,16 @@ export function open(dlg) {
     dlg.dialogContainer = dialogContainer;
     document.body.appendChild(dialogContainer);
 
-    return new Promise((resolve) => {
-        new DialogHashHandler(dlg, `dlg${new Date().getTime()}`, resolve);
+    return new Promise<{ element: DialogElement }>((resolve) => {
+        DialogHashHandler.call({}, dlg, `dlg${new Date().getTime()}`, resolve);
     });
 }
 
-function isOpened(dlg) {
+function isOpened(dlg: DialogElement) {
     return !dlg.classList.contains('hide');
 }
 
-export function close(dlg) {
+export function close(dlg: DialogElement) {
     if (!dlg.classList.contains('hide')) {
         dlg.dispatchEvent(new CustomEvent('closing', {
             bubbles: false,
@@ -269,7 +264,7 @@ export function close(dlg) {
         }));
 
         const onAnimationFinish = () => {
-            focusManager.popScope(dlg);
+            focusManager.popScope();
 
             dlg.classList.add('hide');
             dlg.dispatchEvent(new CustomEvent('_close', {
@@ -282,74 +277,9 @@ export function close(dlg) {
     }
 }
 
-const getAnimationEndHandler = (dlg, callback) => function handler() {
-    dom.removeEventListener(dlg, dom.whichAnimationEvent(), handler, { once: true });
-    callback();
-};
-
-function animateDialogOpen(dlg) {
-    const onAnimationFinish = () => {
-        focusManager.pushScope(dlg);
-
-        if (dlg.getAttribute('data-autofocus') === 'true') {
-            focusManager.autoFocus(dlg);
-        }
-
-        if (document.activeElement && !dlg.contains(document.activeElement)) {
-            // Blur foreign element to prevent triggering of an action from the previous scope
-            document.activeElement.blur();
-        }
-    };
-
-    if (enableAnimation()) {
-        dom.addEventListener(
-            dlg,
-            dom.whichAnimationEvent(),
-            getAnimationEndHandler(dlg, onAnimationFinish),
-            { once: true });
-
-        return;
-    }
-
-    onAnimationFinish();
-}
-
-function animateDialogClose(dlg, onAnimationFinish) {
-    if (enableAnimation()) {
-        let animated = true;
-
-        switch (dlg.animationConfig.exit.name) {
-            case 'fadeout':
-                dlg.style.animation = `fadeout ${dlg.animationConfig.exit.timing.duration}ms ease-out normal both`;
-                break;
-            case 'scaledown':
-                dlg.style.animation = `scaledown ${dlg.animationConfig.exit.timing.duration}ms ease-out normal both`;
-                break;
-            case 'slidedown':
-                dlg.style.animation = `slidedown ${dlg.animationConfig.exit.timing.duration}ms ease-out normal both`;
-                break;
-            default:
-                animated = false;
-                break;
-        }
-
-        dom.addEventListener(
-            dlg,
-            dom.whichAnimationEvent(),
-            getAnimationEndHandler(dlg, onAnimationFinish),
-            { once: true });
-
-        if (animated) {
-            return;
-        }
-    }
-
-    onAnimationFinish();
-}
-
 const supportsOverscrollBehavior = 'overscroll-behavior-y' in document.body.style;
 
-function shouldLockDocumentScroll(options) {
+function shouldLockDocumentScroll(options: DialogOptions) {
     if (options.lockScroll != null) {
         return options.lockScroll;
     }
@@ -369,7 +299,7 @@ function shouldLockDocumentScroll(options) {
     return browser.touch;
 }
 
-function removeBackdrop(dlg) {
+function removeBackdrop(dlg: DialogElement) {
     const backdrop = dlg.backdrop;
 
     if (!backdrop) {
@@ -393,18 +323,18 @@ function removeBackdrop(dlg) {
     onAnimationFinish();
 }
 
-function centerFocus(elem, horiz, on) {
+function centerFocus(elem: HTMLElement, horiz: boolean, on: boolean) {
     import('../../scripts/scrollHelper').then((scrollHelper) => {
         const fn = on ? 'on' : 'off';
         scrollHelper.centerFocus[fn](elem, horiz);
     });
 }
 
-export function createDialog(options = {}) {
+export function createDialog(options: DialogOptions = {}) {
     // If there's no native dialog support, use a plain div
     // Also not working well in samsung tizen browser, content inside not clickable
     // Just go ahead and always use a plain div because we're seeing issues overlaying absoltutely positioned content over a modal dialog
-    const dlg = document.createElement('div');
+    const dlg: DialogElement = document.createElement('div');
 
     // Add an id so we can access the dialog element
     if (options.id) {
@@ -490,7 +420,7 @@ export function createDialog(options = {}) {
     }
 
     if (enableAnimation()) {
-        switch (dlg.animationConfig.entry.name) {
+        switch (dlg.animationConfig!.entry.name) {
             case 'fadein':
                 dlg.style.animation = `fadein ${entryAnimationDuration}ms ease-out normal`;
                 break;
@@ -511,7 +441,7 @@ export function createDialog(options = {}) {
     return dlg;
 }
 
-export function setOnOpen(val) {
+export function setOnOpen(val: ((dialog: DialogElement) => void) | undefined) {
     globalOnOpenCallback = val;
 }
 

@@ -54,3 +54,34 @@ describe('Browser', () => {
         expect(browser.tv).toBeFalsy();
     });
 });
+
+describe('legacy platform detection characterization', () => {
+    it.each([
+        [26, 1], [34, 2], [38, 3], [53, 4], [68, 5], [79, 6],
+        [87, 22], [94, 23], [108, 24], [120, 25]
+    ])('keeps Chrome %s mapped to webOS %s', (chromeVersion, webosVersion) => {
+        const result = detectBrowser(`Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 Chrome/${chromeVersion}.0.0.0 Safari/537.36`);
+        expect(result.web0s).toBe(true);
+        expect(result.web0sVersion).toBe(webosVersion);
+        expect(result.versionMajor).toBe(chromeVersion);
+        expect(result.tv).toBe(true);
+        expect(result.slow).toBe(true);
+        expect(result.keyboard).toBe(true);
+        expect('chrome' in result).toBe(false);
+        expect('safari' in result).toBe(false);
+    });
+
+    it('preserves missing version fields and false TV detection for unknown agents', () => {
+        const result = detectBrowser('unknown');
+        expect('version' in result).toBe(false);
+        expect('versionMajor' in result).toBe(false);
+        expect(result.web0s).toBe(false);
+        expect(result.tv).toBe(false);
+        expect('slow' in result).toBe(false);
+    });
+
+    it('keeps Oculus browsers out of TV classification', () => {
+        const result = detectBrowser('Mozilla/5.0 OculusBrowser/30.0 SamsungBrowser/4.0 Chrome/120.0.0.0 Safari/537.36');
+        expect(result.tv).toBe(false);
+    });
+});

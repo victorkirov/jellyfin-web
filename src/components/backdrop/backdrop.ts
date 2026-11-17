@@ -7,76 +7,18 @@ import * as userSettings from '../../scripts/settings/userSettings';
 
 import './backdrop.scss';
 
-function enableAnimation() {
-    return !browser.slow;
-}
+import Backdrop from './backdropImage';
+import type { ItemDto } from 'types/base/models/item-dto';
+import type { ImageOptions } from 'lib/jellyfin-apiclient/connectionTypes';
 
 function enableRotation() {
     return !browser.tv;
 }
 
-class Backdrop {
-    load(url, slot) {
-        const img = new Image();
-        const self = this;
-
-        img.onload = () => {
-            if (self.isDestroyed) {
-                return;
-            }
-
-            const backdropImage = document.getElementById(`backdropImage${slot}`);
-            backdropImage.style.backgroundImage = `url('${url}')`;
-            backdropImage.setAttribute('data-url', url);
-            backdropImage.classList.add('displayingBackdropImage', 'backdropImageFadeIn');
-            self.currentAnimatingElement = backdropImage;
-
-            document.getElementById(`backdropImage${1 - slot}`)?.classList.remove('displayingBackdropImage');
-
-            if (!enableAnimation()) {
-                internalBackdrop(true);
-                return;
-            }
-
-            const onAnimationComplete = () => {
-                dom.removeEventListener(backdropImage, dom.whichAnimationEvent(), onAnimationComplete, {
-                    once: true
-                });
-                if (backdropImage === self.currentAnimatingElement) {
-                    self.currentAnimatingElement = null;
-                }
-
-                backdropImage?.classList.remove('backdropImageFadeIn');
-            };
-
-            dom.addEventListener(backdropImage, dom.whichAnimationEvent(), onAnimationComplete, {
-                once: true
-            });
-
-            internalBackdrop(true);
-        };
-
-        img.src = url;
-    }
-
-    cancelAnimation() {
-        const elem = this.currentAnimatingElement;
-        if (elem) {
-            elem.classList.remove('backdropImageFadeIn');
-            this.currentAnimatingElement = null;
-        }
-    }
-
-    destroy() {
-        this.isDestroyed = true;
-        this.cancelAnimation();
-    }
-}
-
-let backdropContainer;
+let backdropContainer: HTMLElement | null;
 function getBackdropContainer() {
     if (!backdropContainer) {
-        backdropContainer = document.querySelector('.backdropContainer');
+        backdropContainer = document.querySelector<HTMLElement>('.backdropContainer');
     }
 
     if (!backdropContainer) {
@@ -88,7 +30,7 @@ function getBackdropContainer() {
     return backdropContainer;
 }
 
-export function clearBackdrop(clearAll) {
+export function clearBackdrop(clearAll?: boolean) {
     clearRotation();
 
     if (currentLoadingBackdrop) {
@@ -97,7 +39,7 @@ export function clearBackdrop(clearAll) {
     }
 
     // Remove backdrop images from each slot element
-    document.querySelectorAll('.backdropImage').forEach(elem => {
+    document.querySelectorAll<HTMLElement>('.backdropImage').forEach(elem => {
         elem.classList.remove('displayingBackdropImage', 'backdropImageFadeIn');
         elem.style.backgroundImage = 'none';
         elem.removeAttribute('data-url');
@@ -110,12 +52,12 @@ export function clearBackdrop(clearAll) {
     internalBackdrop(false);
 }
 
-let backgroundContainer;
+let backgroundContainer: HTMLElement | null;
 function getBackgroundContainer() {
     if (!backgroundContainer) {
-        backgroundContainer = document.querySelector('.backgroundContainer');
+        backgroundContainer = document.querySelector<HTMLElement>('.backgroundContainer');
     }
-    return backgroundContainer;
+    return backgroundContainer!;
 }
 
 function setBackgroundContainerBackgroundEnabled() {
@@ -126,21 +68,21 @@ function setBackgroundContainerBackgroundEnabled() {
     }
 }
 
-let hasInternalBackdrop;
-function internalBackdrop(isEnabled) {
+let hasInternalBackdrop = false;
+function internalBackdrop(isEnabled: boolean) {
     hasInternalBackdrop = isEnabled;
     setBackgroundContainerBackgroundEnabled();
 }
 
-let hasExternalBackdrop;
-export function externalBackdrop(isEnabled) {
+let hasExternalBackdrop = false;
+export function externalBackdrop(isEnabled: boolean) {
     hasExternalBackdrop = isEnabled;
     setBackgroundContainerBackgroundEnabled();
 }
 
-let currentLoadingBackdrop;
+let currentLoadingBackdrop: Backdrop | null;
 let currentBackdropSlot = 0;
-function setBackdropImage(url) {
+function setBackdropImage(url: string) {
     const elem = getBackdropContainer();
     const existingBackdropImage = elem.querySelector('.displayingBackdropImage');
     // If the current backdrop image is the same as the new one, do nothing
@@ -148,19 +90,19 @@ function setBackdropImage(url) {
         return;
     }
 
-    const instance = new Backdrop();
+    const instance = new Backdrop(internalBackdrop);
     instance.load(url, currentBackdropSlot);
     currentLoadingBackdrop = instance;
     currentBackdropSlot = 1 - currentBackdropSlot;
 }
 
-function getItemImageUrls(item, imageOptions) {
+function getItemImageUrls(item: ItemDto & { BackdropItemId?: string }, imageOptions?: ImageOptions) {
     imageOptions = imageOptions || {};
 
     const apiClient = ServerConnections.getApiClient(item.ServerId);
     if (item.BackdropImageTags && item.BackdropImageTags.length > 0) {
         return item.BackdropImageTags.map((imgTag, index) => {
-            return apiClient.getScaledImageUrl(item.BackdropItemId || item.Id, Object.assign(imageOptions, {
+            return apiClient!.getScaledImageUrl(item.BackdropItemId || item.Id!, Object.assign(imageOptions, {
                 type: 'Backdrop',
                 tag: imgTag,
                 maxWidth: dom.getScreenWidth(),
@@ -171,7 +113,7 @@ function getItemImageUrls(item, imageOptions) {
 
     if (item.ParentBackdropItemId && item.ParentBackdropImageTags?.length) {
         return item.ParentBackdropImageTags.map((imgTag, index) => {
-            return apiClient.getScaledImageUrl(item.ParentBackdropItemId, Object.assign(imageOptions, {
+            return apiClient!.getScaledImageUrl(item.ParentBackdropItemId!, Object.assign(imageOptions, {
                 type: 'Backdrop',
                 tag: imgTag,
                 maxWidth: dom.getScreenWidth(),
@@ -183,9 +125,9 @@ function getItemImageUrls(item, imageOptions) {
     return [];
 }
 
-function getImageUrls(items, imageOptions) {
-    const list = [];
-    const onImg = img => {
+function getImageUrls(items: ItemDto[], imageOptions?: ImageOptions) {
+    const list: string[] = [];
+    const onImg = (img: string) => {
         list.push(img);
     };
 
@@ -201,10 +143,10 @@ function enabled() {
     return userSettings.enableBackdrops();
 }
 
-let rotationInterval;
-let currentRotatingImages = [];
+let rotationInterval: ReturnType<typeof setInterval> | null;
+let currentRotatingImages: string[] = [];
 let currentRotationIndex = -1;
-export function setBackdrops(items, imageOptions, isEnabled = false) {
+export function setBackdrops(items: ItemDto[], imageOptions?: ImageOptions, isEnabled = false) {
     if (isEnabled || enabled()) {
         const images = getImageUrls(items, imageOptions);
 
@@ -216,7 +158,7 @@ export function setBackdrops(items, imageOptions, isEnabled = false) {
     }
 }
 
-export function setBackdropImages(images) {
+export function setBackdropImages(images: string[]) {
     if (isEqual(images, currentRotatingImages)) {
         return;
     }
@@ -272,7 +214,7 @@ export const TRANSPARENCY_LEVEL = {
  * Sets the backdrop, background, and document transparency
  * @param {TransparencyLevel} level The level of transparency
  */
-export function setBackdropTransparency(level) {
+export function setBackdropTransparency(level: string | number) {
     const backdropElem = getBackdropContainer();
     const backgroundElem = getBackgroundContainer();
 

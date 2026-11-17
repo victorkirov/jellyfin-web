@@ -33,7 +33,7 @@ export function getDeviceProfile(item?: PlayerOptions['item'] | null) {
             profile = profileBuilder(builderOpts) as unknown as PlayerProfile;
         }
 
-        const maxVideoWidth = appSettings.maxVideoWidth(undefined);
+        const maxVideoWidth = appSettings.maxVideoWidth();
         const maxTranscodingVideoWidth = maxVideoWidth < 0 ? appHost.screen()?.maxAllowedWidth : maxVideoWidth;
 
         if (maxTranscodingVideoWidth) {
@@ -44,7 +44,7 @@ export function getDeviceProfile(item?: PlayerOptions['item'] | null) {
                 IsRequired: false
             };
 
-            if (appSettings.limitSupportedVideoResolution(undefined)) {
+            if (appSettings.limitSupportedVideoResolution()) {
                 profile.CodecProfiles.push({
                     Type: 'Video',
                     Conditions: [conditionWidth]
@@ -62,7 +62,7 @@ export function getDeviceProfile(item?: PlayerOptions['item'] | null) {
             });
         }
 
-        const preferredTranscodeVideoCodec = appSettings.preferredTranscodeVideoCodec(undefined);
+        const preferredTranscodeVideoCodec = appSettings.preferredTranscodeVideoCodec();
         if (preferredTranscodeVideoCodec) {
             profile.TranscodingProfiles.forEach((transcodingProfile) => {
                 if (transcodingProfile.Type === 'Video') {
@@ -77,7 +77,7 @@ export function getDeviceProfile(item?: PlayerOptions['item'] | null) {
             });
         }
 
-        const preferredTranscodeVideoAudioCodec = appSettings.preferredTranscodeVideoAudioCodec(undefined);
+        const preferredTranscodeVideoAudioCodec = appSettings.preferredTranscodeVideoAudioCodec();
         if (preferredTranscodeVideoAudioCodec) {
             profile.TranscodingProfiles.forEach((transcodingProfile) => {
                 if (transcodingProfile.Type === 'Video') {

@@ -1,21 +1,23 @@
 import 'webcomponents.js/webcomponents-lite';
 import dom from '../../utils/dom';
 import ScrollerFactory from 'lib/scroller';
+import type { ScrollerOptions } from 'lib/scroller/types';
 import browser from '../../scripts/browser';
 import focusManager from '../../lib/focusManager';
 import layoutManager from '../../lib/layoutManager';
 import './emby-tabs.scss';
 import '../../styles/scrollstyles.scss';
 
-const EmbyTabs = Object.create(HTMLDivElement.prototype);
+import type { Tabs, TabsPrototype } from './tabTypes';
+const EmbyTabs = Object.create(HTMLDivElement.prototype) as TabsPrototype;
 const buttonClass = 'emby-tab-button';
 const activeButtonClass = buttonClass + '-active';
 
-function setActiveTabButton(newButton) {
+function setActiveTabButton(newButton: Element) {
     newButton.classList.add(activeButtonClass);
 }
 
-function getTabPanel() {
+function getTabPanel(): HTMLElement | null {
     return null;
 }
 
@@ -26,7 +28,7 @@ function removeActivePanelClass() {
     }
 }
 
-function fadeInRight(elem) {
+function fadeInRight(elem: HTMLElement) {
     const pct = browser.mobile ? '4%' : '0.5%';
 
     const keyframes = [
@@ -40,7 +42,7 @@ function fadeInRight(elem) {
     });
 }
 
-function triggerBeforeTabChange(tabs, index, previousIndex) {
+function triggerBeforeTabChange(tabs: Tabs, index: number, previousIndex?: number | null) {
     tabs.dispatchEvent(new CustomEvent('beforetabchange', {
         detail: {
             selectedTabIndex: index,
@@ -55,7 +57,7 @@ function triggerBeforeTabChange(tabs, index, previousIndex) {
 
     if (newPanel) {
         // animate new panel ?
-        if (newPanel.animate) {
+        if (typeof newPanel.animate === 'function') {
             fadeInRight(newPanel);
         }
 
@@ -63,22 +65,22 @@ function triggerBeforeTabChange(tabs, index, previousIndex) {
     }
 }
 
-function onClick(e) {
+function onClick(this: Tabs, e: { target: EventTarget | null }) {
     const tabs = this;
 
     const current = tabs.querySelector('.' + activeButtonClass);
-    const tabButton = dom.parentWithClass(e.target, buttonClass);
+    const tabButton = dom.parentWithClass(e.target as HTMLElement, buttonClass);
 
     if (tabButton && tabButton !== current) {
         if (current) {
             current.classList.remove(activeButtonClass);
         }
 
-        const previousIndex = current ? parseInt(current.getAttribute('data-index'), 10) : null;
+        const previousIndex = current ? parseInt(current.getAttribute('data-index')!, 10) : null;
 
         setActiveTabButton(tabButton);
 
-        const index = parseInt(tabButton.getAttribute('data-index'), 10);
+        const index = parseInt(tabButton.getAttribute('data-index')!, 10);
 
         triggerBeforeTabChange(tabs, index, previousIndex);
 
@@ -100,31 +102,32 @@ function onClick(e) {
     }
 }
 
-function onFocusIn(e) {
+function onFocusIn(this: Tabs, e: Event) {
     const tabs = this;
-    const tabButton = dom.parentWithClass(e.target, buttonClass);
+    const tabButton = dom.parentWithClass(e.target as HTMLElement, buttonClass);
     if (tabButton && tabs.scroller) {
         tabs.scroller.toCenter(tabButton, false);
     }
 }
 
-function onFocusOut(e) {
-    const parentContainer = e.target.parentNode;
+function onFocusOut(e: Event) {
+    const target = e.target as HTMLElement;
+    const parentContainer = target.parentNode as HTMLElement;
     const previousFocus = parentContainer.querySelector('.lastFocused');
     if (previousFocus) {
         previousFocus.classList.remove('lastFocused');
     }
-    e.target.classList.add('lastFocused');
+    target.classList.add('lastFocused');
 }
 
-function initScroller(tabs) {
+function initScroller(tabs: Tabs) {
     if (tabs.scroller) {
         return;
     }
 
-    const contentScrollSlider = tabs.querySelector('.emby-tabs-slider');
+    const contentScrollSlider = tabs.querySelector<HTMLElement>('.emby-tabs-slider');
     if (contentScrollSlider) {
-        tabs.scroller = new ScrollerFactory(tabs, {
+        const options: ScrollerOptions & Record<string, unknown> = {
             horizontal: 1,
             itemNav: 0,
             mouseDragging: 1,
@@ -142,7 +145,8 @@ function initScroller(tabs) {
             // In safari the transform is causing the headers to occasionally disappear or flicker
             requireAnimation: !browser.safari,
             allowNativeSmoothScroll: true
-        });
+        };
+        tabs.scroller = new ScrollerFactory(tabs, options);
         tabs.scroller.init();
     } else {
         tabs.classList.add('scrollX');
@@ -192,7 +196,7 @@ EmbyTabs.attachedCallback = function () {
     initScroller(this);
 
     const current = this.querySelector('.' + activeButtonClass);
-    const currentIndex = current ? parseInt(current.getAttribute('data-index'), 10) : parseInt(this.getAttribute('data-index') || '0', 10);
+    const currentIndex = current ? parseInt(current.getAttribute('data-index')!, 10) : parseInt(this.getAttribute('data-index') || '0', 10);
 
     if (currentIndex !== -1) {
         this.selectedTabIndex = currentIndex;
@@ -227,7 +231,7 @@ EmbyTabs.detachedCallback = function () {
     }
 };
 
-function getSelectedTabButton(elem) {
+function getSelectedTabButton(elem: Tabs) {
     return elem.querySelector('.' + activeButtonClass);
 }
 
@@ -238,7 +242,7 @@ EmbyTabs.selectedIndex = function (selected, triggerEvent) {
         return tabs.selectedTabIndex || 0;
     }
 
-    const current = tabs.selectedIndex();
+    const current = tabs.selectedIndex()!;
 
     tabs.selectedTabIndex = selected;
 
@@ -266,15 +270,15 @@ EmbyTabs.selectedIndex = function (selected, triggerEvent) {
     }
 };
 
-function getSibling(elem, method) {
-    let sibling = elem[method];
+function getSibling(elem: Element | null, method: 'nextSibling' | 'previousSibling') {
+    let sibling = elem?.[method] as Element | null;
 
     while (sibling) {
         if (sibling.classList.contains(buttonClass) && !sibling.classList.contains('hide')) {
             return sibling;
         }
 
-        sibling = sibling[method];
+        sibling = sibling[method] as Element | null;
     }
 
     return null;
@@ -307,7 +311,7 @@ EmbyTabs.selectPrevious = function () {
 EmbyTabs.triggerBeforeTabChange = function () {
     const tabs = this;
 
-    triggerBeforeTabChange(tabs, tabs.selectedIndex());
+    triggerBeforeTabChange(tabs, tabs.selectedIndex()!);
 };
 
 EmbyTabs.triggerTabChange = function () {
@@ -321,7 +325,7 @@ EmbyTabs.triggerTabChange = function () {
 };
 
 EmbyTabs.setTabEnabled = function (index, enabled) {
-    const btn = this.querySelector('.emby-tab-button[data-index="' + index + '"]');
+    const btn = this.querySelector('.emby-tab-button[data-index="' + index + '"]')!;
 
     if (enabled) {
         btn.classList.remove('hide');
@@ -330,7 +334,7 @@ EmbyTabs.setTabEnabled = function (index, enabled) {
     }
 };
 
-document.registerElement('emby-tabs', {
+(document as Document & { registerElement(name: string, options: { prototype: TabsPrototype; extends: string }): void }).registerElement('emby-tabs', {
     prototype: EmbyTabs,
     extends: 'div'
 });

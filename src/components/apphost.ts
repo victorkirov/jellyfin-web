@@ -45,7 +45,7 @@ function getDeviceId(): string | number | undefined {
     if (!deviceId) {
         const key = '_deviceId2';
 
-        deviceId = appSettings.get(key);
+        deviceId = appSettings.get(key) || undefined;
 
         if (!deviceId) {
             deviceId = generateDeviceId();
