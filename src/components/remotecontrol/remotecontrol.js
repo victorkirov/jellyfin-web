@@ -91,11 +91,22 @@ function showSubtitleMenu(context, player, button) {
     });
 }
 
-function updateNowPlayingInfo(context, state, serverId) {
+export function updateNowPlayingInfo(context, state, serverId) {
     const item = state.NowPlayingItem;
     const displayName = item ?
         getItemTextLines(item).map(escapeHtml).join(' - ') :
         '';
+    let contextButton = context.querySelector('.btnToggleContextMenu');
+    // Replacing the button drops its old listener and invalidates pending item reads.
+    const autoFocusContextButton = document.activeElement === contextButton;
+    const contextButtonClone = contextButton.cloneNode(true);
+    contextButton.parentNode.replaceChild(contextButtonClone, contextButton);
+    contextButton = context.querySelector('.btnToggleContextMenu');
+    if (autoFocusContextButton) {
+        contextButton.focus();
+    }
+    context.querySelector('.nowPlayingPageUserDataButtonsTitle').innerHTML = '';
+    context.querySelector('.nowPlayingPageUserDataButtons').innerHTML = '';
     if (item) {
         const nowPlayingServerId = (item.ServerId || serverId);
         if (item.Type == 'AudioBook' || item.Type == 'Audio' || item.MediaStreams[0].Type == 'Audio') {
@@ -155,15 +166,6 @@ function updateNowPlayingInfo(context, state, serverId) {
             maxHeight: 300
         });
 
-        let contextButton = context.querySelector('.btnToggleContextMenu');
-        // We remove the previous event listener by replacing the item in each update event
-        const autoFocusContextButton = document.activeElement === contextButton;
-        const contextButtonClone = contextButton.cloneNode(true);
-        contextButton.parentNode.replaceChild(contextButtonClone, contextButton);
-        contextButton = context.querySelector('.btnToggleContextMenu');
-        if (autoFocusContextButton) {
-            contextButton.focus();
-        }
         const options = {
             play: false,
             queue: false,
@@ -173,8 +175,16 @@ function updateNowPlayingInfo(context, state, serverId) {
             positionTo: contextButton
         };
         const apiClient = ServerConnections.getApiClient(item.ServerId);
+        setImageUrl(context, state, url);
+        setBackdrops([item]);
         apiClient.getItem(apiClient.getCurrentUserId(), item.Id).then(function (fullItem) {
-            apiClient.getCurrentUser().then(function (user) {
+            if (context.querySelector('.btnToggleContextMenu') !== contextButton) return;
+            const userData = fullItem.UserData || {};
+            const likes = userData.Likes == null ? '' : userData.Likes;
+            context.querySelector('.nowPlayingPageUserDataButtonsTitle').innerHTML = '<button is="emby-ratingbutton" type="button" class="paper-icon-button-light" data-id="' + fullItem.Id + '" data-serverid="' + fullItem.ServerId + '" data-itemtype="' + fullItem.Type + '" data-likes="' + likes + '" data-isfavorite="' + userData.IsFavorite + '"><span class="material-icons favorite" aria-hidden="true"></span></button>';
+            context.querySelector('.nowPlayingPageUserDataButtons').innerHTML = '<button is="emby-ratingbutton" type="button" class="paper-icon-button-light" data-id="' + fullItem.Id + '" data-serverid="' + fullItem.ServerId + '" data-itemtype="' + fullItem.Type + '" data-likes="' + likes + '" data-isfavorite="' + userData.IsFavorite + '"><span class="material-icons favorite" aria-hidden="true"></span></button>';
+            return apiClient.getCurrentUser().then(function (user) {
+                if (context.querySelector('.btnToggleContextMenu') !== contextButton) return;
                 contextButton.addEventListener('click', function () {
                     itemContextMenu.show(Object.assign({
                         item: fullItem,
@@ -183,18 +193,11 @@ function updateNowPlayingInfo(context, state, serverId) {
                         .catch(() => { /* no-op */ });
                 });
             });
-        });
-        setImageUrl(context, state, url);
-        setBackdrops([item]);
-        apiClient.getItem(apiClient.getCurrentUserId(), item.Id).then(function (fullItem) {
-            const userData = fullItem.UserData || {};
-            const likes = userData.Likes == null ? '' : userData.Likes;
-            context.querySelector('.nowPlayingPageUserDataButtonsTitle').innerHTML = '<button is="emby-ratingbutton" type="button" class="paper-icon-button-light" data-id="' + fullItem.Id + '" data-serverid="' + fullItem.ServerId + '" data-itemtype="' + fullItem.Type + '" data-likes="' + likes + '" data-isfavorite="' + userData.IsFavorite + '"><span class="material-icons favorite" aria-hidden="true"></span></button>';
-            context.querySelector('.nowPlayingPageUserDataButtons').innerHTML = '<button is="emby-ratingbutton" type="button" class="paper-icon-button-light" data-id="' + fullItem.Id + '" data-serverid="' + fullItem.ServerId + '" data-itemtype="' + fullItem.Type + '" data-likes="' + likes + '" data-isfavorite="' + userData.IsFavorite + '"><span class="material-icons favorite" aria-hidden="true"></span></button>';
+        }).catch(function (error) {
+            console.error('Failed to load now-playing item', error);
         });
     } else {
         clearBackdrop();
-        context.querySelector('.nowPlayingPageUserDataButtons').innerHTML = '';
     }
 }
 
