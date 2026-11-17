@@ -1,0 +1,271 @@
+import { getAlbumsHtml } from '../libraryItemRendering';
+import type { LibraryController, LibraryPageData, LibraryResult } from '../libraryControllerTypes';
+import { playbackManager } from 'components/playback/playbackmanager';
+import loading from 'components/loading/loading';
+import libraryBrowser from 'scripts/libraryBrowser';
+import imageLoader from 'components/images/imageLoader';
+import AlphaPicker from 'components/alphaPicker/alphaPicker';
+import * as userSettings from 'scripts/settings/userSettings';
+import globalize from 'lib/globalize';
+import Events from 'utils/events';
+import { setFilterStatus } from 'components/filterdialog/filterIndicator';
+
+import 'components/itemscontainer/emby-itemscontainer';
+
+export default class LibraryTab {
+    alphaPicker?: LibraryController['alphaPicker'];
+    getCurrentViewStyle!: LibraryController['getCurrentViewStyle'];
+    renderTab!: LibraryController['renderTab'];
+    showFilterMenu!: LibraryController['showFilterMenu'];
+
+    constructor(view: HTMLElement, params: { topParentId?: string }, tabContent: HTMLElement) {
+        const playAll = () => {
+            void window.ApiClient.getItem(window.ApiClient.getCurrentUserId(), params.topParentId!).then((item) => {
+                void playbackManager.play({
+                    items: [item]
+                });
+            });
+        };
+
+        const shuffle = () => {
+            void window.ApiClient.getItem(window.ApiClient.getCurrentUserId(), params.topParentId!).then((item) => {
+                getQuery();
+                playbackManager.shuffle(item);
+            });
+        };
+
+        const getPageData = () => {
+            const key = getSavedQueryKey();
+
+            if (!pageData) {
+                pageData = {
+                    query: {
+                        SortBy: 'SortName',
+                        SortOrder: 'Ascending',
+                        IncludeItemTypes: 'MusicAlbum',
+                        Recursive: true,
+                        Fields: 'PrimaryImageAspectRatio,SortName',
+                        ImageTypeLimit: 1,
+                        EnableImageTypes: 'Primary,Backdrop,Banner,Thumb',
+                        StartIndex: 0
+                    },
+                    view: userSettings.getSavedView(key) || 'Poster'
+                };
+
+                if (userSettings.libraryPageSize() > 0) {
+                    pageData.query['Limit'] = userSettings.libraryPageSize();
+                }
+
+                pageData.query.ParentId = params.topParentId;
+                userSettings.loadQuerySettings(key, pageData.query);
+            }
+
+            return pageData;
+        };
+
+        const getQuery = () => {
+            return getPageData().query;
+        };
+
+        const getSavedQueryKey = () => {
+            return `${params.topParentId}-musicalbums`;
+        };
+
+        const onViewStyleChange = () => {
+            const viewStyle = this.getCurrentViewStyle();
+            const itemsContainer = tabContent.querySelector<HTMLElement>('.itemsContainer')!;
+
+            if (viewStyle == 'List') {
+                itemsContainer.classList.add('vertical-list');
+                itemsContainer.classList.remove('vertical-wrap');
+            } else {
+                itemsContainer.classList.remove('vertical-list');
+                itemsContainer.classList.add('vertical-wrap');
+            }
+
+            itemsContainer.innerHTML = '';
+        };
+
+        const reloadItems = () => {
+            loading.show();
+            isLoading = true;
+            const query = getQuery();
+            setFilterStatus(tabContent, query);
+
+            void window.ApiClient.getItems(window.ApiClient.getCurrentUserId(), query).then((response) => {
+                // These endpoints return Items and TotalRecordCount for paged library queries.
+                const result = response as LibraryResult;
+                const onNextPageClick = () => {
+                    if (isLoading) {
+                        return;
+                    }
+
+                    if (userSettings.libraryPageSize() > 0) {
+                        query.StartIndex += query.Limit!;
+                    }
+                    reloadItems();
+                };
+
+                const onPreviousPageClick = () => {
+                    if (isLoading) {
+                        return;
+                    }
+
+                    if (userSettings.libraryPageSize() > 0) {
+                        query.StartIndex = Math.max(0, query.StartIndex - query.Limit!);
+                    }
+                    reloadItems();
+                };
+
+                window.scrollTo(0, 0);
+                this.alphaPicker?.updateControls(query);
+                let html;
+                const pagingHtml = libraryBrowser.getQueryPagingHtml({
+                    startIndex: query.StartIndex,
+                    limit: query.Limit,
+                    totalRecordCount: result.TotalRecordCount,
+                    showLimit: false,
+                    updatePageSizeSetting: false,
+                    addLayoutButton: false,
+                    sortButton: false,
+                    filterButton: false
+                });
+                html = getAlbumsHtml({ viewStyle: this.getCurrentViewStyle(), query, result });
+                let elems = tabContent.querySelectorAll('.paging');
+
+                for (const elem of elems) {
+                    elem.innerHTML = pagingHtml;
+                }
+
+                elems = tabContent.querySelectorAll('.btnNextPage');
+                for (const elem of elems) {
+                    elem.addEventListener('click', onNextPageClick);
+                }
+
+                elems = tabContent.querySelectorAll('.btnPreviousPage');
+                for (const elem of elems) {
+                    elem.addEventListener('click', onPreviousPageClick);
+                }
+
+                const itemsContainer = tabContent.querySelector<HTMLElement>('.itemsContainer')!;
+                itemsContainer.innerHTML = html;
+                imageLoader.lazyChildren(itemsContainer);
+                userSettings.saveQuerySettings(getSavedQueryKey(), query);
+                loading.hide();
+                isLoading = false;
+
+                void import('components/autoFocuser').then(({ default: autoFocuser }) => {
+                    autoFocuser.autoFocus(tabContent);
+                });
+            });
+        };
+
+        let pageData: LibraryPageData | undefined;
+        let isLoading = false;
+
+        this.showFilterMenu = () => {
+            void import('components/filterdialog/filterdialog').then(({ default: FilterDialog }) => {
+                const filterDialog = new FilterDialog({
+                    query: getQuery(),
+                    mode: 'albums',
+                    serverId: window.ApiClient.serverId()
+                });
+                Events.on(filterDialog, 'filterchange', () => {
+                    getQuery().StartIndex = 0;
+                    reloadItems();
+                });
+
+                void filterDialog.show();
+            });
+        };
+
+        this.getCurrentViewStyle = () => {
+            return getPageData().view;
+        };
+
+        const initPage = (tabElement: HTMLElement) => {
+            const alphaPickerElement = tabElement.querySelector<HTMLElement>('.alphaPicker')!;
+
+            alphaPickerElement.addEventListener('alphavaluechanged', (e) => {
+                const newValue = (e as CustomEvent<{ value: string }>).detail.value;
+                const query = getQuery();
+                if (newValue === '#') {
+                    query.NameLessThan = 'A';
+                    delete query.NameStartsWith;
+                } else {
+                    query.NameStartsWith = newValue;
+                    delete query.NameLessThan;
+                }
+                query.StartIndex = 0;
+                reloadItems();
+            });
+
+            this.alphaPicker = new AlphaPicker({
+                element: alphaPickerElement,
+                valueChangeEvent: 'click'
+            });
+
+            tabElement.querySelector<HTMLElement>('.btnFilter')!.addEventListener('click', () => {
+                this.showFilterMenu();
+            });
+
+            tabElement.querySelector<HTMLElement>('.btnSort')!.addEventListener('click', (e) => {
+                libraryBrowser.showSortMenu({
+                    items: [{
+                        name: globalize.translate('Name'),
+                        id: 'SortName'
+                    }, {
+                        name: globalize.translate('AlbumArtist'),
+                        id: 'AlbumArtist,SortName'
+                    }, {
+                        name: globalize.translate('OptionCommunityRating'),
+                        id: 'CommunityRating,SortName'
+                    }, {
+                        name: globalize.translate('OptionCriticRating'),
+                        id: 'CriticRating,SortName'
+                    }, {
+                        name: globalize.translate('OptionDateAdded'),
+                        id: 'DateCreated,SortName'
+                    }, {
+                        name: globalize.translate('OptionReleaseDate'),
+                        id: 'ProductionYear,PremiereDate,SortName'
+                    }, {
+                        name: globalize.translate('OptionRandom'),
+                        id: 'Random,SortName'
+                    }],
+                    callback: () => {
+                        getQuery().StartIndex = 0;
+                        reloadItems();
+                    },
+                    query: getQuery(),
+                    button: e.target as HTMLElement
+                });
+            });
+
+            const btnSelectView = tabElement.querySelector<HTMLElement>('.btnSelectView')!;
+            btnSelectView.addEventListener('click', (e) => {
+                libraryBrowser.showLayoutMenu(e.target, this.getCurrentViewStyle(), 'List,Poster,PosterCard'.split(','));
+            });
+
+            btnSelectView.addEventListener('layoutchange', (e) => {
+                const viewStyle = (e as CustomEvent<{ viewStyle: string }>).detail.viewStyle;
+                getPageData().view = viewStyle;
+                userSettings.saveViewSetting(getSavedQueryKey(), viewStyle);
+                getQuery().StartIndex = 0;
+                onViewStyleChange();
+                reloadItems();
+            });
+
+            tabElement.querySelector<HTMLElement>('.btnPlayAll')!.addEventListener('click', playAll);
+            tabElement.querySelector<HTMLElement>('.btnShuffle')!.addEventListener('click', shuffle);
+        };
+
+        initPage(tabContent);
+        onViewStyleChange();
+
+        this.renderTab = () => {
+            reloadItems();
+            this.alphaPicker?.updateControls(getQuery());
+        };
+    }
+}

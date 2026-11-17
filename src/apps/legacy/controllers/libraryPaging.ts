@@ -1,3 +1,4 @@
+import type { LibraryQuery } from './libraryControllerTypes';
 import libraryBrowser from 'scripts/libraryBrowser';
 import * as userSettings from 'scripts/settings/userSettings';
 
@@ -11,21 +12,24 @@ const layoutOptions = {
 };
 export const libraryLayouts = Object.keys(layoutOptions);
 
-export function getLibraryLayoutOptions(layout) {
-    return layoutOptions[supportedLibraryLayout(layout)];
+export function getLibraryLayoutOptions(layout: string) {
+    return layoutOptions[supportedLibraryLayout(layout) as keyof typeof layoutOptions];
 }
 
-export function getLibraryLayout(key, legacyFirst = false) {
+export function getLibraryLayout(key: string, legacyFirst = false) {
     const suffixes = legacyFirst ? ['-view', '-_view'] : ['-_view', '-view'];
     const value = userSettings.get(key + suffixes[0]) || userSettings.get(key + suffixes[1]);
     return supportedLibraryLayout(value);
 }
 
-export function supportedLibraryLayout(value) {
+export function supportedLibraryLayout(value: string) {
     return libraryLayouts.indexOf(value) === -1 ? 'Poster' : value;
 }
 
-export function bindLibraryPaging({ view, query, totalRecordCount, isLoading, getRequestId, refresh, focus }) {
+export function bindLibraryPaging({ view, query, totalRecordCount, isLoading, getRequestId, refresh, focus }: {
+    view: HTMLElement; query: LibraryQuery; totalRecordCount: number; isLoading(): boolean;
+    getRequestId(): number; refresh(): unknown; focus?(): void;
+}) {
     const pagingHtml = libraryBrowser.getQueryPagingHtml({
         startIndex: query.StartIndex,
         limit: query.Limit,
@@ -39,7 +43,7 @@ export function bindLibraryPaging({ view, query, totalRecordCount, isLoading, ge
     for (const element of view.querySelectorAll('.paging')) {
         element.innerHTML = pagingHtml;
     }
-    function changePage(direction, control) {
+    function changePage(direction: number, control: Element) {
         if (isLoading() || (!query.Limit || query.Limit <= 0)) return;
         const previousStartIndex = query.StartIndex;
         const startIndex = Math.max(0, previousStartIndex + direction * query.Limit);

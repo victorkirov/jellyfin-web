@@ -1,36 +1,26 @@
-import createTabControllerCache from '../tabControllerCache';
+import * as userSettings from 'scripts/settings/userSettings';
+import type { LibraryApiGetLatestMediaRequest } from '@jellyfin/sdk/lib/generated-client/api/library-api';
+import type { LibraryResult } from '../libraryControllerTypes';
+import type { RecommendedParams } from '../recommendedTypes';
 import { getLatestMediaQuery } from 'lib/queries/latestMedia';
 import ServerConnections from 'lib/jellyfin-apiclient/ServerConnections';
 import { queryClient } from 'utils/query/queryClient';
-import { userQueryKey } from 'utils/query/queryKeys';
 import escapeHtml from 'escape-html';
 
 import cardBuilder from 'components/cardbuilder/cardBuilder';
 import { getBackdropShape, getPortraitShape } from 'components/cardbuilder/utils/shape';
 import imageLoader from 'components/images/imageLoader';
 import layoutManager from 'lib/layoutManager';
-import * as mainTabsManager from 'components/maintabsmanager';
-import { playbackManager } from 'components/playback/playbackmanager';
 import dom from 'utils/dom';
 import globalize from 'lib/globalize';
-import inputManager from 'scripts/inputManager';
-import libraryMenu from 'scripts/libraryMenu';
-import * as userSettings from 'scripts/settings/userSettings';
 import { LibraryTab } from 'types/libraryTab';
-import Dashboard from 'components/dashboard';
-import Events from 'utils/events';
-
-import 'elements/emby-scroller/emby-scroller';
-import 'components/itemscontainer/emby-itemscontainer';
-import 'elements/emby-tabs/emby-tabs';
-import 'components/buttons/emby-button';
 
 function enableScrollX() {
     return true;
 }
 
-function loadLatest(page, userId, parentId) {
-    const options = {
+function loadLatest(page: HTMLElement, userId: string, parentId?: string) {
+    const options: LibraryApiGetLatestMediaRequest = {
         userId,
         includeItemTypes: ['Movie'],
         limit: 18,
@@ -39,10 +29,10 @@ function loadLatest(page, userId, parentId) {
         imageTypeLimit: 1,
         enableImageTypes: ['Primary', 'Backdrop', 'Banner', 'Thumb']
     };
-    const api = ServerConnections.getApi(ApiClient.serverId());
-    queryClient.fetchQuery(getLatestMediaQuery(api, options)).then(function (items) {
+    const api = ServerConnections.getApi(window.ApiClient.serverId());
+    void queryClient.fetchQuery(getLatestMediaQuery(api, options)).then(function (items) {
         const allowBottomPadding = !enableScrollX();
-        const container = page.querySelector('#recentlyAddedItems');
+        const container = page.querySelector<HTMLElement>('#recentlyAddedItems')!;
         cardBuilder.buildCards(items, {
             itemsContainer: container,
             shape: getPortraitShape(enableScrollX()),
@@ -59,7 +49,7 @@ function loadLatest(page, userId, parentId) {
     });
 }
 
-function loadResume(page, userId, parentId) {
+function loadResume(page: HTMLElement, userId: string, parentId?: string) {
     const screenWidth = dom.getWindowSize().innerWidth;
     const options = {
         SortBy: 'DatePlayed',
@@ -75,15 +65,16 @@ function loadResume(page, userId, parentId) {
         EnableImageTypes: 'Primary,Backdrop,Banner,Thumb',
         EnableTotalRecordCount: false
     };
-    ApiClient.getItems(userId, options).then(function (result) {
+    void window.ApiClient.getItems(userId, options).then(function (response) {
+        const result = response as LibraryResult;
         if (result.Items.length) {
-            page.querySelector('#resumableSection').classList.remove('hide');
+            page.querySelector<HTMLElement>('#resumableSection')!.classList.remove('hide');
         } else {
-            page.querySelector('#resumableSection').classList.add('hide');
+            page.querySelector<HTMLElement>('#resumableSection')!.classList.add('hide');
         }
 
         const allowBottomPadding = !enableScrollX();
-        const container = page.querySelector('#resumableItems');
+        const container = page.querySelector<HTMLElement>('#resumableItems')!;
         cardBuilder.buildCards(result.Items, {
             itemsContainer: container,
             preferThumb: true,
@@ -102,7 +93,7 @@ function loadResume(page, userId, parentId) {
     });
 }
 
-function getRecommendationHtml(recommendation) {
+function getRecommendationHtml(recommendation: { RecommendationType?: string; BaselineItemName?: string; Items: LibraryResult['Items'] }) {
     let html = '';
     let title = '';
 
@@ -155,7 +146,7 @@ function getRecommendationHtml(recommendation) {
     return html;
 }
 
-function loadSuggestions(page, userId, parentId) {
+function loadSuggestions(page: HTMLElement, userId: string, parentId?: string) {
     const screenWidth = dom.getWindowSize().innerWidth;
     let itemLimit = 5;
     if (screenWidth >= 1600) {
@@ -164,7 +155,7 @@ function loadSuggestions(page, userId, parentId) {
         itemLimit = 6;
     }
 
-    const url = ApiClient.getUrl('Movies/Recommendations', {
+    const url = window.ApiClient.getUrl('Movies/Recommendations', {
         userId: userId,
         ParentId: parentId,
         categoryLimit: 6,
@@ -173,16 +164,16 @@ function loadSuggestions(page, userId, parentId) {
         ImageTypeLimit: 1,
         EnableImageTypes: 'Primary,Backdrop,Banner,Thumb'
     });
-    ApiClient.getJSON(url).then(function (recommendations) {
+    void window.ApiClient.getJSON(url).then(function (recommendations: Parameters<typeof getRecommendationHtml>[0][]) {
         if (!recommendations.length) {
-            page.querySelector('.noItemsMessage').classList.remove('hide');
-            page.querySelector('.recommendations').innerHTML = '';
+            page.querySelector<HTMLElement>('.noItemsMessage')!.classList.remove('hide');
+            page.querySelector<HTMLElement>('.recommendations')!.innerHTML = '';
             return;
         }
 
         const html = recommendations.map(getRecommendationHtml).join('');
-        page.querySelector('.noItemsMessage').classList.add('hide');
-        const recs = page.querySelector('.recommendations');
+        page.querySelector<HTMLElement>('.noItemsMessage')!.classList.add('hide');
+        const recs = page.querySelector<HTMLElement>('.recommendations')!;
         recs.innerHTML = html;
         imageLoader.lazyChildren(recs);
 
@@ -191,13 +182,13 @@ function loadSuggestions(page, userId, parentId) {
     });
 }
 
-function autoFocus(page) {
-    import('components/autoFocuser').then(({ default: autoFocuser }) => {
+function autoFocus(page: HTMLElement) {
+    void import('components/autoFocuser').then(({ default: autoFocuser }) => {
         autoFocuser.autoFocus(page);
     });
 }
 
-function setScrollClasses(elem, scrollX) {
+function setScrollClasses(elem: HTMLElement, scrollX: boolean) {
     if (scrollX) {
         elem.classList.add('hiddenScrollX');
 
@@ -217,23 +208,23 @@ function setScrollClasses(elem, scrollX) {
     }
 }
 
-function initSuggestedTab(page, tabContent) {
-    const containers = tabContent.querySelectorAll('.itemsContainer');
+export function initSuggestedTab(_page: HTMLElement, tabContent: HTMLElement) {
+    const containers = tabContent.querySelectorAll<HTMLElement>('.itemsContainer');
 
     for (const container of containers) {
         setScrollClasses(container, enableScrollX());
     }
 }
 
-function loadSuggestionsTab(view, params, tabContent) {
+export function loadSuggestionsTab(_view: HTMLElement, params: RecommendedParams, tabContent: HTMLElement) {
     const parentId = params.topParentId;
-    const userId = ApiClient.getCurrentUserId();
+    const userId = window.ApiClient.getCurrentUserId();
     loadResume(tabContent, userId, parentId);
     loadLatest(tabContent, userId, parentId);
     loadSuggestions(tabContent, userId, parentId);
 }
 
-function getTabs() {
+export function getTabs() {
     return [{
         name: globalize.translate('Movies')
     }, {
@@ -247,7 +238,7 @@ function getTabs() {
     }];
 }
 
-function getDefaultTabIndex(folderId) {
+export function getDefaultTabIndex(folderId?: string) {
     switch (userSettings.get('landing-' + folderId)) {
         case LibraryTab.Suggestions:
             return 1;
@@ -266,109 +257,3 @@ function getDefaultTabIndex(folderId) {
     }
 }
 
-export default function (view, params) {
-    function onBeforeTabChange(e) {
-        tabs.preload(parseInt(e.detail.selectedTabIndex, 10));
-    }
-
-    function onTabChange(e) {
-        currentTabIndex = parseInt(e.detail.selectedTabIndex, 10);
-        tabs.render(currentTabIndex);
-    }
-
-    function getTabContainers() {
-        return view.querySelectorAll('.pageTabContent');
-    }
-
-    function initTabs() {
-        mainTabsManager.setTabs(view, currentTabIndex, getTabs, getTabContainers, onBeforeTabChange, onTabChange);
-    }
-
-    const tabs = createTabControllerCache(index => {
-        const tabContent = view.querySelector(".pageTabContent[data-index='" + index + "']");
-        if (index === suggestionsTabIndex) {
-            this.tabContent = tabContent;
-            return Promise.resolve(this);
-        }
-
-        let depends = 'movies';
-
-        switch (index) {
-            case 3:
-                depends = 'moviecollections';
-                break;
-
-            case 4:
-                depends = 'moviegenres';
-                break;
-        }
-
-        return import(`../movies/${depends}.js`).then(({ default: ControllerFactory }) => {
-            if (index === 0 || index === 2) {
-                return new ControllerFactory(view, params, tabContent, {
-                    mode: index ? 'favorites' : 'movies'
-                });
-            }
-            return new ControllerFactory(view, params, tabContent);
-        });
-    });
-
-    function onPlaybackStop(e, stopInfo) {
-        const state = stopInfo.state;
-
-        if (state.NowPlayingItem && state.NowPlayingItem.MediaType == 'Video') {
-            const api = ServerConnections.getApi(ApiClient.serverId());
-            queryClient.invalidateQueries({ queryKey: userQueryKey(api, ApiClient.getCurrentUserId(), 'LatestMedia') });
-            tabs.reset();
-            mainTabsManager.getTabsElement().triggerTabChange();
-        }
-    }
-
-    function onInputCommand(e) {
-        if (e.detail.command === 'search') {
-            e.preventDefault();
-            Dashboard.navigate('search?collectionType=movies&parentId=' + params.topParentId);
-        }
-    }
-
-    let currentTabIndex = parseInt(params.tab || getDefaultTabIndex(params.topParentId), 10);
-    const suggestionsTabIndex = 1;
-
-    this.initTab = function () {
-        const tabContent = view.querySelector(".pageTabContent[data-index='" + suggestionsTabIndex + "']");
-        initSuggestedTab(view, tabContent);
-    };
-
-    this.renderTab = function () {
-        const tabContent = view.querySelector(".pageTabContent[data-index='" + suggestionsTabIndex + "']");
-        loadSuggestionsTab(view, params, tabContent);
-    };
-
-    view.addEventListener('viewshow', function () {
-        initTabs();
-        if (!view.getAttribute('data-title')) {
-            const parentId = params.topParentId;
-
-            if (parentId) {
-                ApiClient.getItem(ApiClient.getCurrentUserId(), parentId).then(function (item) {
-                    view.setAttribute('data-title', item.Name);
-                    libraryMenu.setTitle(item.Name);
-                });
-            } else {
-                view.setAttribute('data-title', globalize.translate('Movies'));
-                libraryMenu.setTitle(globalize.translate('Movies'));
-            }
-        }
-
-        Events.on(playbackManager, 'playbackstop', onPlaybackStop);
-        inputManager.on(window, onInputCommand);
-    });
-    view.addEventListener('viewbeforehide', function () {
-        tabs.pause();
-        inputManager.off(window, onInputCommand);
-        Events.off(playbackManager, 'playbackstop', onPlaybackStop);
-    });
-    view.addEventListener('viewdestroy', function () {
-        tabs.destroy();
-    });
-}

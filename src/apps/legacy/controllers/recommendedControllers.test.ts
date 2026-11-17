@@ -1,13 +1,26 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
+import type { RecommendedParams } from './recommendedTypes';
+
+type ChildOptions = { mode?: string };
+type ChildTab = {
+    initTab: Mock; preRender: Mock; renderTab: Mock; destroy: Mock;
+    content: HTMLElement; options?: ChildOptions;
+};
+type ChildArgs = [HTMLElement, RecommendedParams, HTMLElement, ChildOptions?];
+type TabEvent = { detail: { selectedTabIndex: string } };
+type TabBindings = [HTMLElement, number, () => unknown, () => unknown,
+    (event: TabEvent) => void, (event: TabEvent) => void, boolean?];
+type RecommendedFactory = new (view: HTMLElement, params: RecommendedParams) => unknown;
 
 const mocks = vi.hoisted(() => ({
     latest: vi.fn(),
     nextUp: vi.fn(),
-    children: [],
-    tabs: null,
+    children: [] as ChildTab[],
+    tabs: null as TabBindings | null,
     api: { basePath: 'https://test.invalid' }
 }));
-const childModule = vi.hoisted(() => ({ default: function (view, params, content, options) {
+const childModule = vi.hoisted(() => ({ default: function (...args: ChildArgs) {
+    const [, , content, options] = args;
     const tab = { initTab: vi.fn(), preRender: vi.fn(), renderTab: vi.fn(), destroy: vi.fn(), content, options };
     mocks.children.push(tab);
     return tab;
@@ -38,12 +51,12 @@ vi.mock('components/favoriteitems', () => ({ default: { render: vi.fn() } }));
 vi.mock('lib/layoutManager', () => ({ default: { tv: true } }));
 vi.mock('components/loading/loading', () => ({ default: { show: vi.fn(), hide: vi.fn() } }));
 vi.mock('components/maintabsmanager', () => ({
-    setTabs: (...args) => { mocks.tabs = args; },
-    getTabsElement: () => ({ triggerTabChange: () => mocks.tabs[5]({ detail: { selectedTabIndex: '1' } }) })
+    setTabs: (...args: TabBindings) => { mocks.tabs = args; },
+    getTabsElement: () => ({ triggerTabChange: () => mocks.tabs![5]({ detail: { selectedTabIndex: '1' } }) })
 }));
 vi.mock('components/playback/playbackmanager', () => ({ playbackManager: {} }));
 vi.mock('utils/dom', () => ({ default: { getWindowSize: () => ({ innerWidth: 1920 }) } }));
-vi.mock('lib/globalize', () => ({ default: { translate: key => key } }));
+vi.mock('lib/globalize', () => ({ default: { translate: (key: string) => key } }));
 vi.mock('scripts/inputManager', () => ({ default: { on: vi.fn(), off: vi.fn() } }));
 vi.mock('scripts/libraryMenu', () => ({ default: { getTopParentId: () => 'menu-parent', setTitle: vi.fn() } }));
 vi.mock('scripts/settings/userSettings', () => ({ get: vi.fn(), useEpisodeImagesInNextUpAndResume: () => false }));
@@ -69,11 +82,11 @@ const api = {
     subscribe: vi.fn(() => vi.fn())
 };
 
-function makeView(Factory, params = { topParentId: 'parent' }) {
+function makeView(Factory: RecommendedFactory, params: RecommendedParams = { topParentId: 'parent' }) {
     const view = document.createElement('div');
     view.setAttribute('data-title', 'Library');
     view.innerHTML = Array.from({ length: 7 }, (_, index) => `<div class="pageTabContent" data-index="${index}"></div>`).join('');
-    view.querySelector('[data-index="1"]').innerHTML = `
+    view.querySelector('[data-index="1"]')!.innerHTML = `
         <div id="resumableSection"><div id="resumableItems" class="itemsContainer"></div></div>
         <div id="recentlyAddedItems" class="itemsContainer"></div>
         <div id="latestItemsSection"><div id="latestEpisodesItems" class="itemsContainer"></div></div>
@@ -87,14 +100,14 @@ function makeView(Factory, params = { topParentId: 'parent' }) {
     return view;
 }
 
-function select(index, preload = false) {
-    mocks.tabs[preload ? 4 : 5]({ detail: { selectedTabIndex: String(index) } });
+function select(index: number, preload = false) {
+    mocks.tabs![preload ? 4 : 5]({ detail: { selectedTabIndex: String(index) } });
 }
 
 beforeEach(() => {
     vi.clearAllMocks();
     mocks.children.length = 0;
-    playbackManager._callbacks = {};
+    Object.assign(playbackManager, { _callbacks: {} });
     queryClient.clear();
     vi.stubGlobal('ApiClient', api);
     api.getItems.mockResolvedValue({ Items: [] });
@@ -121,7 +134,7 @@ describe.each([
                     expect(mocks.latest).toHaveBeenCalled();
                 } else {
                     expect(mocks.children).toHaveLength(index + (index > 1 ? 0 : 1));
-                    expect(mocks.children.at(-1).renderTab).toHaveBeenCalled();
+                    expect(mocks.children[mocks.children.length - 1].renderTab).toHaveBeenCalled();
                 }
             });
             select(index);
@@ -133,7 +146,7 @@ describe.each([
         }
         view.dispatchEvent(new Event('viewbeforehide'));
         view.dispatchEvent(new Event('viewshow'));
-        expect(mocks.tabs[1]).toBe(count - 1);
+        expect(mocks.tabs![1]).toBe(count - 1);
         select(0);
         await Promise.resolve();
         expect(mocks.children[0].renderTab).toHaveBeenCalledTimes(1);
@@ -161,7 +174,7 @@ describe.each([
     });
 
     it('keeps row parameters and reuses cached latest media on a new visit', async () => {
-        const first = makeView(Factory, { topParentId: 'parent', tab: 1 });
+        const first = makeView(Factory, { topParentId: 'parent', tab: '1' });
         select(1);
         await vi.waitFor(() => expect(mocks.latest).toHaveBeenCalledTimes(1));
         expect(mocks.latest).toHaveBeenLastCalledWith({
@@ -172,7 +185,7 @@ describe.each([
             await vi.waitFor(() => expect(cardBuilder.buildCards).toHaveBeenCalledWith([{ Id: 'latest' }], expect.anything()));
         }
         first.dispatchEvent(new Event('viewdestroy'));
-        const second = makeView(Factory, { topParentId: 'parent', tab: 1 });
+        const second = makeView(Factory, { topParentId: 'parent', tab: '1' });
         select(1);
         const renderer = Factory === Music ? cardBuilder.getCardsHtml : cardBuilder.buildCards;
         const expectedCards = Factory === Movies ? 4 : 6;

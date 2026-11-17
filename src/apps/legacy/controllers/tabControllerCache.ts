@@ -1,13 +1,20 @@
-export default function createTabControllerCache(loadController) {
-    const controllers = [];
-    const pending = [];
-    let rendered = [];
-    let rendering = [];
-    let destroyed = false;
-    let selectedIndex;
+type TabController = {
+    initTab?(): void;
+    preRender?(): void;
+    renderTab(): void | Promise<void>;
+    destroy?(): void;
+};
 
-    function get(index) {
-        if (destroyed) return Promise.resolve();
+export default function createTabControllerCache(loadController: (index: number) => Promise<TabController>) {
+    const controllers: TabController[] = [];
+    const pending: Array<Promise<TabController | undefined> | null> = [];
+    let rendered: number[] = [];
+    let rendering: Array<Promise<void> | null> = [];
+    let destroyed = false;
+    let selectedIndex: number | null | undefined;
+
+    function get(index: number): Promise<TabController | undefined> {
+        if (destroyed) return Promise.resolve(undefined);
         if (controllers[index]) return Promise.resolve(controllers[index]);
         if (!pending[index]) {
             pending[index] = Promise.resolve().then(() => loadController(index)).then(controller => {
@@ -26,22 +33,22 @@ export default function createTabControllerCache(loadController) {
                 throw error;
             });
         }
-        return pending[index];
+        return pending[index]!;
     }
 
-    function reportError(error) {
+    function reportError(error: unknown) {
         console.error('Failed to load library tab', error);
     }
 
     return {
-        preload(index) {
+        preload(index: number) {
             return get(index).then(controller => {
                 if (!destroyed && controller && rendered.indexOf(index) === -1 && controller.preRender) {
                     controller.preRender();
                 }
             }).catch(reportError);
         },
-        render(index) {
+        render(index: number) {
             selectedIndex = index;
             const currentRendered = rendered;
             const currentRendering = rendering;
@@ -56,7 +63,7 @@ export default function createTabControllerCache(loadController) {
                     currentRendering[index] = null;
                 });
             }
-            return currentRendering[index];
+            return currentRendering[index]!;
         },
         pause() {
             selectedIndex = null;
