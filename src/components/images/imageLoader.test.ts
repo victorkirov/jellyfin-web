@@ -24,9 +24,8 @@ function frame() {
 function targets() {
     return Array.from(document.querySelectorAll<HTMLElement>('.lazy'));
 }
-function intersect(target: Element, inside = true, observerIndex = 0) {
-    const observer = observers[observerIndex];
-    observer.callback([{ target, isIntersecting: inside } as IntersectionObserverEntry], {} as IntersectionObserver);
+function intersect(target: Element, inside = true) {
+    observers[0].callback([{ target, isIntersecting: inside } as IntersectionObserverEntry], {} as IntersectionObserver);
 }
 function complete() {
     preloaders.forEach(image => {
@@ -148,18 +147,17 @@ describe('poster load scheduling', () => {
         frame();
         expect(target.style.backgroundImage).toContain('explicit.jpg');
     });
-    it('adds an already-filled direct image to retention when the load observer adopts it', () => {
+    it('does not reload an already-filled direct image when the load observer adopts it', () => {
         const [target] = targets();
         imageLoader.setLazyImage(target, 'direct.jpg');
         complete();
         frame();
-        expect(observers).toHaveLength(0);
         imageLoader.lazyChildren(document.body);
         intersect(target);
-        expect(observers[1].targets.has(target)).toBe(true);
+        expect(target.style.backgroundImage).toContain('direct.jpg');
         expect(preloaders).toHaveLength(1);
     });
-    it('retains a replacement URL when unloading an older filled image', () => {
+    it('loads a replacement URL set after the poster was filled', () => {
         imageLoader.lazyChildren(document.body);
         const [target] = targets();
         intersect(target);
@@ -167,7 +165,6 @@ describe('poster load scheduling', () => {
         frame();
         imageLoader.setLazyImage(target, 'replacement.jpg');
         intersect(target, false);
-        intersect(target, false, 1);
         intersect(target);
         complete();
         frame();
@@ -186,49 +183,25 @@ describe('poster load scheduling', () => {
 });
 
 describe('TV observer zones and presentation', () => {
-    it('observes only applied posters for unloading and unobserves emptied ones', () => {
-        document.body.innerHTML += document.body.innerHTML;
-        imageLoader.lazyChildren(document.body);
-        const [first, second] = targets();
-        expect(observers).toHaveLength(1);
-        intersect(first);
-        complete();
-        expect(observers).toHaveLength(1);
-        frame();
-        expect(observers).toHaveLength(2);
-        expect(observers[1].targets).toEqual(new Set([first]));
-        expect(observers[1].targets.has(second)).toBe(false);
-        intersect(first, false);
-        intersect(first, false, 1);
-        expect(observers[1].targets.size).toBe(0);
-        expect(observers[0].targets.has(first)).toBe(true);
-    });
-    it('loads 1.5 viewport heights ahead and retains posters for 3 heights', () => {
+    it('loads 1.5 viewport heights ahead with a single observer', () => {
         imageLoader.lazyChildren(document.body);
         intersect(targets()[0]);
         complete();
         frame();
-        expect(observers.map(observer => observer.options.rootMargin)).toEqual(['150% 0px', '300% 0px']);
+        expect(observers.map(observer => observer.options.rootMargin)).toEqual(['150% 0px']);
     });
-    it('keeps filled images outside the load zone until leaving the retention zone', () => {
+    it('keeps filled posters after they scroll far away so scrolling back does not reload them', () => {
         imageLoader.lazyChildren(document.body);
         const [target] = targets();
         intersect(target);
         complete();
         frame();
-        intersect(target, true, 1);
         intersect(target, false);
         expect(target.hasAttribute('data-src')).toBe(false);
+        expect(target.style.backgroundImage).toContain('image.jpg');
         intersect(target);
         expect(preloaders).toHaveLength(1);
-        intersect(target, false);
-        intersect(target, false, 1);
-        expect(target.getAttribute('data-src')).toBe('image.jpg');
-        expect(target.style.backgroundImage).toBe('none');
-        intersect(target);
-        complete();
-        frame();
-        expect(target.hasAttribute('data-src')).toBe(false);
+        expect(observers).toHaveLength(1);
     });
     it('applies posters immediately without fade classes or animation listeners', () => {
         imageLoader.lazyChildren(document.body);
@@ -269,7 +242,7 @@ describe('optional blurhash', () => {
         intersect(targets()[0]);
         expect(postMessage).not.toHaveBeenCalled();
     });
-    it.each([true, false])('hides a canvas with completion first=%s and reveals it when unloading', completionFirst => {
+    it.each([true, false])('hides a canvas with completion first=%s and keeps it hidden after scrolling away', completionFirst => {
         vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ createImageData: () => ({ data: new Uint8ClampedArray(4) }), putImageData: vi.fn() } as unknown as CanvasRenderingContext2D);
         imageLoader.lazyChildren(document.body);
         intersect(targets()[0]);
@@ -283,7 +256,6 @@ describe('optional blurhash', () => {
         frame();
         expect(document.querySelector('canvas')?.classList.contains('lazy-hidden')).toBe(true);
         intersect(targets()[0], false);
-        intersect(targets()[0], false, 1);
-        expect(document.querySelector('canvas')?.classList.contains('lazy-hidden')).toBe(false);
+        expect(document.querySelector('canvas')?.classList.contains('lazy-hidden')).toBe(true);
     });
 });

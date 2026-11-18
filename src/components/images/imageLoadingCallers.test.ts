@@ -96,7 +96,7 @@ describe('image loader callers', () => {
         frame();
         expect(old.hasAttribute('data-src')).toBe(true);
         expect(current.hasAttribute('data-src')).toBe(false);
-        expect(observers.filter(observer => observer.targets.size)).toHaveLength(2);
+        expect(observers.filter(observer => observer.targets.size)).toHaveLength(1);
         observers.filter(observer => observer.targets.size).forEach(observer => {
             expect(observer.targets.has(old)).toBe(false);
             expect(observer.targets.has(current)).toBe(true);
@@ -122,7 +122,7 @@ describe('image loader callers', () => {
         frame();
         expect(images).toHaveLength(2);
         expect(current.hasAttribute('data-src')).toBe(false);
-        expect(observers.filter(observer => observer.targets.size)).toHaveLength(2);
+        expect(observers.filter(observer => observer.targets.size)).toHaveLength(1);
         expect(observers[0].targets.has(old)).toBe(false);
     });
 });

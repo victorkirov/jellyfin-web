@@ -1,23 +1,13 @@
-import { LazyLoader } from '../lazyLoader/lazyLoaderIntersectionObserver';
-
 type PendingImage = { target: HTMLElement; url: string; requireLoadZone: boolean };
 
 const loadZone = new WeakSet<HTMLElement>();
 const pendingImages = new WeakMap<HTMLElement, PendingImage>();
-const filledSources = new WeakMap<HTMLElement, string>();
 const readyImages: PendingImage[] = [];
 let framePending = false;
-const unloadLoader = new LazyLoader({
-    callback: entry => {
-        if (!entry.isIntersecting) emptyImage(entry.target as HTMLElement);
-    },
-    rootMargin: '300% 0px'
-});
 
 export function setInLoadZone(target: HTMLElement, inside: boolean) {
     if (inside) {
         loadZone.add(target);
-        if (filledSources.has(target)) unloadLoader.addElements([target]);
     } else {
         loadZone.delete(target);
         if (pendingImages.get(target)?.requireLoadZone) {
@@ -26,12 +16,12 @@ export function setInLoadZone(target: HTMLElement, inside: boolean) {
     }
 }
 
-function setPlaceholderVisible(target: HTMLElement, visible: boolean) {
+function hidePlaceholder(target: HTMLElement) {
     const canvas = target.previousElementSibling;
     if (canvas?.tagName === 'CANVAS') {
-        canvas.classList.toggle('lazy-hidden', !visible);
+        canvas.classList.add('lazy-hidden');
     }
-    target.parentElement?.querySelector('.cardPadder')?.classList.toggle('lazy-hidden-children', !visible);
+    target.parentElement?.querySelector('.cardPadder')?.classList.add('lazy-hidden-children');
 }
 
 function applyNextImage() {
@@ -51,11 +41,11 @@ function applyNextImage() {
         } else {
             target.style.backgroundImage = "url('" + url + "')";
         }
-        filledSources.set(target, url);
+        // Applied posters stay until their markup is replaced, so scrolling back never reloads them. Memory is bounded
+        // by the library page size (100 by default) and the views viewContainer keeps cached.
         target.removeAttribute('data-src');
         target.classList.remove('lazy-hidden');
-        setPlaceholderVisible(target, false);
-        if (requireLoadZone) unloadLoader.addElements([target]);
+        hidePlaceholder(target);
         break;
     }
     if (readyImages.length) scheduleFrame();
@@ -83,20 +73,4 @@ export function preloadImage(target: HTMLElement, url: string, requireLoadZone =
         if (pendingImages.get(target) === request) pendingImages.delete(target);
     });
     image.src = url;
-}
-
-export function emptyImage(target: HTMLElement) {
-    setInLoadZone(target, false);
-    const url = filledSources.get(target);
-    if (!url) return;
-    filledSources.delete(target);
-    unloadLoader.removeElement(target);
-    setPlaceholderVisible(target, true);
-    if (target.tagName === 'IMG') {
-        target.setAttribute('src', '');
-    } else {
-        target.style.backgroundImage = 'none';
-    }
-    target.setAttribute('data-src', target.getAttribute('data-src') || url);
-    target.classList.add('lazy-hidden');
 }
