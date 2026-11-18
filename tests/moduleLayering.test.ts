@@ -2,12 +2,27 @@
 import { ESLint } from 'eslint';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-const eslint = new ESLint();
+let eslint: ESLint;
 const restrictions = (results: ESLint.LintResult[]) => results.flatMap(result => result.messages
     .filter(message => message.ruleId === 'import/no-restricted-paths'));
 
-// Parser/configuration startup is setup, not part of a five-second fixture assertion.
+// Reuse the production boundary configuration without running unrelated lint rules.
 beforeAll(async () => {
+    const sourceConfig = await new ESLint().calculateConfigForFile('src/elements/emby-button/Button.tsx');
+    if (!sourceConfig) throw new Error('Missing production ESLint configuration');
+    eslint = new ESLint({
+        overrideConfigFile: true,
+        overrideConfig: [{
+            files: ['**/*.{js,jsx,ts,tsx}'],
+            languageOptions: {
+                parser: sourceConfig.languageOptions?.parser,
+                parserOptions: { ecmaFeatures: { jsx: true } }
+            },
+            plugins: { import: sourceConfig.plugins!.import },
+            settings: sourceConfig.settings,
+            rules: { 'import/no-restricted-paths': sourceConfig.rules!['import/no-restricted-paths'] }
+        }]
+    });
     await eslint.lintText("import 'lib/navigationHistory';\n", {
         filePath: 'src/elements/emby-button/Button.tsx'
     });
@@ -35,6 +50,7 @@ describe('resolved module layers', () => {
 
     it('has no restricted edges in the source graph', async () => {
         const results = await eslint.lintFiles(['src/elements', 'src/utils', 'src/components', 'src/plugins']);
+        expect(results.length).toBeGreaterThan(0);
         expect(results.flatMap(result => restrictions([result])
             .map(message => `${result.filePath}:${message.line} ${message.message}`))).toEqual([]);
     }, 60000);

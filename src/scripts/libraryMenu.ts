@@ -56,6 +56,7 @@ function onBackClick() {
 }
 
 function updateUserInHeader(user?: HeaderUser) {
+    headerHasLocalUser = !!user?.localUser;
     retranslateUi(headerBackButton, headerHomeButton, headerAudioPlayerButton, headerSearchButton, headerUserButton);
 
     let hasImage;
@@ -79,19 +80,16 @@ function updateUserInHeader(user?: HeaderUser) {
         if (headerHomeButton) {
             headerHomeButton.classList.remove('hide');
         }
-
-        if (headerSearchButton) {
-            headerSearchButton.classList.remove('hide');
-        }
     } else {
         headerHomeButton.classList.add('hide');
-
-        if (headerSearchButton) {
-            headerSearchButton.classList.add('hide');
-        }
     }
 
+    updateSearchButton();
     requiresUserRefresh = false;
+}
+
+function updateSearchButton() {
+    headerSearchButton?.classList.toggle('hide', !headerHasLocalUser || currentPageIsSearch);
 }
 
 function showSearch() {
@@ -187,6 +185,8 @@ let headerBackButton: HTMLButtonElement;
 let headerUserButton: HTMLButtonElement;
 type HeaderUser = Partial<Awaited<ReturnType<typeof ServerConnections.user>>>;
 let currentUser: HeaderUser | undefined;
+let headerHasLocalUser = false;
+let currentPageIsSearch = false;
 let headerSearchButton: HTMLButtonElement;
 let headerAudioPlayerButton: HTMLButtonElement;
 let currentTimeText: HTMLElement;
@@ -280,6 +280,8 @@ pageClassOn('pagebeforeshow', 'page', function (this: HTMLElement) {
 });
 
 pageClassOn('pageshow', 'page', function (this: HTMLElement, e: CustomEvent<{ isRestored?: boolean }>) {
+    currentPageIsSearch = this.id === 'searchPage';
+    updateSearchButton();
     const isLibraryPage = this.classList.contains('libraryPage');
 
     updateMenuForPageType(isLibraryPage);

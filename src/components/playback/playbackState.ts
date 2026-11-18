@@ -14,8 +14,6 @@ import { getItemsForPlayback } from './playbackItemQueries';
 import { getPlayer } from './playbackRegistry';
 
 export function createPlaybackState(self: PlaybackContext, services: Pick<PlaybackServices, 'getDeliveryMethod'>) {
-    const playerStates: Record<string, object> = {};
-
     function getCurrentSubtitleStream(player: PlaybackPlayer, isSecondaryStream = false) {
         if (!player) {
             throw new Error('player cannot be null');
@@ -70,14 +68,6 @@ export function createPlaybackState(self: PlaybackContext, services: Pick<Playba
         if (!player.name) {
             throw new Error('player name cannot be null');
         }
-        let state = playerStates[player.name];
-
-        if (!state) {
-            playerStates[player.name] = {};
-            // eslint-disable-next-line sonarjs/no-dead-store
-            state = playerStates[player.name];
-        }
-
         return player;
     }
 

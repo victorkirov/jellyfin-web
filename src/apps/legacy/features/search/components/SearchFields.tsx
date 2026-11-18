@@ -36,8 +36,7 @@ const SearchFields: FC<SearchFieldsProps> = ({
 
     return (
         <div className='padded-left padded-right searchFields'>
-            <div className='searchFieldsInner flex align-items-center justify-content-center'>
-                <span className='searchfields-icon material-icons search' aria-hidden='true' />
+            <div className='searchFieldsInner flex align-items-center'>
                 <div
                     className='inputContainer flex-grow'
                     style={{ marginBottom: 0 }}

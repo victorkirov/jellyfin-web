@@ -110,13 +110,6 @@ export function getPrimaryImageAspectRatio(items: { PrimaryImageAspectRatio?: nu
     return result;
 }
 
-export function fillImages(elems: ArrayLike<ImageEntry>) {
-    for (let i = 0, length = elems.length; i < length; i++) {
-        const elem = elems[0];
-        fillImage(elem);
-    }
-}
-
 export function setLazyImage(element: HTMLElement, url: string) {
     element.classList.add('lazy');
     element.setAttribute('data-src', url);
@@ -125,7 +118,6 @@ export function setLazyImage(element: HTMLElement, url: string) {
 
 export default {
     setLazyImage: setLazyImage,
-    fillImages: fillImages,
     fillImage: fillImage,
     lazyImage: lazyImage,
     lazyChildren: lazyChildren,

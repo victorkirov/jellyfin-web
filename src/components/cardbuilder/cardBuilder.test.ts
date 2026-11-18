@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { compile } from 'sass';
 import { getCardFooterText } from './cardCaptions';
-import { getCardsHtml, onUserDataChanged, onTimerCreated, onTimerCancelled, onSeriesTimerCancelled } from './cardBuilder';
+import { buildCards, getCardsHtml, onUserDataChanged, onTimerCreated, onTimerCancelled, onSeriesTimerCancelled } from './cardBuilder';
 
 vi.mock('scripts/browser', () => ({ default: {} }));
 vi.mock('scripts/datetime', () => ({ default: { toLocaleString: (value: number) => String(value) } }));
@@ -21,7 +21,7 @@ vi.mock('lib/jellyfin-apiclient', () => ({
 }));
 vi.mock('../../lib/focusManager', () => ({ default: {} }));
 vi.mock('../images/imageLoader', () => ({
-    default: { getPrimaryImageAspectRatio: () => 1 }
+    default: { getPrimaryImageAspectRatio: () => 1, lazyChildren: vi.fn() }
 }));
 vi.mock('../indicators/indicators', () => ({
     default: { getProgressBarHtml: () => '' }
@@ -240,4 +240,56 @@ describe('named footer context', () => {
             overlayText: false, isOuterFooter: true
         })).toBe('');
     });
+});
+
+describe('shared focused card caption', () => {
+    const title = 'Curious George: A Very Monkey Christmas <full & untruncated>';
+    const options = { shape: 'square', width: 200, disableIndicators: true, showTitle: true };
+
+    it('uses one static caption for the focused card without changing neighbouring markup', () => {
+        document.body.innerHTML = getCardsHtml([
+            { Id: 'long', Name: title, Type: 'Movie' },
+            { Id: 'other', Name: 'Another title', Type: 'Movie' }
+        ], options);
+        const cards = document.querySelectorAll<HTMLButtonElement>('.card');
+        const neighbours = Array.from(cards).map(card => card.outerHTML);
+        cards[0].focus();
+        const caption = document.querySelector('.focusedCardCaption');
+        expect(caption?.textContent).toBe(title);
+        expect(caption?.querySelector('full')).toBeNull();
+        cards[1].focus();
+        expect(document.querySelectorAll('.focusedCardCaption')).toHaveLength(1);
+        expect(document.querySelector('.focusedCardCaption')).toBe(caption);
+        expect(caption?.textContent).toBe('Another title');
+        expect(Array.from(cards).map(card => card.outerHTML)).toEqual(neighbours);
+        expect(caption?.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('clears the caption on other focus and when its page hides', () => {
+        document.body.innerHTML = '<div class="page">' + getCardsHtml([{ Id: 'long', Name: title, Type: 'Movie' }], options) + '</div><input />';
+        document.querySelector<HTMLButtonElement>('.card')!.focus();
+        document.querySelector<HTMLInputElement>('input')!.focus();
+        expect(document.querySelector('.focusedCardCaption')?.textContent).toBe('');
+        document.querySelector<HTMLButtonElement>('.card')!.focus();
+        document.querySelector('.page')!.dispatchEvent(new Event('viewbeforehide', { bubbles: true }));
+        expect(document.querySelector('.focusedCardCaption')?.textContent).toBe('');
+    });
+
+    it('clears a removed card caption when the card builder refreshes the container', () => {
+        document.body.innerHTML = '<div class="itemsContainer"></div>';
+        const itemsContainer = document.querySelector<HTMLElement>('.itemsContainer')!;
+        buildCards([{ Id: 'long', Name: title, Type: 'Movie' }], { ...options, itemsContainer });
+        itemsContainer.querySelector<HTMLButtonElement>('.card')!.focus();
+        buildCards([{ Id: 'new', Name: 'Replacement', Type: 'Movie' }], { ...options, itemsContainer });
+        expect(document.querySelector('.focusedCardCaption')?.textContent).toBe('');
+    });
+});
+
+it('keeps the restored card caption when the outgoing page finishes hiding', () => {
+    document.body.innerHTML = '<div class="outgoingPage"></div><div class="restoredPage">' + getCardsHtml([
+        { Id: 'restored', Name: 'A restored title that remains fully visible', Type: 'Movie' }
+    ], { shape: 'square', width: 200, disableIndicators: true, showTitle: true }) + '</div>';
+    document.querySelector<HTMLButtonElement>('.card')!.focus();
+    document.querySelector('.outgoingPage')!.dispatchEvent(new Event('pagehide', { bubbles: true }));
+    expect(document.querySelector('.focusedCardCaption')?.textContent).toBe('A restored title that remains fully visible');
 });

@@ -1,7 +1,7 @@
 import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/media-source-info';
 
 export type MediaPlayOptions = {
-    mediaSource?: MediaSourceInfo & { IsLocal?: boolean };
+    mediaSource?: MediaSourceInfo;
     url?: string;
     playerStartPositionTicks?: number | null;
     transcodingOffsetTicks?: number;
@@ -22,14 +22,3 @@ export type MediaInstance = {
     _currentPlayOptions?: MediaPlayOptions | null;
 };
 
-// Keep the dormant UWP adapter typed without requiring Windows globals on TV.
-export type WindowsMediaAdapter = {
-    Storage: { StorageFile: { getFileFromPathAsync: (path?: string) => Promise<unknown> } };
-    Media: {
-        Playback: {
-            MediaPlaybackList: new () => { items: { append: (item: unknown) => void } };
-            MediaPlaybackItem: new (source: unknown, startTimeMs: number) => unknown;
-        };
-        Core: { MediaSource: { createFromStorageFile: (file: unknown) => unknown } };
-    };
-};

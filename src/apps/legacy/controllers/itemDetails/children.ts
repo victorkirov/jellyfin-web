@@ -18,6 +18,10 @@ import globalize from 'lib/globalize';
 const LIST_VIEW_TYPES: BaseItemKind[] = [BaseItemKind.MusicAlbum, BaseItemKind.Playlist, BaseItemKind.Season, BaseItemKind.Series];
 
 export function renderChildren(page: DetailsPage, item: ItemDto) {
+    const renderIsCurrent = page.detailsIsCurrent || (() => true);
+    const retry = () => renderChildren(page, item);
+    page.retryChildren = retry;
+    const isCurrent = () => renderIsCurrent() && page.retryChildren === retry;
     const childrenCollapsible = getElement(page, LIST_VIEW_TYPES.includes(item.Type as BaseItemKind) ? '#listChildrenCollapsible' : '#childrenCollapsible');
     const childrenItemsContainer = getElement(childrenCollapsible, '.itemsContainer');
 
@@ -54,6 +58,7 @@ export function renderChildren(page: DetailsPage, item: ItemDto) {
 
     promise = promise || apiClient.getItems(apiClient.getCurrentUserId(), query);
     void promise.then(function (result) {
+        if (!isCurrent()) return;
         let html = '';
         let scrollX: boolean | undefined = false;
         let isList: boolean | undefined = false;
@@ -113,7 +118,8 @@ export function renderChildren(page: DetailsPage, item: ItemDto) {
         }
 
         fillChildContainer(page, item, result.Items!, childrenCollapsible, childrenItemsContainer, { html, scrollX, isList });
-    });
+        page.retryChildren = undefined;
+    }).catch(error => { if (isCurrent()) console.error('failed to load details children', error); });
 
     let childrenTitle = globalize.translate('Items');
     if (item.Type == 'Season') {
@@ -136,15 +142,19 @@ export function renderChildren(page: DetailsPage, item: ItemDto) {
 }
 
 export function renderItemsByName(page: DetailsPage, item: ItemDto, user: UserDto) {
+    const isCurrent = page.detailsIsCurrent || (() => true);
     void import('scripts/itemsByName').then(({ default: ItemsByName }) => {
+        if (!isCurrent()) return;
         ItemsByName.renderItems(page, item, user);
-    });
+    }).catch(error => { if (isCurrent()) console.error('failed to load details children', error); });
 }
 
 export function renderPlaylistItems(page: DetailsPage, item: ItemDto) {
+    const isCurrent = page.detailsIsCurrent || (() => true);
     void import('scripts/playlistViewer').then(({ default: PlaylistViewer }) => {
+        if (!isCurrent()) return;
         PlaylistViewer.render(page, item);
-    });
+    }).catch(error => { if (isCurrent()) console.error('failed to load details children', error); });
 }
 
 export function filterItemsByCollectionItemType(items: ItemDto[], typeInfo: CollectionType) {
@@ -218,7 +228,7 @@ export function renderCollectionItems(page: DetailsPage, parentItem: ItemDto, ty
 
     // HACK: Call autoFocuser again because btnPlay may be hidden, but focused by reloadFromItem
     // FIXME: Sometimes focus does not move until all (?) sections are loaded
-    autoFocus(page);
+    autoFocus(page, page.detailsIsCurrent);
 }
 
 export function renderCollectionItemType(page: DetailsPage, type: CollectionType, items: ItemDto[]) {

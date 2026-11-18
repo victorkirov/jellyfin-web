@@ -1,3 +1,5 @@
+import type { DetailsPage } from './types';
+
 const collapseOrder = ['.btnShuffle', '.btnInstantMix', '.btnPlayTrailer', '.btnUserRating', '.btnPlaystate', '.btnReplay'];
 const pending = new WeakSet<HTMLElement>();
 
@@ -29,8 +31,9 @@ export function fitActionBar(view: HTMLElement) {
 export function requestActionBarLayout(view: HTMLElement) {
     if (pending.has(view)) return;
     pending.add(view);
+    const isCurrent = (view as DetailsPage).detailsIsCurrent;
     void Promise.resolve().then(() => {
         pending.delete(view);
-        if (document.documentElement.contains(view)) fitActionBar(view);
+        if ((!isCurrent || isCurrent()) && document.documentElement.contains(view)) fitActionBar(view);
     });
 }

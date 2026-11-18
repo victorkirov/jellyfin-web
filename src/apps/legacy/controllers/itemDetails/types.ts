@@ -2,7 +2,11 @@ import type { BaseItemPerson, MediaSourceInfo } from '@jellyfin/sdk/lib/generate
 import type { ItemDto as BaseItem } from 'types/base/models/item-dto';
 
 export type DetailsParams = { id?: string; serverId?: string; genre?: string; musicgenre?: string; musicartist?: string; context?: string };
-export type DetailsPage = HTMLElement & { deferredDetails?: (() => void)[] };
+export type DetailsPage = HTMLElement & {
+    deferredDetails?: { destroy: () => void; pause: () => void; resume: () => void }[];
+    detailsIsCurrent?: () => boolean;
+    retryChildren?: () => void;
+};
 export type DetailsController = {
     _unmount: (() => void)[];
     _currentPlaybackMediaSources?: MediaSourceInfo[] | null;

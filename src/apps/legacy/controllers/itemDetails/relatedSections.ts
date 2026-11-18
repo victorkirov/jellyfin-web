@@ -88,19 +88,60 @@ export function enableScrollX() {
 }
 
 export function clearDeferredDetails(page: DetailsPage) {
-    for (const destroy of page.deferredDetails || []) destroy();
+    for (const section of page.deferredDetails || []) section.destroy();
     page.deferredDetails = [];
 }
 
-export function renderDeferredDetailSection(page: DetailsPage, section: HTMLElement, render: () => unknown) {
-    if (!layoutManager.tv) return render();
+export function pauseDeferredDetails(page: DetailsPage) {
+    for (const section of page.deferredDetails || []) section.pause();
+}
 
-    section.classList.add('hide');
+export function resumeDeferredDetails(page: DetailsPage) {
+    for (const section of page.deferredDetails || []) section.resume();
+}
+
+export function renderDeferredDetailSection(page: DetailsPage, section: HTMLElement, render: (isCurrent: () => boolean) => unknown) {
+    if (!layoutManager.tv) return render(page.detailsIsCurrent || (() => true));
+    let completed = false;
+    let paused = true;
+    let request = 0;
+    let dispose: (() => void) | undefined;
+
+    function resume() {
+        if (!paused || completed) return;
+        paused = false;
+        const generation = ++request;
+        const renderIsCurrent = page.detailsIsCurrent || (() => true);
+        const isCurrent = () => !paused && generation === request && renderIsCurrent();
+        section.classList.add('hide');
+        dispose = deferSection(section, () => {
+            if (!isCurrent()) return;
+            section.classList.remove('hide');
+            return Promise.resolve(render(isCurrent)).then(() => {
+                if (isCurrent()) completed = true;
+            }).catch(error => {
+                if (isCurrent()) throw error;
+            });
+        });
+    }
+
+    function pause() {
+        if (completed) return;
+        paused = true;
+        request++;
+        dispose?.();
+    }
+
     page.deferredDetails = page.deferredDetails || [];
-    page.deferredDetails.push(deferSection(section, () => {
-        section.classList.remove('hide');
-        return render();
-    }));
+    page.deferredDetails.push({
+        pause,
+        resume,
+        destroy: () => {
+            request++;
+            dispose?.();
+        }
+    });
+    resume();
 }
 
 export function renderLyricsContainer(view: DetailsPage, item: ItemDto, apiClient: ConnectionClient) {
@@ -110,13 +151,14 @@ export function renderLyricsContainer(view: DetailsPage, item: ItemDto, apiClien
             lyricContainer.classList.add('hide');
             return;
         }
-        renderDeferredDetailSection(view, lyricContainer, () => {
+        renderDeferredDetailSection(view, lyricContainer, isCurrent => {
             //get lyrics
             return apiClient.ajax({
                 url: apiClient.getUrl('Audio/' + item.Id + '/Lyrics'),
                 type: 'GET',
                 dataType: 'json'
             }).then((response) => {
+                if (!isCurrent()) return;
                 if (!response.Lyrics) {
                     lyricContainer.classList.add('hide');
                     return;
@@ -131,6 +173,7 @@ export function renderLyricsContainer(view: DetailsPage, item: ItemDto, apiClien
                     itemsContainer.innerHTML = html;
                 }
             }).catch(() => {
+                if (!isCurrent()) return;
                 lyricContainer.classList.add('hide');
             });
         });
@@ -148,13 +191,14 @@ export function renderMoreFromSeason(view: DetailsPage, item: ItemDto, apiClient
 
         getElement(section, 'h2').textContent = globalize.translate('MoreFromValue', item.SeasonName!);
 
-        renderDeferredDetailSection(view, section, () => {
+        renderDeferredDetailSection(view, section, isCurrent => {
             const userId = apiClient.getCurrentUserId();
             return apiClient.getEpisodes(item.SeriesId!, {
                 SeasonId: item.SeasonId,
                 UserId: userId,
                 Fields: 'ItemCounts,PrimaryImageAspectRatio,CanDelete,MediaSourceCount'
             }).then(function (result) {
+                if (!isCurrent()) return;
                 if (result.Items!.length < 2) {
                     section.classList.add('hide');
                     return;
@@ -201,7 +245,7 @@ export function renderMoreFromArtist(view: DetailsPage, item: ItemDto, apiClient
             getElement(section, 'h2').textContent = globalize.translate('MoreFromValue', item.AlbumArtists![0].Name!);
         }
 
-        renderDeferredDetailSection(view, section, () => {
+        renderDeferredDetailSection(view, section, isCurrent => {
             const query: Record<string, string | boolean | null | undefined> = {
                 IncludeItemTypes: 'MusicAlbum',
                 Recursive: true,
@@ -217,6 +261,7 @@ export function renderMoreFromArtist(view: DetailsPage, item: ItemDto, apiClient
             }
 
             return apiClient.getItems(apiClient.getCurrentUserId(), query).then(function (result) {
+                if (!isCurrent()) return;
                 if (!result.Items!.length) {
                     section.classList.add('hide');
                     return;
@@ -259,7 +304,7 @@ export function renderItemCollections(page: DetailsPage, item: ItemDto, apiClien
         return;
     }
 
-    renderDeferredDetailSection(page, section, () => {
+    renderDeferredDetailSection(page, section, isCurrent => {
         return getLibraryApi(api)
             .getItemCollections({
                 itemId: item.Id!,
@@ -268,6 +313,7 @@ export function renderItemCollections(page: DetailsPage, item: ItemDto, apiClien
             })
             .then(response => response.data?.Items || [])
             .then(collectionItems => {
+                if (!isCurrent()) return;
                 if (!collectionItems.length) {
                     section.classList.add('hide');
                     return;
@@ -291,6 +337,7 @@ export function renderItemCollections(page: DetailsPage, item: ItemDto, apiClien
                     context: context!
                 });
             }).catch(() => {
+                if (!isCurrent()) return;
                 section.classList.add('hide');
             });
     });
@@ -305,7 +352,7 @@ export function renderSimilarItems(page: DetailsPage, item: ItemDto, context: st
             return;
         }
 
-        renderDeferredDetailSection(page, similarCollapsible, () => {
+        renderDeferredDetailSection(page, similarCollapsible, isCurrent => {
             similarCollapsible.classList.remove('hide');
             const apiClient = ServerConnections.getApiClient(item.ServerId)!;
             const options: { userId: string; limit: number; fields: string; ExcludeArtistIds?: string | null } = {
@@ -319,6 +366,7 @@ export function renderSimilarItems(page: DetailsPage, item: ItemDto, context: st
             }
 
             return apiClient.getSimilarItems(item.Id!, options).then(function (result) {
+                if (!isCurrent()) return;
                 if (!result.Items!.length) {
                     similarCollapsible.classList.add('hide');
                     return;
@@ -405,6 +453,7 @@ export function renderProgramsForChannel(page: DetailsPage, result: { Items?: It
 }
 
 export function renderChannelGuide(page: DetailsPage, apiClient: ConnectionClient, item: ItemDto) {
+    const isCurrent = page.detailsIsCurrent || (() => true);
     if (item.Type === 'TvChannel') {
         getElement(page, '.programGuideSection').classList.remove('hide');
         void apiClient.getLiveTvPrograms({
@@ -417,12 +466,14 @@ export function renderChannelGuide(page: DetailsPage, apiClient: ConnectionClien
             ImageTypeLimit: 0,
             EnableUserData: false
         }).then(function (result) {
+            if (!isCurrent()) return;
             renderProgramsForChannel(page, result);
-        });
+        }).catch(error => { if (isCurrent()) console.error('failed to load channel guide', error); });
     }
 }
 
 export function renderSeriesSchedule(page: DetailsPage, item: ItemDto) {
+    const isCurrent = page.detailsIsCurrent || (() => true);
     const apiClient = ServerConnections.getApiClient(item.ServerId)!;
     void apiClient.getLiveTvPrograms({
         UserId: apiClient.getCurrentUserId(),
@@ -435,6 +486,7 @@ export function renderSeriesSchedule(page: DetailsPage, item: ItemDto) {
         Fields: 'ChannelInfo,ChannelImage',
         LibrarySeriesId: item.Id
     }).then(function (result) {
+        if (!isCurrent()) return;
         if (result.Items!.length) {
             getElement(page, '#seriesScheduleSection').classList.remove('hide');
         } else {
@@ -447,11 +499,11 @@ export function renderSeriesSchedule(page: DetailsPage, item: ItemDto) {
         imageLoader.lazyChildren(scheduleTab);
 
         loading.hide();
-    });
+    }).catch(error => { if (isCurrent()) console.error('failed to load series schedule', error); });
 }
 
 export function renderMusicVideos(page: DetailsPage, item: ItemDto, user: UserDto) {
-    renderDeferredDetailSection(page, getElement(page, '#musicVideosCollapsible'), () => {
+    renderDeferredDetailSection(page, getElement(page, '#musicVideosCollapsible'), isCurrent => {
         const request = {
             SortBy: 'SortName',
             SortOrder: 'Ascending',
@@ -462,6 +514,7 @@ export function renderMusicVideos(page: DetailsPage, item: ItemDto, user: UserDt
         };
 
         return ServerConnections.getApiClient(item.ServerId)!.getItems(user.Id!, request).then(function (result) {
+            if (!isCurrent()) return;
             if (result.Items!.length) {
                 getElement(page, '#musicVideosCollapsible').classList.remove('hide');
                 const musicVideosContent = getElement(page, '#musicVideosContent');
@@ -475,8 +528,9 @@ export function renderMusicVideos(page: DetailsPage, item: ItemDto, user: UserDt
 }
 
 export function renderAdditionalParts(page: DetailsPage, item: ItemDto, user: UserDto) {
-    renderDeferredDetailSection(page, getElement(page, '#additionalPartsCollapsible'), () => {
+    renderDeferredDetailSection(page, getElement(page, '#additionalPartsCollapsible'), isCurrent => {
         return ServerConnections.getApiClient(item.ServerId)!.getAdditionalVideoParts(user.Id!, item.Id!).then(function (result) {
+            if (!isCurrent()) return;
             if (result.Items!.length) {
                 getElement(page, '#additionalPartsCollapsible').classList.remove('hide');
                 const additionalPartsContent = getElement(page, '#additionalPartsContent');
@@ -497,11 +551,12 @@ export function renderScenes(page: DetailsPage, item: ItemDto) {
     }
 
     if (chapters.length) {
-        renderDeferredDetailSection(page, getElement(page, '#scenesCollapsible'), () => {
+        renderDeferredDetailSection(page, getElement(page, '#scenesCollapsible'), isCurrent => {
             getElement(page, '#scenesCollapsible').classList.remove('hide');
             const scenesContent = getElement(page, '#scenesContent');
 
             return import('components/cardbuilder/chaptercardbuilder').then(({ default: chaptercardbuilder }) => {
+                if (!isCurrent()) return;
                 chaptercardbuilder.buildChapterCards(item, chapters, {
                     itemsContainer: scenesContent,
                     backdropShape: 'overflowBackdrop',
@@ -529,8 +584,9 @@ export function getVideosHtml(items: ItemDto[]) {
 }
 
 export function renderSpecials(page: DetailsPage, item: ItemDto, user: UserDto) {
-    renderDeferredDetailSection(page, getElement(page, '#specialsCollapsible'), () => {
+    renderDeferredDetailSection(page, getElement(page, '#specialsCollapsible'), isCurrent => {
         return ServerConnections.getApiClient(item.ServerId)!.getSpecialFeatures(user.Id!, item.Id!).then(function (specials) {
+            if (!isCurrent()) return;
             const specialsContent = getElement(page, '#specialsContent');
             specialsContent.innerHTML = getVideosHtml(specials);
             imageLoader.lazyChildren(specialsContent);
@@ -544,11 +600,12 @@ export function renderCast(page: DetailsPage, item: ItemDto, people: DetailPerso
         return;
     }
 
-    renderDeferredDetailSection(page, getElement(page, '#castCollapsible'), () => {
+    renderDeferredDetailSection(page, getElement(page, '#castCollapsible'), isCurrent => {
         getElement(page, '#castCollapsible').classList.remove('hide');
         const castContent = getElement(page, '#castContent');
 
         return import('components/cardbuilder/peoplecardbuilder').then(({ default: peoplecardbuilder }) => {
+            if (!isCurrent()) return;
             peoplecardbuilder.buildPeopleCards(people, {
                 itemsContainer: castContent,
                 coverImage: true,
@@ -566,11 +623,12 @@ export function renderGuestCast(page: DetailsPage, item: ItemDto, people: Detail
         return;
     }
 
-    renderDeferredDetailSection(page, getElement(page, '#guestCastCollapsible'), () => {
+    renderDeferredDetailSection(page, getElement(page, '#guestCastCollapsible'), isCurrent => {
         getElement(page, '#guestCastCollapsible').classList.remove('hide');
         const guestCastContent = getElement(page, '#guestCastContent');
 
         return import('components/cardbuilder/peoplecardbuilder').then(({ default: peoplecardbuilder }) => {
+            if (!isCurrent()) return;
             peoplecardbuilder.buildPeopleCards(people, {
                 itemsContainer: guestCastContent,
                 coverImage: true,

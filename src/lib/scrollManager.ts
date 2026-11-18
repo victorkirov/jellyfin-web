@@ -351,6 +351,19 @@ function adjustVerticalScroll(scrollY: number, isFixed: boolean, elementRect: DO
     return scrollY;
 }
 
+function verticalScroll(elementRect: DOMRect, scrollerRect: Rect, scroller: Scroller, data: ScrollerData, position: number, centered: boolean, isFixed: boolean) {
+    let visibleTop = scrollerRect.top;
+    const visibleBottom = Math.min(scrollerRect.top + scrollerRect.height, window.innerHeight);
+    if (scroller === documentScroller && !isFixed) {
+        const header = document.querySelector('.headerTop');
+        const caption = document.querySelector('.focusedCardCaption');
+        if (header) visibleTop = Math.max(visibleTop, header.getBoundingClientRect().bottom);
+        if (caption) visibleTop = Math.max(visibleTop, caption.getBoundingClientRect().bottom);
+    }
+    if (elementRect.top >= visibleTop && elementRect.bottom <= visibleBottom) return data.scrollPos;
+    return adjustVerticalScroll(calcScroll(data, position, elementRect.height, centered), isFixed, elementRect, scroller);
+}
+
 export function scrollToElement(element: HTMLElement) {
     // Overflow eligibility can change between focus events as content loads.
     const stylesCache = new WeakMap();
@@ -401,9 +414,7 @@ export function scrollToElement(element: HTMLElement) {
 
     if (!yScrollerData.custom) {
         const yPos = getScrollerChildPos(yScroller, elementRect, yScrollerRect!, true);
-        scrollY = calcScroll(yScrollerData, yPos, elementRect.height, scrollCenterY);
-
-        scrollY = adjustVerticalScroll(scrollY, !!isFixed, elementRect, yScroller);
+        scrollY = verticalScroll(elementRect, yScrollerRect!, yScroller, yScrollerData, yPos, scrollCenterY, !!isFixed);
     } else {
         yScroller = null;
     }

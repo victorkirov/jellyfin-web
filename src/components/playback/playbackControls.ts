@@ -377,36 +377,39 @@ export function createPlaybackControls(self: PlaybackContext, services: Pick<Pla
 
             return appSettings.enableAutomaticBitrateDetection(endpointInfo.IsInNetwork, mediaType);
         },
-        setMaxStreamingBitrate: function (options: PlaybackOptions, player?: PlaybackPlayer | null) {
-            player = (player || self._currentPlayer)!;
-            if (player?.setMaxStreamingBitrate) {
+        setMaxStreamingBitrate: async function (options: PlaybackOptions, player?: PlaybackPlayer | null): Promise<unknown> {
+            player = player || self._currentPlayer;
+            if (!player) throw new Error('player cannot be null');
+            if (player.setMaxStreamingBitrate) {
                 return player.setMaxStreamingBitrate(options);
             }
 
-            const api = ServerConnections.getApi(self.currentItem(player)!.ServerId!);
-            const apiClient = ServerConnections.getApiClient(self.currentItem(player)!.ServerId);
-
-            void apiClient!.getEndpointInfo().then(function (endpointInfo) {
-                const playerData = services.getPlayerData(player);
-                const mediaType = playerData.streamInfo ? playerData.streamInfo.mediaType : null;
-
-                let promise;
-                if (options.enableAutomaticBitrateDetection) {
-                    appSettings.enableAutomaticBitrateDetection(endpointInfo.IsInNetwork, mediaType, true);
-                    promise = bitrateTest.detectBitrate(api!, true);
-                } else {
-                    appSettings.enableAutomaticBitrateDetection(endpointInfo.IsInNetwork, mediaType, false);
-                    promise = Promise.resolve(options.maxBitrate);
+            const item = self.currentItem(player)!;
+            const streamInfo = services.getPlayerData(player).streamInfo;
+            const attempt = self._playbackAttempt.capture();
+            const assertCurrent = (checkStream = true) => {
+                self._playbackAttempt.assertCurrent(attempt);
+                if (self._currentPlayer !== player || self.currentItem(player) !== item
+                    || (checkStream && services.getPlayerData(player).streamInfo !== streamInfo)) {
+                    throw new Error('Bitrate change cancelled');
                 }
-
-                void promise.then(function (bitrate) {
-                    appSettings.maxStreamingBitrate(endpointInfo.IsInNetwork, mediaType, bitrate);
-
-                    void services.changeStream(player, services.getCurrentTicks(player), {
-                        MaxStreamingBitrate: bitrate
-                    });
-                });
+            };
+            const api = ServerConnections.getApi(item.ServerId!);
+            const apiClient = ServerConnections.getApiClient(item.ServerId)!;
+            const endpointInfo = await apiClient.getEndpointInfo();
+            assertCurrent();
+            const mediaType = streamInfo?.mediaType || null;
+            const bitrate = options.enableAutomaticBitrateDetection ?
+                await bitrateTest.detectBitrate(api!, true) : options.maxBitrate;
+            assertCurrent();
+            const result = await services.changeStream(player, services.getCurrentTicks(player), {
+                MaxStreamingBitrate: bitrate
             });
+            assertCurrent(false);
+            if (result === false) throw new Error('Bitrate change failed');
+            appSettings.enableAutomaticBitrateDetection(endpointInfo.IsInNetwork, mediaType, !!options.enableAutomaticBitrateDetection);
+            appSettings.maxStreamingBitrate(endpointInfo.IsInNetwork, mediaType, bitrate);
+            return result;
         },
         isFullscreen: function (player?: PlaybackPlayer | null) {
             player = (player || self._currentPlayer)!;

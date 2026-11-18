@@ -159,7 +159,7 @@ export function initializeAudioPlayer(self: HtmlAudioPlayer) {
                 elem.crossOrigin = 'use-credentials';
             }
 
-            return htmlMediaHelper.applySrc(elem, val, options).then(function () {
+            return htmlMediaHelper.applySrc(elem, val).then(function () {
                 self._currentSrc = val;
 
                 return htmlMediaHelper.playWithPromise(elem, onError);

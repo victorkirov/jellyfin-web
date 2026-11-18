@@ -4,6 +4,8 @@ import { ServerConnections } from 'lib/jellyfin-apiclient';
 import loading from 'components/loading/loading';
 import focusManager from 'lib/focusManager';
 import LibraryMenu from 'scripts/libraryMenu';
+import { playbackManager } from 'components/playback/playbackmanager';
+import toast from 'components/toast/toast';
 
 vi.mock('lib/globalize', () => ({ default: { translate: (key: string) => key } }));
 vi.mock('scripts/settings/userSettings', () => ({ libraryPageSize: () => 2, get: vi.fn(), getFilter: vi.fn(), getSortValuesLegacy: () => ({ sortBy: 'SortName', sortOrder: 'Ascending' }) }));
@@ -11,11 +13,16 @@ vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: { getApiClient: vi
 vi.mock('lib/focusManager', () => ({ default: { autoFocus: vi.fn() } }));
 vi.mock('components/loading/loading', () => ({ default: { show: vi.fn(), hide: vi.fn() } }));
 vi.mock('scripts/libraryMenu', () => ({ default: { setTitle: vi.fn() } }));
-vi.mock('components/playback/playbackmanager', () => ({ playbackManager: { canQueue: () => true } }));
+vi.mock('components/playback/playbackmanager', () => ({ playbackManager: { canQueue: () => true, play: vi.fn().mockResolvedValue(undefined), queue: vi.fn().mockResolvedValue(undefined), shuffle: vi.fn().mockResolvedValue(undefined) } }));
+vi.mock('components/toast/toast', () => ({ default: vi.fn() }));
 vi.mock('components/listview/listview', () => ({ default: {} }));
 vi.mock('components/cardbuilder/cardBuilder', () => ({ default: {} }));
 vi.mock('scripts/alphanumericshortcuts', () => ({ default: class { destroy() { /* No document listeners in this test. */ } } }));
-vi.mock('components/alphaPicker/alphaPicker', () => ({ default: class { on() { /* No input handlers in this test. */ } off() { /* No input handlers in this test. */ } destroy() { /* No input handlers in this test. */ } } }));
+vi.mock('components/alphaPicker/alphaPicker', () => ({ default: class {
+    value() {
+        return '';
+    } on() { /* No input handlers in this test. */ } off() { /* No input handlers in this test. */ } destroy() { /* No input handlers in this test. */ }
+} }));
 vi.mock('components/itemscontainer/emby-itemscontainer', () => ({}));
 vi.mock('elements/emby-scroller/emby-scroller', () => ({}));
 
@@ -45,10 +52,11 @@ function setup() {
     const container = Object.assign(view.querySelector<HTMLElement>('.itemsContainer')!, { resume: vi.fn<(options: { refresh: boolean }) => Promise<void>>(() => Promise.resolve()), pause: vi.fn() });
     const item = { Id: 'folder', Name: 'Folder', Type: 'Folder' };
     const getItem = vi.fn().mockResolvedValue(item);
-    vi.mocked(ServerConnections.getApiClient).mockReturnValue({ getItem, getCurrentUserId: () => 'user' } as never);
+    const getItems = vi.fn().mockResolvedValue({ Items: [{ Id: 'child', Type: 'Movie' }] });
+    vi.mocked(ServerConnections.getApiClient).mockReturnValue({ getItem, getItems, getCurrentUserId: () => 'user' } as never);
     const controller = new ItemsView(view, { serverId: 'server', parentId: 'folder' });
     const show = (isRestored = false) => view.dispatchEvent(new CustomEvent('viewshow', { detail: { isRestored } }));
-    return { view, container, getItem, item, controller, show };
+    return { view, container, getItem, getItems, item, controller, show };
 }
 
 describe('List outer-load ownership', () => {
@@ -217,4 +225,47 @@ describe('List outer-load ownership', () => {
         expect(container.resume).toHaveBeenCalledOnce();
         expect(view.querySelector('.listLoadStatus')).toBeNull();
     });
+});
+
+describe('List playback event failures', () => {
+    it.each(['Play', 'Queue', 'Shuffle'])('handles rejected %s after the filtered item lookup exactly once', async action => {
+        const { view, show, controller } = setup();
+        show();
+        await flush();
+        controller.hasFilters = true;
+        const failure = new Error('playback failed');
+        const operation = action === 'Queue' ? playbackManager.queue : playbackManager.play;
+        vi.mocked(operation).mockRejectedValueOnce(failure);
+        view.querySelector<HTMLButtonElement>('.btn' + action)!.click();
+        await flush();
+        expect(toast).toHaveBeenCalledExactlyOnceWith('ErrorDefault');
+        expect(console.error).toHaveBeenCalledExactlyOnceWith('Failed to perform list playback action', failure);
+    });
+    it.each(['Play', 'Queue', 'Shuffle'])('handles rejected item lookup before %s without executing playback', async action => {
+        const { view, show, controller, getItems } = setup();
+        show();
+        await flush();
+        controller.hasFilters = true;
+        getItems.mockRejectedValueOnce(new Error('lookup failed'));
+        view.querySelector<HTMLButtonElement>('.btn' + action)!.click();
+        await flush();
+        expect(playbackManager.play).not.toHaveBeenCalled();
+        expect(playbackManager.queue).not.toHaveBeenCalled();
+        expect(playbackManager.shuffle).not.toHaveBeenCalled();
+        expect(toast).toHaveBeenCalledOnce();
+    });
+});
+
+it.each(['Play', 'Queue', 'Shuffle'])('does not repeat handled or cancelled %s playback errors', async action => {
+    const { view, show, controller } = setup();
+    show();
+    await flush();
+    controller.hasFilters = true;
+    const operation = action === 'Queue' ? playbackManager.queue : playbackManager.play;
+    vi.mocked(operation).mockRejectedValueOnce(undefined);
+    view.querySelector<HTMLButtonElement>('.btn' + action)!.click();
+    await flush();
+    expect(operation).toHaveBeenCalledOnce();
+    expect(toast).not.toHaveBeenCalled();
+    expect(console.error).not.toHaveBeenCalled();
 });

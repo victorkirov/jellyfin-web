@@ -1,8 +1,8 @@
 import { type DetailsPage, type DetailsController, queryAll } from './types';
 
-export function autoFocus(container: HTMLElement) {
+export function autoFocus(container: HTMLElement, isCurrent: () => boolean = () => true) {
     void import('components/autoFocuser').then(({ default: autoFocuser }) => {
-        autoFocuser.autoFocus(container);
+        if (isCurrent()) autoFocuser.autoFocus(container);
     });
 }
 

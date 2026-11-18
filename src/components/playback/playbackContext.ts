@@ -54,7 +54,7 @@ export type PlaybackContext = {
     setAudioStreamIndex: (index: number, player?: PlaybackPlayer | null) => void;
     getMaxStreamingBitrate: (player?: PlaybackPlayer | null) => number;
     enableAutomaticBitrateDetection: (player?: PlaybackPlayer | null) => boolean;
-    setMaxStreamingBitrate: (options: PlaybackOptions, player?: PlaybackPlayer | null) => void;
+    setMaxStreamingBitrate: (options: PlaybackOptions, player?: PlaybackPlayer | null) => Promise<unknown>;
     isFullscreen: (player?: PlaybackPlayer | null) => boolean | undefined;
     toggleFullscreen: (player?: PlaybackPlayer | null) => void;
     togglePictureInPicture: (player?: PlaybackPlayer | null) => void;
@@ -141,7 +141,7 @@ export type PlaybackContext = {
     setDefaultPlayerActive: () => void;
     removeActivePlayer: (name: string) => void;
     removeActiveTarget: (id: string) => void;
-    sendCommand: (cmd: { Name: string; Arguments: { RepeatMode: string; ShuffleMode: string; Volume: number; AspectRatio: string; PlaybackRate: number; Brightness: number; Index: string; Bitrate: string; }; }, player: PlaybackPlayer) => void;
+    sendCommand: (cmd: { Name: string; Arguments?: Record<string, unknown> }, player?: PlaybackPlayer | null) => void | Promise<unknown>;
 };
 
 export type PlaybackServices = {

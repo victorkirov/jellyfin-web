@@ -22,6 +22,61 @@ import PlayQueueManager from './playqueuemanager';
 
 const optionalPlayerCommands = ['PictureInPicture', 'AirPlay', 'SetBrightness', 'SetAspectRatio', 'PlaybackRate'];
 
+type WirePlaybackCommand = { Name: string; Arguments?: Record<string, unknown> };
+type PlaybackCommand =
+    | { Name: 'SetRepeatMode' | 'SetShuffleQueue' | 'SetAspectRatio'; value: string }
+    | { Name: 'SetVolume' | 'PlaybackRate' | 'SetBrightness' | 'SetAudioStreamIndex' | 'SetSubtitleStreamIndex' | 'SetMaxStreamingBitrate'; value: number }
+    | { Name: 'VolumeUp' | 'VolumeDown' | 'Mute' | 'Unmute' | 'ToggleMute' | 'ToggleFullscreen' }
+    | { Name: 'Forward'; command: WirePlaybackCommand };
+
+const commandArgumentKeys = {
+    SetRepeatMode: 'RepeatMode',
+    SetShuffleQueue: 'ShuffleMode',
+    SetAspectRatio: 'AspectRatio',
+    SetVolume: 'Volume',
+    PlaybackRate: 'PlaybackRate',
+    SetBrightness: 'Brightness',
+    SetAudioStreamIndex: 'Index',
+    SetSubtitleStreamIndex: 'Index',
+    SetMaxStreamingBitrate: 'Bitrate'
+} as const;
+
+function numericCommandValue(raw: unknown) {
+    if ((typeof raw !== 'number' && typeof raw !== 'string') || (typeof raw === 'string' && !raw.trim())) return null;
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : null;
+}
+
+function normalizeCommand(command: WirePlaybackCommand): PlaybackCommand | null {
+    const args = command.Arguments || {};
+    switch (command.Name) {
+        case 'SetRepeatMode':
+        case 'SetShuffleQueue':
+        case 'SetAspectRatio': {
+            const value = args[commandArgumentKeys[command.Name]];
+            return typeof value === 'string' && value ? { Name: command.Name, value } : null;
+        }
+        case 'SetVolume':
+        case 'PlaybackRate':
+        case 'SetBrightness':
+        case 'SetAudioStreamIndex':
+        case 'SetSubtitleStreamIndex':
+        case 'SetMaxStreamingBitrate': {
+            const value = numericCommandValue(args[commandArgumentKeys[command.Name]]);
+            return value === null ? null : { Name: command.Name, value };
+        }
+        case 'VolumeUp':
+        case 'VolumeDown':
+        case 'Mute':
+        case 'Unmute':
+        case 'ToggleMute':
+        case 'ToggleFullscreen':
+            return { Name: command.Name };
+        default:
+            return { Name: 'Forward', command };
+    }
+}
+
 function normalizeName(t: string) {
     return t.toLowerCase().replace(' ', '');
 }
@@ -538,14 +593,16 @@ class PlaybackManagerCore {
         }
     }
 
-    sendCommand(this: PlaybackContext, cmd: { Name: string; Arguments: { RepeatMode: string; ShuffleMode: string; Volume: number; AspectRatio: string; PlaybackRate: number; Brightness: number; Index: string; Bitrate: string } }, player: PlaybackPlayer) {
-        console.debug('MediaController received command: ' + cmd.Name);
+    sendCommand(this: PlaybackContext, command: WirePlaybackCommand, player = this._currentPlayer): void | Promise<unknown> {
+        const cmd = normalizeCommand(command);
+        if (!cmd || !player) return;
+        console.debug('MediaController received command: ' + command.Name);
         switch (cmd.Name) {
             case 'SetRepeatMode':
-                this.setRepeatMode(cmd.Arguments.RepeatMode, player);
+                this.setRepeatMode(cmd.value, player);
                 break;
             case 'SetShuffleQueue':
-                this.setQueueShuffleMode(cmd.Arguments.ShuffleMode, player);
+                this.setQueueShuffleMode(cmd.value, player);
                 break;
             case 'VolumeUp':
                 this.volumeUp(player);
@@ -560,37 +617,35 @@ class PlaybackManagerCore {
                 this.setMute(false, player);
                 break;
             case 'ToggleMute':
-                this.toggleMute(player);
+                this.toggleMute(undefined, player);
                 break;
             case 'SetVolume':
-                this.setVolume(cmd.Arguments.Volume, player);
+                this.setVolume(cmd.value, player);
                 break;
             case 'SetAspectRatio':
-                this.setAspectRatio(cmd.Arguments.AspectRatio, player);
+                this.setAspectRatio(cmd.value, player);
                 break;
             case 'PlaybackRate':
-                this.setPlaybackRate(cmd.Arguments.PlaybackRate, player);
+                this.setPlaybackRate(cmd.value, player);
                 break;
             case 'SetBrightness':
-                this.setBrightness(cmd.Arguments.Brightness, player);
+                this.setBrightness(cmd.value, player);
                 break;
             case 'SetAudioStreamIndex':
-                this.setAudioStreamIndex(parseInt(cmd.Arguments.Index, 10), player);
+                this.setAudioStreamIndex(cmd.value, player);
                 break;
             case 'SetSubtitleStreamIndex':
-                this.setSubtitleStreamIndex(parseInt(cmd.Arguments.Index, 10), player);
+                this.setSubtitleStreamIndex(cmd.value, player);
                 break;
             case 'SetMaxStreamingBitrate':
-                // Preserve the legacy numeric command argument until its remote adapter is corrected.
-                this.setMaxStreamingBitrate(parseInt(cmd.Arguments.Bitrate, 10) as unknown as PlaybackOptions, player);
-                break;
+                return this.setMaxStreamingBitrate({ maxBitrate: cmd.value }, player).catch((error: unknown) => {
+                    console.error('Failed to apply bitrate command', error);
+                });
             case 'ToggleFullscreen':
                 this.toggleFullscreen(player);
                 break;
-            default:
-                if (player.sendCommand) {
-                    player.sendCommand(cmd);
-                }
+            case 'Forward':
+                player.sendCommand?.(cmd.command);
                 break;
         }
     }

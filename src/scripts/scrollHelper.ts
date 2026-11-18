@@ -85,7 +85,7 @@ function centerOnFocus(e: Event, scrollSlider: HTMLElement, horizontal: boolean)
     const focused = focusManager.focusableParent(e.target);
 
     if (focused) {
-        toCenter(scrollSlider, focused, horizontal);
+        toCenter(scrollSlider, focused, horizontal, !horizontal);
     }
 }
 

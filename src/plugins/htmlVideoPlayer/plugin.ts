@@ -39,8 +39,7 @@ function getDefaultProfile() {
 // return values differ. Facade casts below retain the local player's legacy API.
 export class HtmlVideoPlayer extends VideoSubtitles {
     forcedFullscreen?: boolean;
-    isPip?: boolean;
-    name: string;
+    name = 'Html Video Player';
 
     type = PluginType.MediaPlayer;
 
@@ -68,15 +67,6 @@ export class HtmlVideoPlayer extends VideoSubtitles {
 
     _currentPlayOptions!: PlayerOptions;
     private videoLastProfile: PlayerProfile | undefined;
-
-    constructor() {
-        super();
-        if (browser.edgeUwp) {
-            this.name = 'Windows Video Player';
-        } else {
-            this.name = 'Html Video Player';
-        }
-    }
 
     currentSrc() {
         return this.videoCurrentSrc;
@@ -245,7 +235,7 @@ export class HtmlVideoPlayer extends VideoSubtitles {
                 elem.crossOrigin = 'use-credentials';
             }
 
-            return applySrc(elem, val, options).then(() => {
+            return applySrc(elem, val).then(() => {
                 this.videoCurrentSrc = val;
 
                 return playWithPromise(elem, this.onError);
@@ -689,10 +679,6 @@ export class HtmlVideoPlayer extends VideoSubtitles {
         if (
             // Check non-standard Safari PiP support
             typeof video.webkitSupportsPresentationMode === 'function' && video.webkitSupportsPresentationMode('picture-in-picture') && typeof video.webkitSetPresentationMode === 'function'
-            // Check non-standard Windows PiP support
-            || (window.Windows
-                && Windows.UI.ViewManagement.ApplicationView.getForCurrentView()
-                    .isViewModeSupported(Windows.UI.ViewManagement.ApplicationViewMode.compactOverlay))
             // Check standard PiP support
             || document.pictureInPictureEnabled
         ) {
@@ -776,13 +762,6 @@ export class HtmlVideoPlayer extends VideoSubtitles {
                     document.exitPictureInPicture().catch(HtmlVideoPlayer.onPictureInPictureError);
                 }
             }
-        } else if (window.Windows) {
-            this.isPip = isEnabled;
-            if (isEnabled) {
-                void Windows.UI.ViewManagement.ApplicationView.getForCurrentView().tryEnterViewModeAsync(Windows.UI.ViewManagement.ApplicationViewMode.compactOverlay);
-            } else {
-                void Windows.UI.ViewManagement.ApplicationView.getForCurrentView().tryEnterViewModeAsync(Windows.UI.ViewManagement.ApplicationViewMode.default);
-            }
         } else if (video?.webkitSupportsPresentationMode && typeof video.webkitSetPresentationMode === 'function') {
             video.webkitSetPresentationMode(isEnabled ? 'picture-in-picture' : 'inline');
         }
@@ -791,8 +770,6 @@ export class HtmlVideoPlayer extends VideoSubtitles {
     isPictureInPictureEnabled() {
         if (document.pictureInPictureEnabled) {
             return !!document.pictureInPictureElement;
-        } else if (window.Windows) {
-            return this.isPip || false;
         } else {
             const video = this.videoMediaElement;
             if (video) {

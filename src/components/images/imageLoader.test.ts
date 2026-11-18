@@ -89,6 +89,40 @@ describe('poster load scheduling', () => {
             expect(targets().filter(target => !target.hasAttribute('data-src'))).toHaveLength(count);
         }
     });
+    it('bounds stale inspections per frame and eventually applies attached posters in order', () => {
+        document.body.innerHTML = document.body.innerHTML.repeat(130);
+        imageLoader.lazyChildren(document.body);
+        const posters = targets();
+        posters.forEach(target => {
+            intersect(target);
+        });
+        complete();
+        posters.slice(0, 128).forEach(target => {
+            target.remove();
+        });
+        const contains = vi.spyOn(document.documentElement, 'contains');
+        frame();
+        expect(contains.mock.calls.length).toBeGreaterThan(0);
+        expect(contains.mock.calls.length).toBeLessThanOrEqual(32);
+        expect(posters[128].hasAttribute('data-src')).toBe(true);
+        for (let count = 0; frames.length && count < 10; count++) frame();
+        expect(frames).toHaveLength(0);
+        expect(posters.slice(0, 128).every(target => target.hasAttribute('data-src'))).toBe(true);
+        expect(posters.slice(128).every(target => !target.hasAttribute('data-src'))).toBe(true);
+    });
+    it('bounds superseded queued entries before applying the replacement', () => {
+        const [target] = targets();
+        for (let index = 0; index < 130; index++) {
+            imageLoader.setLazyImage(target, `poster-${index}.jpg`);
+            preloaders[index].dispatchEvent(new Event('load'));
+        }
+        frame();
+        expect(target.style.backgroundImage).toBe('');
+        expect(frames).toHaveLength(1);
+        for (let count = 0; frames.length && count < 10; count++) frame();
+        expect(target.style.backgroundImage).toContain('poster-129.jpg');
+        expect(frames).toHaveLength(0);
+    });
     it('skips detached queued posters and still applies the next attached poster', () => {
         document.body.innerHTML += document.body.innerHTML;
         imageLoader.lazyChildren(document.body);

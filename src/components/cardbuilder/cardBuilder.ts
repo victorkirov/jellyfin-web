@@ -9,6 +9,7 @@ import imageLoader from '../images/imageLoader';
 import layoutManager from '../../lib/layoutManager';
 import 'elements/emby-button/paper-icon-button-light';
 import './card.scss';
+import { clearFocusedCardCaption } from './focusedCardCaption';
 import '../guide/programs.scss';
 import { getDesiredAspect, getPostersPerRow, isResizable, isUsingLiveTvNaming } from './utils/builder';
 import { getBackdropShape, getPortraitShape, getSquareShape } from './utils/shape';
@@ -289,6 +290,7 @@ export function buildCards(items: CardItem[], options: CardRenderOptions) {
             options.parentContainer.classList.remove('hide');
         } else {
             options.parentContainer.classList.add('hide');
+            clearFocusedCardCaption(itemsContainer);
             return;
         }
     }
@@ -297,11 +299,13 @@ export function buildCards(items: CardItem[], options: CardRenderOptions) {
 
     if (html) {
         if (itemsContainer.cardBuilderHtml !== html) {
+            clearFocusedCardCaption(itemsContainer);
             itemsContainer.innerHTML = html;
             itemsContainer.cardBuilderHtml = html;
             imageLoader.lazyChildren(itemsContainer);
         }
     } else {
+        clearFocusedCardCaption(itemsContainer);
         itemsContainer.innerHTML = html;
         itemsContainer.cardBuilderHtml = null;
     }

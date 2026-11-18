@@ -128,3 +128,94 @@ it('keeps one visible heading after the actual details similar-items renderer fa
     expect(section.classList.contains('hide')).toBe(false);
     expect(section.querySelector('.similarContent button')?.textContent).toBe('Similar movie');
 });
+
+it('uses the configured date locale for person birth and death captions', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 18));
+    const nativeDate = vi.spyOn(Date.prototype, 'toLocaleDateString').mockReturnValue('browser-locale');
+    fixture.item = { Id: 'person', Name: 'Person', ServerId: 'server', Type: BaseItemKind.Person,
+        PremiereDate: '1980-01-02T12:00:00Z', EndDate: '2020-01-03T12:00:00Z' };
+    const page = document.querySelector<HTMLElement>('#itemDetailPage')!;
+    const controller = new DetailsController(page, { id: 'person', serverId: 'server' });
+    expect(controller).toBeInstanceOf(DetailsController);
+    page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+    try {
+        await vi.waitFor(() => expect(page.querySelector('#itemDeathDate')?.textContent).not.toBe(''));
+        expect(page.querySelector('#itemBirthday')?.textContent).toContain('1/2/1980');
+        expect(page.querySelector('#itemDeathDate')?.textContent).toContain('1/3/2020');
+        expect(page.querySelector('#itemDeathDate')?.textContent).toContain('40');
+        expect(nativeDate).not.toHaveBeenCalled();
+    } finally {
+        vi.useRealTimers();
+    }
+});
+
+it.each(['viewbeforehide', 'viewdestroy'])('discards an in-flight deferred section after %s', async event => {
+    let resolve!: (result: { Items: ItemDto[] }) => void;
+    apiClient.getSimilarItems.mockReturnValueOnce(new Promise(done => {
+        resolve = done;
+    }));
+    fixture.item = { Id: 'movie', ServerId: 'server', Type: BaseItemKind.Movie, MediaType: MediaType.Video };
+    const page = document.querySelector<HTMLElement>('#itemDetailPage')!;
+    expect(new DetailsController(page, { id: 'movie', serverId: 'server' })).toBeDefined();
+    page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+    const section = page.querySelector<HTMLElement>('#similarCollapsible')!;
+    await vi.waitFor(() => expect(section.previousElementSibling?.classList.contains('focusable')).toBe(true));
+    const placeholder = section.previousElementSibling as HTMLElement;
+    placeholder.focus();
+    await vi.waitFor(() => expect(apiClient.getSimilarItems).toHaveBeenCalledOnce());
+    page.dispatchEvent(new Event(event));
+    const before = section.innerHTML;
+    resolve({ Items: [{ Id: 'late', Type: BaseItemKind.Movie }] });
+    for (let index = 0; index < 20; index++) await Promise.resolve();
+    expect(section.innerHTML).toBe(before);
+    expect(placeholder.isConnected).toBe(false);
+});
+
+it('keeps completed deferred cards and focus when Back refreshes the same item', async () => {
+    fixture.item = { Id: 'movie', ServerId: 'server', Type: BaseItemKind.Movie, MediaType: MediaType.Video };
+    apiClient.getSimilarItems.mockResolvedValueOnce({ Items: [{ Id: 'similar', Type: BaseItemKind.Movie }] });
+    const page = document.querySelector<HTMLElement>('#itemDetailPage')!;
+    expect(new DetailsController(page, { id: 'movie', serverId: 'server' })).toBeDefined();
+    page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+    const section = page.querySelector<HTMLElement>('#similarCollapsible')!;
+    await vi.waitFor(() => expect(section.previousElementSibling?.classList.contains('focusable')).toBe(true));
+    (section.previousElementSibling as HTMLElement).focus();
+    await vi.waitFor(() => expect(section.querySelector('button')).not.toBeNull());
+    const card = section.querySelector('button')!;
+    card.focus();
+    page.dispatchEvent(new Event('viewbeforehide'));
+    page.dispatchEvent(new CustomEvent('viewshow', { detail: { isRestored: true } }));
+    card.focus();
+    await vi.waitFor(() => expect(getSdkItem).toHaveBeenCalledTimes(2));
+    for (let index = 0; index < 20; index++) await Promise.resolve();
+    expect(section.classList.contains('hide')).toBe(false);
+    expect(document.activeElement).toBe(card);
+    expect(card.isConnected).toBe(true);
+    expect(apiClient.getSimilarItems).toHaveBeenCalledOnce();
+});
+
+it('restarts only unfinished deferred work on Back and ignores the older completion', async () => {
+    let resolveOld!: (result: { Items: ItemDto[] }) => void;
+    apiClient.getSimilarItems.mockReturnValueOnce(new Promise(done => {
+        resolveOld = done;
+    })).mockResolvedValueOnce({ Items: [{ Id: 'latest', Type: BaseItemKind.Movie }] });
+    fixture.item = { Id: 'movie', ServerId: 'server', Type: BaseItemKind.Movie, MediaType: MediaType.Video };
+    const page = document.querySelector<HTMLElement>('#itemDetailPage')!;
+    expect(new DetailsController(page, { id: 'movie', serverId: 'server' })).toBeDefined();
+    page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+    const section = page.querySelector<HTMLElement>('#similarCollapsible')!;
+    await vi.waitFor(() => expect(section.previousElementSibling?.classList.contains('focusable')).toBe(true));
+    (section.previousElementSibling as HTMLElement).focus();
+    await vi.waitFor(() => expect(apiClient.getSimilarItems).toHaveBeenCalledOnce());
+    page.dispatchEvent(new Event('viewbeforehide'));
+    page.dispatchEvent(new CustomEvent('viewshow', { detail: { isRestored: true } }));
+    (section.previousElementSibling as HTMLElement).focus();
+    await vi.waitFor(() => expect(section.querySelector('button')).not.toBeNull());
+    const card = section.querySelector('button')!;
+    resolveOld({ Items: [] });
+    for (let index = 0; index < 20; index++) await Promise.resolve();
+    expect(section.classList.contains('hide')).toBe(false);
+    expect(section.querySelector('button')).toBe(card);
+    expect(apiClient.getSimilarItems).toHaveBeenCalledTimes(2);
+});

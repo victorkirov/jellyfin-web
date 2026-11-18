@@ -87,3 +87,21 @@ describe('Media playback promise compatibility', () => {
         await expect(playWithPromise(element, vi.fn())).rejects.toBeUndefined();
     });
 });
+
+describe('browser media sources', () => {
+    it('applies ordinary URLs without calling Windows Storage', async () => {
+        const { applySrc } = await import('./htmlMediaHelper');
+        const storage = vi.fn().mockResolvedValue({});
+        vi.stubGlobal('Windows', { Storage: { StorageFile: { getFileFromPathAsync: storage } } });
+        try {
+            const element = document.createElement('video');
+            await applySrc(element, 'https://example/video.mp4');
+            expect(element.src).toBe('https://example/video.mp4');
+            await applySrc(element, 'https://example/local.mp4');
+            expect(element.src).toBe('https://example/local.mp4');
+            expect(storage).not.toHaveBeenCalled();
+        } finally {
+            vi.unstubAllGlobals();
+        }
+    });
+});

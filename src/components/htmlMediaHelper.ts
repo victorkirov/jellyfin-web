@@ -1,8 +1,8 @@
 export { enableHlsJsPlayer, enableHlsJsPlayerForCodecs } from 'lib/playback/hlsSupport';
 import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/media-source-info';
 
-import type { MediaInstance, MediaPlayOptions, WindowsMediaAdapter } from 'lib/playback/types/htmlMedia';
-import { TICKS_PER_MILLISECOND, TICKS_PER_SECOND } from 'constants/time';
+import type { MediaInstance } from 'lib/playback/types/htmlMedia';
+import { TICKS_PER_SECOND } from 'constants/time';
 
 import appSettings from '../scripts/settings/appSettings';
 import Events from '../utils/events';
@@ -76,24 +76,8 @@ export function seekOnPlaybackStart(instance: MediaInstance, element: HTMLMediaE
     }
 }
 
-export function applySrc(elem: HTMLMediaElement, src: string, options: MediaPlayOptions) {
-    const windows = (window as Window & { Windows?: WindowsMediaAdapter }).Windows;
-    if (windows && options.mediaSource?.IsLocal) {
-        return windows.Storage.StorageFile.getFileFromPathAsync(options.url).then(function (file) {
-            const playlist = new windows.Media.Playback.MediaPlaybackList();
-
-            const source1 = windows.Media.Core.MediaSource.createFromStorageFile(file);
-            const startTimeMs = (options.playerStartPositionTicks || 0) / TICKS_PER_MILLISECOND;
-            playlist.items.append(new windows.Media.Playback.MediaPlaybackItem(source1, startTimeMs));
-            // UWP accepts a playback list and an options argument instead of a Blob.
-            const createObjectURL = URL.createObjectURL as unknown as (list: typeof playlist, options: { oneTimeOnly: boolean }) => string;
-            elem.src = createObjectURL.call(URL, playlist, { oneTimeOnly: true });
-            return Promise.resolve();
-        });
-    } else {
-        elem.src = src;
-    }
-
+export function applySrc(elem: HTMLMediaElement, src: string) {
+    elem.src = src;
     return Promise.resolve();
 }
 

@@ -1,3 +1,4 @@
+import { millisecondsToTicks, ticksToMilliseconds } from 'constants/time';
 import { playbackManager } from '../playback/playbackmanager';
 import Events from '../../utils/events';
 import mediaInfo from '../mediainfo/mediainfo';
@@ -125,9 +126,9 @@ function getTimeRemainingMs(instance: UpNextDialog) {
         const runtimeTicks = playbackManager.duration(options.player);
 
         if (runtimeTicks) {
-            const timeRemainingTicks = runtimeTicks - playbackManager.currentTime(options.player)! * 10000;
+            const timeRemainingTicks = runtimeTicks - millisecondsToTicks(playbackManager.currentTime(options.player)!);
 
-            return Math.round(timeRemainingTicks / 10000);
+            return Math.round(ticksToMilliseconds(timeRemainingTicks));
         }
     }
 

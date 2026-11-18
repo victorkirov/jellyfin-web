@@ -879,7 +879,8 @@ export default function (view: HTMLElement) {
                 const showSubOffset = playbackManager.supportSubtitleOffset(player)
                         && playbackManager.canHandleOffsetOnCurrentSubtitle(player);
 
-                void playerSettingsMenu.show({
+                setTimeout(resetIdle, 0);
+                return playerSettingsMenu.show({
                     mediaType: 'Video',
                     player: player,
                     positionTo: this,
@@ -890,9 +891,10 @@ export default function (view: HTMLElement) {
                 }).finally(() => {
                     resetIdle();
                 });
-
-                setTimeout(resetIdle, 0);
             }
+        }).catch((error: unknown) => {
+            // Dismissing an action sheet rejects without an error.
+            if (error) console.error('Failed to apply playback setting', error);
         });
     }
 

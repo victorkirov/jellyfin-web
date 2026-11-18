@@ -100,3 +100,21 @@ it('leaves a shared custom scroller untouched without measuring rectangles', () 
     expect(targetRect).not.toHaveBeenCalled();
     expect(scrollerRect).not.toHaveBeenCalled();
 });
+
+it.each([0, 40, 180])('keeps vertical position for a fully visible target at %s', top => {
+    const { scroller, target, targetRect } = createScroller();
+    scroller.scrollTop = 300;
+    targetRect.mockReturnValue({ left: 300, top, right: 320, bottom: top + 20, width: 20, height: 20 } as DOMRect);
+    scrollToElement(target);
+    expect(scroller.scrollTop).toBe(300);
+    expect(scroller.scrollLeft).toBe(210);
+});
+it.each([-1, 181])('brings a partially clipped target at %s fully into view', top => {
+    const { scroller, target, targetRect } = createScroller();
+    scroller.scrollTop = 300;
+    targetRect.mockReturnValue({ left: 300, top, right: 320, bottom: top + 20, width: 20, height: 20 } as DOMRect);
+    scrollToElement(target);
+    const nextTop = top - (scroller.scrollTop - 300);
+    expect(nextTop).toBeGreaterThanOrEqual(0);
+    expect(nextTop + 20).toBeLessThanOrEqual(200);
+});

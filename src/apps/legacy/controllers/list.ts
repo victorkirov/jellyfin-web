@@ -2,6 +2,8 @@ import { bindLibraryPaging } from './libraryPaging';
 import * as userSettings from 'scripts/settings/userSettings';
 import focusManager from 'lib/focusManager';
 import loading from 'components/loading/loading';
+import toast from 'components/toast/toast';
+import globalize from 'lib/globalize';
 import AlphaNumericShortcuts from 'scripts/alphanumericshortcuts';
 import { playbackManager } from 'components/playback/playbackmanager';
 import AlphaPicker from 'components/alphaPicker/alphaPicker';
@@ -115,7 +117,7 @@ class ItemsView extends ListSettings {
 
             if (currentItem && !this.hasFilters) {
                 const values = this.getSortValues();
-                void playbackManager.play({
+                return playbackManager.play({
                     items: [currentItem],
                     queryOptions: {
                         SortBy: values.sortBy,
@@ -124,8 +126,8 @@ class ItemsView extends ListSettings {
                     autoplay: true
                 });
             } else {
-                void getItems(this, this.params, currentItem, null, 0, 300).then((result: ListResult) => {
-                    void playbackManager.play({
+                return getItems(this, this.params, currentItem, null, 0, 300).then((result: ListResult) => {
+                    return playbackManager.play({
                         items: result.Items!,
                         autoplay: true
                     });
@@ -137,12 +139,12 @@ class ItemsView extends ListSettings {
             const currentItem = this.currentItem;
 
             if (currentItem && !this.hasFilters) {
-                void playbackManager.queue({
+                return playbackManager.queue({
                     items: [currentItem]
                 });
             } else {
-                void getItems(this, this.params, currentItem, null, 0, 300).then((result: ListResult) => {
-                    void playbackManager.queue({
+                return getItems(this, this.params, currentItem, null, 0, 300).then((result: ListResult) => {
+                    return playbackManager.queue({
                         items: result.Items!
                     });
                 });
@@ -153,10 +155,10 @@ class ItemsView extends ListSettings {
             const currentItem = this.currentItem;
 
             if (currentItem && !this.hasFilters) {
-                void playbackManager.shuffle(currentItem);
+                return playbackManager.shuffle(currentItem);
             } else {
-                void getItems(this, this.params, currentItem, 'Random', 0, 300).then((result: ListResult) => {
-                    void playbackManager.play({
+                return getItems(this, this.params, currentItem, 'Random', 0, 300).then((result: ListResult) => {
+                    return playbackManager.play({
                         items: result.Items!,
                         autoplay: true
                     });
@@ -264,15 +266,23 @@ class ItemsView extends ListSettings {
             }
         };
 
+        const runPlaybackAction = (operation: () => unknown) => () => {
+            void Promise.resolve().then(operation).catch(error => {
+                if (!error) return;
+                console.error('Failed to perform list playback action', error);
+                toast(globalize.translate('ErrorDefault'));
+            });
+        };
+
         view.addEventListener('viewshow', (event: Event) => {
             if (destroyed) return;
             const isRestored = Boolean((event as CustomEvent<{ isRestored: boolean }>).detail?.isRestored);
             void loadView(isRestored);
 
             if (!isRestored) {
-                bindAll(view.querySelectorAll<HTMLElement>('.btnPlay'), 'click', play);
-                bindAll(view.querySelectorAll<HTMLElement>('.btnQueue'), 'click', queue);
-                bindAll(view.querySelectorAll<HTMLElement>('.btnShuffle'), 'click', shuffle);
+                bindAll(view.querySelectorAll<HTMLElement>('.btnPlay'), 'click', runPlaybackAction(play));
+                bindAll(view.querySelectorAll<HTMLElement>('.btnQueue'), 'click', runPlaybackAction(queue));
+                bindAll(view.querySelectorAll<HTMLElement>('.btnShuffle'), 'click', runPlaybackAction(shuffle));
             }
 
             this.alphaNumericShortcuts = new AlphaNumericShortcuts({

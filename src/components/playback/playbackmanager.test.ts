@@ -990,3 +990,137 @@ describe('HLS sessions through playback manager stop and stream changes', () => 
         expect(manager.getCurrentPlayer()).toBeFalsy();
     });
 });
+
+describe('bitrate change ownership', () => {
+    async function setupControls() {
+        const context = setup();
+        await context.play();
+        const services = { ...context.manager._services, changeStream: vi.fn().mockResolvedValue(undefined) };
+        return { ...context, services, controls: createPlaybackControls(context.manager, services).api };
+    }
+
+    it('waits for stream replacement', async () => {
+        const { controls, services, player } = await setupControls();
+        let finish!: () => void;
+        services.changeStream.mockReturnValue(new Promise<void>(resolve => {
+            finish = resolve;
+        }));
+        const operation = controls.setMaxStreamingBitrate({ maxBitrate: 5_000_000 }, player);
+        expect(operation).toBeInstanceOf(Promise);
+        let settled = false;
+        void Promise.resolve(operation).then(() => {
+            settled = true;
+        });
+        await vi.waitFor(() => expect(services.changeStream).toHaveBeenCalled());
+        expect(settled).toBe(false);
+        finish();
+        await operation;
+    });
+
+    it.each(['endpoint', 'detection', 'stream'])('returns %s rejection to the UI boundary', async stage => {
+        const { controls, services, player } = await setupControls();
+        const error = new Error(stage);
+        if (stage === 'endpoint') mocks.apiClient.getEndpointInfo.mockRejectedValue(error);
+        if (stage === 'detection') mocks.detectBitrate.mockRejectedValue(error);
+        if (stage === 'stream') services.changeStream.mockRejectedValue(error);
+        await expect(controls.setMaxStreamingBitrate({ maxBitrate: 5_000_000, enableAutomaticBitrateDetection: stage === 'detection' }, player)).rejects.toBe(error);
+    });
+
+    it.each(['endpoint', 'detection'].flatMap(stage => ['attempt', 'player', 'stream', 'item'].map(identity => ({ stage, identity }))))('rejects replacement $identity while awaiting $stage', async ({ stage, identity }) => {
+        const { controls, services, player, manager } = await setupControls();
+        let complete!: (value: number | object) => void;
+        const deferred = new Promise<number | object>(resolve => {
+            complete = resolve;
+        });
+        if (stage === 'endpoint') mocks.apiClient.getEndpointInfo.mockReturnValue(deferred);
+        else mocks.detectBitrate.mockReturnValue(deferred);
+        const operation = controls.setMaxStreamingBitrate({ maxBitrate: 5_000_000, enableAutomaticBitrateDetection: stage === 'detection' }, player);
+        await Promise.resolve();
+        if (identity === 'attempt') manager._playbackAttempt.invalidate();
+        if (identity === 'player') manager._currentPlayer = null;
+        if (identity === 'stream') manager._services.getPlayerData(player).streamInfo = { ...manager._services.getPlayerData(player).streamInfo! };
+        if (identity === 'item') manager._services.getPlayerData(player).streamInfo!.item = { ...item, Id: 'replacement' };
+        mocks.maxBitrate.mockClear();
+        mocks.automaticBitrate.mockClear();
+        complete(stage === 'endpoint' ? {} : 5_000_000);
+        await expect(operation).rejects.toThrow('cancelled');
+        expect(services.changeStream).not.toHaveBeenCalled();
+        expect(mocks.maxBitrate).not.toHaveBeenCalled();
+        expect(mocks.automaticBitrate).not.toHaveBeenCalled();
+    });
+});
+
+describe('playback command boundary', () => {
+    it('toggles mute on the explicit player instead of the current player', () => {
+        const { manager, player } = setup();
+        const current = { ...player, toggleMute: vi.fn() };
+        const selected = { ...player, toggleMute: vi.fn() };
+        manager._currentPlayer = current;
+        void manager.sendCommand({ Name: 'ToggleMute' }, selected);
+        expect(selected.toggleMute).toHaveBeenCalledOnce();
+        expect(current.toggleMute).not.toHaveBeenCalled();
+    });
+
+    it('passes a bitrate options object and returns the command completion', async () => {
+        const { manager, player } = setup();
+        const bitrate = vi.spyOn(manager, 'setMaxStreamingBitrate').mockResolvedValue(undefined);
+        await manager.sendCommand({ Name: 'SetMaxStreamingBitrate', Arguments: { Bitrate: '5000000' } }, player);
+        expect(bitrate).toHaveBeenCalledExactlyOnceWith({ maxBitrate: 5_000_000 }, player);
+    });
+
+    it.each(['SetRepeatMode', 'SetShuffleQueue', 'SetVolume', 'SetAspectRatio', 'PlaybackRate', 'SetBrightness', 'SetAudioStreamIndex', 'SetSubtitleStreamIndex', 'SetMaxStreamingBitrate'])('ignores sparse %s arguments', (Name) => {
+        const { manager, player } = setup();
+        expect(() => manager.sendCommand({ Name }, player)).not.toThrow();
+    });
+
+    it.each(['', 'invalid', '12junk', NaN, Infinity, null, false])('ignores invalid numeric command value %s', value => {
+        const { manager, player } = setup();
+        const volume = vi.spyOn(manager, 'setVolume');
+        void manager.sendCommand({ Name: 'SetVolume', Arguments: { Volume: value } }, player);
+        expect(volume).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        ['VolumeUp', {}, 'volumeUp', []],
+        ['VolumeDown', {}, 'volumeDown', []],
+        ['Mute', {}, 'setMute', [true]],
+        ['Unmute', {}, 'setMute', [false]],
+        ['ToggleMute', {}, 'toggleMute', [undefined]],
+        ['SetRepeatMode', { RepeatMode: 'RepeatAll' }, 'setRepeatMode', ['RepeatAll']],
+        ['SetShuffleQueue', { ShuffleMode: 'Shuffle' }, 'setQueueShuffleMode', ['Shuffle']],
+        ['SetVolume', { Volume: '40' }, 'setVolume', [40]],
+        ['SetAspectRatio', { AspectRatio: '16:9' }, 'setAspectRatio', ['16:9']],
+        ['PlaybackRate', { PlaybackRate: '1.5' }, 'setPlaybackRate', [1.5]],
+        ['SetBrightness', { Brightness: '25' }, 'setBrightness', [25]],
+        ['SetAudioStreamIndex', { Index: '2' }, 'setAudioStreamIndex', [2]],
+        ['SetSubtitleStreamIndex', { Index: '-1' }, 'setSubtitleStreamIndex', [-1]],
+        ['ToggleFullscreen', {}, 'toggleFullscreen', []]
+    ] as const)('normalizes %s and targets the supplied player', (Name, Arguments, method, parameters) => {
+        const { manager, player } = setup();
+        const control = vi.spyOn(manager, method).mockImplementation(() => undefined);
+        void manager.sendCommand({ Name, Arguments }, player);
+        expect(control).toHaveBeenCalledExactlyOnceWith(...parameters, player);
+    });
+
+    it.each([
+        { Name: 'DisplayMessage', Arguments: { Header: 'Title', Text: 'Message' } },
+        { Name: 'SendString', Arguments: { String: 'text' } },
+        { Name: 'PictureInPicture' }
+    ])('preserves the JavaScript player command $Name', command => {
+        const { manager, player } = setup();
+        const selected = { ...player, sendCommand: vi.fn() };
+        void manager.sendCommand(command, selected);
+        expect(selected.sendCommand).toHaveBeenCalledExactlyOnceWith(command);
+    });
+});
+
+describe('player data identity', () => {
+    it('returns the player itself and preserves null and name assertions', () => {
+        const { manager, player } = setup();
+        const replacement = { ...player };
+        expect(manager._services.getPlayerData(player)).toBe(player);
+        expect(manager._services.getPlayerData(replacement)).toBe(replacement);
+        expect(() => manager._services.getPlayerData(null)).toThrow('player cannot be null');
+        expect(() => manager._services.getPlayerData({ ...player, name: '' })).toThrow('player name cannot be null');
+    });
+});

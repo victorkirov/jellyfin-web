@@ -1,23 +1,10 @@
-import type { WindowsMediaAdapter } from 'lib/playback/types/htmlMedia';
-
-type ApplicationView = {
-    isViewModeSupported: (mode: string) => boolean;
-    tryEnterViewModeAsync: (mode: string) => Promise<boolean>;
-};
-type WindowsPresentation = {
-    UI: { ViewManagement: {
-        ApplicationView: { getForCurrentView: () => ApplicationView };
-        ApplicationViewMode: { compactOverlay: string; default: string };
-    } };
-};
+export {};
 
 declare global {
     interface Window {
         appMode?: string;
-        Windows?: WindowsMediaAdapter & WindowsPresentation;
         webkitAudioContext: typeof AudioContext;
     }
-    const Windows: WindowsMediaAdapter & WindowsPresentation;
     const tizen: { application: { getCurrentApplication: () => { exit: () => void } } };
     const webOS: { platformBack: () => void };
     interface Navigator { audioSession: { type: string } }

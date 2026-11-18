@@ -6,6 +6,9 @@ import { type ItemDto, type TrackSelect, type StateButton, getElement } from './
 import { type Api } from '@jellyfin/sdk';
 import ItemDetails from './index';
 import focusManager from 'lib/focusManager';
+import autoFocuser from 'components/autoFocuser';
+import { deferSection } from 'components/homesections/deferSection';
+import toast from 'components/toast/toast';
 import cardBuilder from 'components/cardbuilder/cardBuilder';
 import { requestActionBarLayout } from './actionBarLayout';
 import type { UserDataChangedMessage } from '@jellyfin/sdk/lib/generated-client';
@@ -18,7 +21,7 @@ const { apiClient, playbackManager, fixture, hideLoading, getListViewHtml, getSd
         getCurrentUserId: () => 'user',
         getItems: vi.fn(() => Promise.resolve({ Items: [] })),
         getEpisodes: vi.fn(() => Promise.resolve({ Items: [] })),
-        getSeasons: vi.fn(() => Promise.resolve({ Items: [] })),
+        getSeasons: vi.fn<() => Promise<{ Items: ItemDto[] }>>(() => Promise.resolve({ Items: [] })),
         getLiveTvPrograms: vi.fn(() => Promise.resolve({ Items: [] })),
         getNextUpEpisodes: vi.fn<(...args: unknown[]) => Promise<{ Items: ItemDto[] }>>().mockResolvedValue({ Items: [] }),
 
@@ -41,6 +44,7 @@ vi.mock('components/backdrop/backdrop', () => ({ clearBackdrop: vi.fn(), setBack
 vi.mock('components/cardbuilder/cardBuilder', () => ({ default: { getCardsHtml: () => '' } }));
 vi.mock('components/cardbuilder/cardImage', () => ({ buildCardImage: () => '' }));
 vi.mock('components/images/imageLoader', () => ({ default: { lazyChildren: vi.fn() } }));
+vi.mock('components/toast/toast', () => ({ default: vi.fn() }));
 vi.mock('components/itemContextMenu', () => ({ default: { getCommands, show: showMenu } }));
 vi.mock('components/itemHelper', () => ({ default: {
     supportsMediaSourceSelection: () => true, canMarkPlayed: (item: ItemDto & { allowRating?: boolean }) => !!item.allowRating, canRate: (item: ItemDto & { allowRating?: boolean }) => !!item.allowRating,
@@ -51,7 +55,7 @@ vi.mock('components/mediainfo/mediainfo', async importOriginal => {
     return { default: { ...original.default, fillPrimaryMediaInfo: vi.fn(), fillSecondaryMediaInfo: vi.fn() } };
 });
 vi.mock('elements/emby-progressbar/emby-progressbar', () => ({}));
-vi.mock('components/homesections/deferSection', () => ({ deferSection: () => vi.fn() }));
+vi.mock('components/homesections/deferSection', () => ({ deferSection: vi.fn(() => vi.fn()) }));
 vi.mock('lib/focusManager', () => ({ default: { isCurrentlyFocusable: () => false, focus: vi.fn(), autoFocus: vi.fn() } }));
 vi.mock('lib/layoutManager', () => ({ default: { tv: true } }));
 vi.mock('components/listview/listview', () => ({ default: { getListViewHtml } }));
@@ -340,7 +344,7 @@ describe('Details request failures', () => {
         expect(getElement(page, '.btnPlay').classList.contains('hide')).toBe(true);
         expect(getElement(page, '.detailLoadError').classList.contains('hide')).toBe(false);
         expect(getElement(page, '.detailPageWrapperContainer').classList.contains('hide')).toBe(true);
-        expect(focusManager.focus).toHaveBeenLastCalledWith(getElement(page, '.btnRetry'));
+        expect(focusManager.focus).toHaveBeenLastCalledWith(getElement(page, '.btnDetailsBack'));
         getElement(page, '.btnDetailsBack').click();
         expect(goBack).toHaveBeenCalledOnce();
         getElement(page, '.btnRetry').click();
@@ -645,4 +649,209 @@ describe('Details action eligibility and resolved series target', () => {
         expect(tags.textContent).toContain('<script>unsafe</script>, Time & space');
         expect(tags.querySelector('a, button, script, [tabindex]')).toBeNull();
     });
+});
+
+function pendingResult<T>() {
+    let resolve!: (value: T) => void;
+    let reject!: (reason: Error) => void;
+    const promise = new Promise<T>((done, fail) => {
+        resolve = done;
+        reject = fail;
+    });
+    return { promise, resolve, reject };
+}
+const settleDetails = async () => {
+    for (let index = 0; index < 30; index++) await Promise.resolve();
+};
+
+describe('Details load generations', () => {
+    it.each(['viewbeforehide', 'viewdestroy'])('discards initial success after %s including focus and section setup', async event => {
+        const pending = pendingResult<ItemDto>();
+        vi.spyOn(queryClient, 'fetchQuery').mockReturnValueOnce(pending.promise);
+        const page = getElement(document, '#itemDetailPage');
+        expect(new ItemDetails(page, { id: 'late' })).toBeDefined();
+        page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+        page.dispatchEvent(new Event(event));
+        vi.clearAllMocks();
+        pending.resolve({ Id: 'late', Type: 'Series', IsFolder: true });
+        await settleDetails();
+        expect(getElement(page, '.detailPageWrapperContainer').classList.contains('hide')).toBe(true);
+        expect(focusManager.focus).not.toHaveBeenCalled();
+        expect(autoFocuser.autoFocus).not.toHaveBeenCalled();
+        expect(hideLoading).not.toHaveBeenCalled();
+        expect(deferSection).not.toHaveBeenCalled();
+    });
+
+    it.each(['viewbeforehide', 'viewdestroy'])('discards initial rejection after %s', async event => {
+        vi.spyOn(console, 'error').mockReturnValue(undefined);
+        const pending = pendingResult<ItemDto>();
+        vi.spyOn(queryClient, 'fetchQuery').mockReturnValueOnce(pending.promise);
+        const page = getElement(document, '#itemDetailPage');
+        expect(new ItemDetails(page, { id: 'late' })).toBeDefined();
+        page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+        page.dispatchEvent(new Event(event));
+        vi.clearAllMocks();
+        pending.reject(new Error('late error'));
+        await settleDetails();
+        expect(getElement(page, '.detailLoadError').classList.contains('hide')).toBe(true);
+        expect(focusManager.focus).not.toHaveBeenCalled();
+        expect(hideLoading).not.toHaveBeenCalled();
+        expect(console.error).not.toHaveBeenCalled();
+    });
+
+    it('accepts only the final A in A/B/A version requests', async () => {
+        fixture.item = { Id: 'original', Type: 'Movie', MediaType: 'Video', MediaSources: [{ Id: 'A', MediaStreams: [] }, { Id: 'B', MediaStreams: [] }] };
+        const page = getElement(document, '#itemDetailPage');
+        expect(new ItemDetails(page, { id: 'original' })).toBeDefined();
+        page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+        await vi.waitFor(() => expect(hideLoading).toHaveBeenCalled());
+        const source = getElement(page, '.selectSource');
+        source.innerHTML = '<option value="A">A</option><option value="B">B</option>';
+        const first = pendingResult<ItemDto>();
+        const second = pendingResult<ItemDto>();
+        const third = pendingResult<ItemDto>();
+        vi.spyOn(queryClient, 'fetchQuery').mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise).mockReturnValueOnce(third.promise);
+        for (const value of ['A', 'B', 'A']) {
+            source.value = value;
+            source.dispatchEvent(new Event('change'));
+        }
+        third.resolve({ ...fixture.item!, Id: 'A', Name: 'Latest A' });
+        await settleDetails();
+        expect(getElement(page, '.nameContainer').textContent).toContain('Latest A');
+        vi.clearAllMocks();
+        second.resolve({ Id: 'B', Type: 'Movie', Name: 'Obsolete B' });
+        first.resolve({ Id: 'A', Type: 'Movie', Name: 'Obsolete A' });
+        await settleDetails();
+        expect(getElement(page, '.nameContainer').textContent).toContain('Latest A');
+        expect(hideLoading).not.toHaveBeenCalled();
+        expect(autoFocuser.autoFocus).not.toHaveBeenCalled();
+    });
+
+    it.each(['viewbeforehide', 'viewdestroy'])('discards a version response and delayed menu commands after %s', async event => {
+        fixture.item = { Id: 'original', Type: 'Movie', MediaType: 'Video', MediaSources: [{ Id: 'A', MediaStreams: [] }, { Id: 'B', MediaStreams: [] }] };
+        const commands = pendingResult<{ id: string; name: string }[]>();
+        getCommands.mockReturnValueOnce(commands.promise);
+        const page = getElement(document, '#itemDetailPage');
+        expect(new ItemDetails(page, { id: 'original' })).toBeDefined();
+        page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+        await vi.waitFor(() => expect(hideLoading).toHaveBeenCalled());
+        const pending = pendingResult<ItemDto>();
+        vi.spyOn(queryClient, 'fetchQuery').mockReturnValueOnce(pending.promise);
+        getElement(page, '.selectSource').dispatchEvent(new Event('change'));
+        page.dispatchEvent(new Event(event));
+        vi.clearAllMocks();
+        pending.resolve({ Id: 'original', Type: 'Movie', Name: 'Late version' });
+        commands.resolve([{ id: 'moremediainfo', name: 'Media info' }]);
+        await settleDetails();
+        expect(getElement(page, '.nameContainer').textContent).not.toContain('Late version');
+        expect(getElement(page, '.btnMoreCommands').classList.contains('hide')).toBe(true);
+        expect(hideLoading).not.toHaveBeenCalled();
+        expect(autoFocuser.autoFocus).not.toHaveBeenCalled();
+    });
+});
+
+describe('Details context-menu event failure boundary', () => {
+    it.each(['item', 'user', 'menu'])('handles %s failure once without a detached rejection', async stage => {
+        fixture.item = { Id: 'movie', Type: 'Movie' };
+        const page = getElement(document, '#itemDetailPage');
+        expect(new ItemDetails(page, { id: 'movie' })).toBeDefined();
+        page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+        await vi.waitFor(() => expect(hideLoading).toHaveBeenCalled());
+        const error = new Error('menu unavailable');
+        vi.spyOn(console, 'error').mockReturnValue(undefined);
+        if (stage === 'item') apiClient.getItem.mockRejectedValueOnce(error);
+        if (stage === 'user') apiClient.getCurrentUser.mockRejectedValueOnce(error);
+        if (stage === 'menu') showMenu.mockRejectedValueOnce(error);
+        getElement(page, '.btnMoreCommands').click();
+        await settleDetails();
+        expect(toast).toHaveBeenCalledExactlyOnceWith(strings.ErrorDefault);
+        expect(console.error).toHaveBeenCalledExactlyOnceWith('Failed to perform details action', error);
+        if (stage !== 'menu') expect(showMenu).not.toHaveBeenCalled();
+    });
+});
+
+it('treats a successful fallback to the server root as a failed title load', async () => {
+    vi.spyOn(console, 'error').mockReturnValue(undefined);
+    fixture.item = { Id: 'server-root', Type: 'UserRootFolder', Name: 'Media Folders' };
+    const page = getElement(document, '#itemDetailPage');
+    expect(new ItemDetails(page, { id: '00000000000000000000000000000000' })).toBeDefined();
+    page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+    await vi.waitFor(() => expect(getElement(page, '.detailLoadError').classList.contains('hide')).toBe(false));
+    expect(getElement(page, '.detailPageWrapperContainer').classList.contains('hide')).toBe(true);
+    expect(focusManager.focus).toHaveBeenLastCalledWith(getElement(page, '.btnDetailsBack'));
+});
+
+it('accepts the requested GUID with equivalent casing and separators', async () => {
+    fixture.item = { Id: '0123456789abcdef0123456789abcdef', Type: 'Movie', Name: 'Requested movie' };
+    const page = getElement(document, '#itemDetailPage');
+    expect(new ItemDetails(page, { id: '01234567-89AB-CDEF-0123-456789ABCDEF' })).toBeDefined();
+    page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+    await vi.waitFor(() => expect(getElement(page, '.nameContainer').textContent).toContain('Requested movie'));
+    expect(getElement(page, '.detailLoadError').classList.contains('hide')).toBe(true);
+});
+
+describe('Details Back restoration preserves rendered content', () => {
+    it.each(['child', 'cast'])('retains the focused %s card after the same-item refetch', async kind => {
+        fixture.item = { Id: 'series', Type: 'Series', IsFolder: true };
+        const page = getElement(document, '#itemDetailPage');
+        expect(new ItemDetails(page, { id: 'series' })).toBeDefined();
+        page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+        await vi.waitFor(() => expect(hideLoading).toHaveBeenCalled());
+        await settleDetails();
+        const section = getElement(page, kind === 'child' ? '#listChildrenCollapsible' : '#castCollapsible');
+        const container = getElement(section, kind === 'child' ? '.itemsContainer' : '#castContent');
+        section.classList.remove('hide');
+        container.innerHTML = '<button class="restoredCard">Keep this position</button>';
+        const card = container.querySelector<HTMLButtonElement>('button')!;
+        card.focus();
+        page.dispatchEvent(new Event('viewbeforehide'));
+        const pending = pendingResult<ItemDto>();
+        vi.spyOn(queryClient, 'fetchQuery').mockReturnValueOnce(pending.promise);
+        vi.clearAllMocks();
+        page.dispatchEvent(new CustomEvent('viewshow', { detail: { isRestored: true } }));
+        // ViewManager restores the saved element before the refetch completes.
+        card.focus();
+        pending.resolve({ ...fixture.item });
+        await settleDetails();
+        expect(card.isConnected).toBe(true);
+        expect(document.activeElement).toBe(card);
+        expect(section.classList.contains('hide')).toBe(false);
+        expect(autoFocuser.autoFocus).not.toHaveBeenCalled();
+        expect(apiClient.getSeasons).not.toHaveBeenCalled();
+        expect(getCommands).not.toHaveBeenCalled();
+    });
+
+    it('keeps the resolved Next Up label when the same-item refetch finishes later', async () => {
+        const { page } = await openResumableSeries();
+        page.dispatchEvent(new Event('viewbeforehide'));
+        const pending = pendingResult<ItemDto>();
+        vi.spyOn(queryClient, 'fetchQuery').mockReturnValueOnce(pending.promise);
+        page.dispatchEvent(new CustomEvent('viewshow', { detail: { isRestored: true } }));
+        await settleDetails();
+        const play = getElement(page, '.btnPlay');
+        expect(play.title).toBe('Resume from 12:00 · S14:E8');
+        pending.resolve({ ...fixture.item! });
+        await settleDetails();
+        expect(play.title).toBe('Resume from 12:00 · S14:E8');
+        play.click();
+        expect(playbackManager.play).toHaveBeenLastCalledWith(expect.objectContaining({
+            items: [expect.objectContaining({ Id: 'next' })], startPositionTicks: 7200000000
+        }));
+    });
+});
+
+it('retries unfinished children on Back without accepting the interrupted request', async () => {
+    fixture.item = { Id: 'series', Type: 'Series', IsFolder: true };
+    const old = pendingResult<{ Items: ItemDto[] }>();
+    apiClient.getSeasons.mockReturnValueOnce(old.promise);
+    const page = getElement(document, '#itemDetailPage');
+    expect(new ItemDetails(page, { id: 'series' })).toBeDefined();
+    page.dispatchEvent(new CustomEvent('viewshow', { detail: {} }));
+    await vi.waitFor(() => expect(apiClient.getSeasons).toHaveBeenCalledOnce());
+    page.dispatchEvent(new Event('viewbeforehide'));
+    old.resolve({ Items: [] });
+    await settleDetails();
+    page.dispatchEvent(new CustomEvent('viewshow', { detail: { isRestored: true } }));
+    await settleDetails();
+    expect(apiClient.getSeasons).toHaveBeenCalledTimes(2);
 });

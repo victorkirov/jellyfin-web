@@ -1,3 +1,4 @@
+import { millisecondsToTicks } from 'constants/time';
 import { getLyricApi } from '@jellyfin/sdk/lib/utils/api/lyric-api';
 import 'core-js/modules/es.array.find-last-index';
 import type { LyricLine } from '@jellyfin/sdk/lib/generated-client/models/lyric-line';
@@ -39,8 +40,7 @@ function getLyricIndex(time: number, lyrics: LyricLine[]) {
 function getCurrentPlayTime() {
     let currentTime = playbackManager.currentTime();
     if (currentTime === undefined) currentTime = 0;
-    //convert to ticks
-    return currentTime * 10000;
+    return millisecondsToTicks(currentTime);
 }
 
 export default function (view: HTMLElement) {

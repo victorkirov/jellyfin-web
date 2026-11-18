@@ -12,7 +12,7 @@ import { type ItemDto } from 'types/base/models/item-dto';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import { AppFeature } from 'constants/appFeature';
 import { appHost } from 'components/apphost';
-import { intervalToDuration } from 'date-fns';
+import { formatPersonDate } from './personDate';
 import { PersonKind } from '@jellyfin/sdk/lib/generated-client/models/person-kind';
 import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
 import { type DetailPerson, type DetailsPage, type DetailsController, type DetailsParams, getElement } from './types';
@@ -22,10 +22,9 @@ import itemContextMenu from 'components/itemContextMenu';
 import layoutManager from 'lib/layoutManager';
 import loading from 'components/loading/loading';
 import globalize from 'lib/globalize';
-import datetime from 'scripts/datetime';
 import libraryMenu from 'scripts/libraryMenu';
 
-export function reloadFromItem(instance: DetailsController, page: DetailsPage, params: DetailsParams, item: ItemDto, user: UserDto, loadNextUp?: () => void) {
+export function reloadFromItem(instance: DetailsController, page: DetailsPage, params: DetailsParams, item: ItemDto, user: UserDto, loadNextUp?: () => void, isCurrent: () => boolean = () => true) {
     const apiClient = ServerConnections.getApiClient(item.ServerId)!;
 
     libraryMenu.setTitle('');
@@ -62,12 +61,15 @@ export function reloadFromItem(instance: DetailsController, page: DetailsPage, p
     }
 
     void itemContextMenu.getCommands(getContextMenuOptions(item, user)).then(commands => {
+        if (!isCurrent()) return;
         if (commands.length) {
             hideAll(page, 'btnMoreCommands', true);
         } else {
             hideAll(page, 'btnMoreCommands');
         }
         requestActionBarLayout(page);
+    }).catch(error => {
+        if (isCurrent()) console.error('Failed to load item commands', error);
     });
 
     renderBirthday(page, item);
@@ -80,7 +82,7 @@ export function reloadFromItem(instance: DetailsController, page: DetailsPage, p
     loading.hide();
     requestActionBarLayout(page);
 
-    autoFocus(page);
+    autoFocus(page, isCurrent);
 }
 
 export function setInitialCollapsibleState(page: DetailsPage, item: ItemDto, apiClient: ConnectionClient, context: string | null | undefined, user: UserDto, loadNextUp: () => void = () => renderNextUp(page, item, user)) {
@@ -174,14 +176,8 @@ function renderBirthday(page: DetailsPage, item: ItemDto) {
 
     if (item.Type == 'Person' && item.PremiereDate) {
         try {
-            const birthday = datetime.parseISO8601Date(item.PremiereDate, true);
-            const durationSinceBorn = intervalToDuration({ start: birthday, end: Date.now() });
+            itemBirthday.innerHTML = formatPersonDate(item.PremiereDate, 'BirthDateValue', item.EndDate ? undefined : item.PremiereDate);
             itemBirthday.classList.remove('hide');
-            if (item.EndDate) {
-                itemBirthday.innerHTML = globalize.translate('BirthDateValue', birthday.toLocaleDateString());
-            } else {
-                itemBirthday.innerHTML = `${globalize.translate('BirthDateValue', birthday.toLocaleDateString())} ${globalize.translate('AgeValue', durationSinceBorn.years!)}`;
-            }
         } catch (err) {
             console.error(err);
             itemBirthday.classList.add('hide');
@@ -196,16 +192,8 @@ function renderDeathDate(page: DetailsPage, item: ItemDto) {
 
     if (item.Type == 'Person' && item.EndDate) {
         try {
-            const deathday = datetime.parseISO8601Date(item.EndDate, true);
+            itemDeathDate.innerHTML = formatPersonDate(item.EndDate, 'DeathDateValue', item.PremiereDate || undefined, item.EndDate);
             itemDeathDate.classList.remove('hide');
-            if (item.PremiereDate) {
-                const birthday = datetime.parseISO8601Date(item.PremiereDate, true);
-                const durationSinceBorn = intervalToDuration({ start: birthday, end: deathday });
-
-                itemDeathDate.innerHTML = `${globalize.translate('DeathDateValue', deathday.toLocaleDateString())} ${globalize.translate('AgeValue', durationSinceBorn.years!)}`;
-            } else {
-                itemDeathDate.innerHTML = globalize.translate('DeathDateValue', deathday.toLocaleDateString());
-            }
         } catch (err) {
             console.error(err);
             itemDeathDate.classList.add('hide');

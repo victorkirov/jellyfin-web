@@ -3,7 +3,7 @@ import { bindActionFocus } from './actionFocus';
 import focusManager from 'lib/focusManager';
 import { appRouter } from 'components/router/appRouter';
 import { reloadFromItem, setInitialCollapsibleState } from './page';
-import { clearDeferredDetails, renderCast, renderGuestCast, renderNextUp } from './relatedSections';
+import { clearDeferredDetails, pauseDeferredDetails, resumeDeferredDetails, renderCast, renderGuestCast, renderNextUp } from './relatedSections';
 import { renderDetails } from './metadata';
 import { renderBackdrop } from './artwork';
 import { getContextMenuOptions, reloadPlayButtons, reloadUserDataButtons, setTrailerButtonVisibility } from './actions';
@@ -22,6 +22,8 @@ import { type ItemDto, type DetailsPage, type DetailsController, type DetailsPar
 
 import itemContextMenu from 'components/itemContextMenu';
 import loading from 'components/loading/loading';
+import toast from 'components/toast/toast';
+import globalize from 'lib/globalize';
 import itemShortcuts from 'components/shortcuts';
 import libraryMenu from 'scripts/libraryMenu';
 import Events from 'utils/events';
@@ -119,17 +121,28 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
             nextUpItemId = nextUpEpisode?.Id || undefined;
             reloadPlayButtons(view, currentItem!, nextUpEpisode);
             requestActionBarLayout(view);
-        }, () => request === nextUpRequest && currentItem?.Id === item.Id);
+        }, () => active && !destroyed && request === nextUpRequest && currentItem?.Id === item.Id);
     }
 
     function renderItem(item: ItemDto, user: UserDto) {
+        const generation = ++renderGeneration;
+        const isCurrent = () => active && !destroyed && generation === renderGeneration;
+        view.detailsIsCurrent = isCurrent;
+        view.retryChildren = undefined;
+        if (currentItem?.Id !== item.Id) {
+            nextUpEpisode = undefined;
+            nextUpItemId = undefined;
+        }
         currentItem = item;
-        nextUpEpisode = undefined;
-        nextUpItemId = undefined;
-        reloadFromItem(self, view, params, item, user, refreshNextUp);
+        reloadFromItem(self, view, params, item, user, refreshNextUp, isCurrent);
     }
 
     function reload() {
+        if (!active || destroyed) return Promise.resolve();
+        const request = ++initialRequest;
+        versionRequest++;
+        renderGeneration++;
+        loadingVisible = true;
         loading.show();
         getElement(view, '.detailLoadError').classList.add('hide');
         getElement(view, '.detailPageWrapperContainer').classList.add('hide');
@@ -143,15 +156,21 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
 
         const apiClient = getApiClient();
 
-        Promise.all([getPromise(apiClient, params), apiClient.getCurrentUser()]).then(([item, user]) => {
+        return Promise.resolve().then(() => Promise.all([getPromise(apiClient, params), apiClient.getCurrentUser()])).then(([item, user]) => {
+            if (!active || destroyed || request !== initialRequest) return;
+            if (params.id && item.Id?.replace(/-/g, '').toLowerCase() !== params.id.replace(/-/g, '').toLowerCase()) {
+                throw new Error('Requested title was not returned');
+            }
             getElement(view, '.detailPageWrapperContainer').classList.remove('hide');
             renderItem(item, user);
+            loadingVisible = false;
         }).catch((error) => {
+            if (!active || destroyed || request !== initialRequest) return;
             currentItem = null;
             getElement(view, '.detailPageWrapperContainer').classList.add('hide');
             getElement(view, '.detailLoadError').classList.remove('hide');
-            loading.hide();
-            focusManager.focus(getElement(view, '.btnRetry'));
+            hideLoading();
+            focusManager.focus(getElement(view, '.btnDetailsBack'));
             console.error('failed to get item or current user: ', error);
         });
     }
@@ -170,21 +189,21 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
         const playOptions = getPlayOptions(startPosition);
         const options = { ...playOptions, items: [item] };
         // Legacy selects intentionally pass string stream indexes; playback normalizes them.
-        void playbackManager.play(options as unknown as PlaybackOptions);
+        return playbackManager.play(options as unknown as PlaybackOptions);
     }
 
     function playTrailer() {
-        void playbackManager.playTrailers(currentItem!);
+        if (currentItem) return playbackManager.playTrailers(currentItem);
     }
 
-    function playCurrentItem(button: HTMLElement, mode: string | null) {
+    function playCurrentItem(mode: string | null) {
         const item = currentItem;
         if (!item) return;
 
         if (item.Type === 'Program') {
             const apiClient = ServerConnections.getApiClient(item.ServerId)!;
-            void apiClient.getLiveTvChannel(item.ChannelId!, apiClient.getCurrentUserId()).then(function (channel) {
-                void playbackManager.play({
+            return apiClient.getLiveTvChannel(item.ChannelId!, apiClient.getCurrentUserId()).then(function (channel) {
+                return playbackManager.play({
                     items: [channel]
                 });
             });
@@ -192,7 +211,7 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
         }
 
         const target = item.Type === 'Series' && nextUpEpisode ? nextUpEpisode : item;
-        playItem(target, mode === ItemAction.Resume ? (target.UserData?.PlaybackPositionTicks || 0) : 0);
+        return playItem(target, mode === ItemAction.Resume ? (target.UserData?.PlaybackPositionTicks || 0) : 0);
     }
 
     function onPlayClick(event: Event) {
@@ -204,19 +223,19 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
             action = actionElem.getAttribute('data-action');
         }
 
-        playCurrentItem(actionElem, action);
+        return playCurrentItem(action);
     }
 
     function onInstantMixClick() {
-        playbackManager.instantMix(currentItem!);
+        if (currentItem) return playbackManager.instantMix(currentItem);
     }
 
     function onShuffleClick() {
-        void playbackManager.shuffle(currentItem!);
+        if (currentItem) return playbackManager.shuffle(currentItem);
     }
 
     function onPlayTrailerClick() {
-        playTrailer();
+        return playTrailer();
     }
 
     function onMoreCommandsClick(event: Event) {
@@ -225,11 +244,29 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
 
         const apiClient = getApiClient();
 
-        void apiClient.getItem(apiClient.getCurrentUserId(), selectedItem!).then(function (item) {
-            void apiClient.getCurrentUser().then(function (user) {
-                itemContextMenu.show(getContextMenuOptions(item, user, button))
-                    .catch(() => { /* no-op */ });
-            });
+        const isCurrent = view.detailsIsCurrent || (() => false);
+        return Promise.all([
+            apiClient.getItem(apiClient.getCurrentUserId(), selectedItem!),
+            apiClient.getCurrentUser()
+        ]).then(([item, user]) => {
+            if (isCurrent()) return itemContextMenu.show(getContextMenuOptions(item, user, button));
+        });
+    }
+
+    function onActionError(error: unknown) {
+        // Action sheets reject without an error when dismissed.
+        if (!error) return;
+        console.error('Failed to perform details action', error);
+        toast(globalize.translate('ErrorDefault'));
+    }
+
+    function bindAction(selector: string, action: (event: Event) => unknown) {
+        bindAll(view, selector, 'click', event => {
+            try {
+                void Promise.resolve(action(event)).catch(onActionError);
+            } catch (error) {
+                onActionError(error);
+            }
         });
     }
 
@@ -263,7 +300,7 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
             else reloadPlayButtons(view, currentItem, nextUpEpisode);
             reloadUserDataButtons(view, currentItem);
             requestActionBarLayout(view);
-            autoFocus(view);
+            autoFocus(view, view.detailsIsCurrent);
         }
     }
 
@@ -271,6 +308,27 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
     let nextUpEpisode: ItemDto | undefined;
     let nextUpItemId: string | undefined;
     let nextUpRequest = 0;
+    let initialRequest = 0;
+    let versionRequest = 0;
+    let renderGeneration = 0;
+    let active = false;
+    let destroyed = false;
+    let loadingVisible = false;
+
+    function hideLoading() {
+        if (!loadingVisible) return;
+        loadingVisible = false;
+        loading.hide();
+    }
+
+    function invalidateLoads() {
+        active = false;
+        initialRequest++;
+        versionRequest++;
+        nextUpRequest++;
+        hideLoading();
+        pauseDeferredDetails(view);
+    }
 
     function init() {
         const apiClient = getApiClient();
@@ -279,25 +337,31 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
         const unbindActionFocus = bindActionFocus(view);
         const onActionLabelChange = () => requestActionBarLayout(view);
         view.addEventListener('detailactionlabelchange', onActionLabelChange);
-        bindAll(view, '.btnRetry', 'click', reload);
+        bindAll(view, '.btnRetry', 'click', () => {
+            void reload();
+        });
         bindAll(view, '.btnDetailsBack', 'click', () => {
             void appRouter.back();
         });
 
-        bindAll(view, '.btnPlay', 'click', onPlayClick);
-        bindAll(view, '.btnReplay', 'click', onPlayClick);
-        bindAll(view, '.btnInstantMix', 'click', onInstantMixClick);
-        bindAll(view, '.btnShuffle', 'click', onShuffleClick);
-        bindAll(view, '.btnPlayTrailer', 'click', onPlayTrailerClick);
+        bindAction('.btnPlay', onPlayClick);
+        bindAction('.btnReplay', onPlayClick);
+        bindAction('.btnInstantMix', onInstantMixClick);
+        bindAction('.btnShuffle', onShuffleClick);
+        bindAction('.btnPlayTrailer', onPlayTrailerClick);
         getElement(view, '.trackSelections').addEventListener('submit', onTrackSelectionsSubmit);
-        bindAll(view, '.btnMoreCommands', 'click', onMoreCommandsClick);
+        bindAction('.btnMoreCommands', onMoreCommandsClick);
         getElement(view, '.selectSource').addEventListener('change', function () {
             renderVideoSelections(view, self._currentPlaybackMediaSources!);
             renderAudioSelections(view, self._currentPlaybackMediaSources!);
             renderSubtitleSelections(view, self._currentPlaybackMediaSources!);
-            refreshSelectedVersion();
+            void refreshSelectedVersion();
         });
         view.addEventListener('viewshow', function (e) {
+            if (destroyed) return;
+            active = true;
+            const generation = renderGeneration;
+            view.detailsIsCurrent = () => active && !destroyed && generation === renderGeneration;
             const page = view;
 
             libraryMenu.setTransparentMenu(true);
@@ -313,10 +377,14 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
                     }
                     renderTrackSelections(page, self, currentItem, true);
                     renderBackdrop(page, currentItem);
-                    refreshSelectedVersion();
+                    resumeDeferredDetails(view);
+                    view.retryChildren?.();
+                    void refreshSelectedVersion();
+                } else {
+                    void reload();
                 }
             } else {
-                reload();
+                void reload();
             }
 
             self._unsubscribeUserData = apiClient.subscribe!(
@@ -328,7 +396,7 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
             itemShortcuts.on(getElement(view, '.nameContainer'));
         });
         view.addEventListener('viewbeforehide', function () {
-            nextUpRequest++;
+            invalidateLoads();
             itemShortcuts.off(getElement(view, '.nameContainer'));
             self._unsubscribeUserData?.();
             self._unsubscribeUserData = null;
@@ -336,11 +404,14 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
             libraryMenu.setTransparentMenu(false);
         });
         view.addEventListener('viewdestroy', function () {
+            destroyed = true;
+            invalidateLoads();
+            renderGeneration++;
+            clearDeferredDetails(view);
+            view.retryChildren = undefined;
             unbindActionFocus();
             view.removeEventListener('detailactionlabelchange', onActionLabelChange);
-            nextUpRequest++;
             unmount(self);
-            clearDeferredDetails(view);
 
             currentItem = null;
             self._currentPlaybackMediaSources = null;
@@ -348,7 +419,8 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
     }
 
     function refreshSelectedVersion() {
-        if (!currentItem) return;
+        if (!currentItem || !active || destroyed) return Promise.resolve();
+        const request = ++versionRequest;
         const selectedId = getElement(view, '.selectSource').value || currentItem!.Id;
 
         const apiClient = ServerConnections.getApiClient(currentItem.ServerId)!;
@@ -358,7 +430,7 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
             return;
         }
 
-        Promise.all([
+        return Promise.all([
             queryClient.fetchQuery({
                 ...getItemQuery(api, selectedId!, apiClient.getCurrentUserId()),
                 // Restored views must reflect playback and mutations while hidden.
@@ -366,23 +438,26 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
             }),
             apiClient.getCurrentUser()
         ]).then(function ([versionItem, user]) {
-            if ((getElement(view, '.selectSource').value || currentItem?.Id) !== selectedId) {
+            if (!active || destroyed || request !== versionRequest || !currentItem || (getElement(view, '.selectSource').value || currentItem.Id) !== selectedId) {
                 return;
             }
 
             const sameItem = versionItem.Id === currentItem!.Id;
-            currentItem = versionItem;
             if (sameItem) {
+                currentItem = versionItem;
                 reloadPlayButtons(view, currentItem, nextUpEpisode);
                 reloadUserDataButtons(view, currentItem);
                 requestActionBarLayout(view);
                 return;
             }
             renderItem(versionItem, user);
-            renderVideoSelections(view, self._currentPlaybackMediaSources!);
-            renderAudioSelections(view, self._currentPlaybackMediaSources!);
-            renderSubtitleSelections(view, self._currentPlaybackMediaSources!);
+            if (self._currentPlaybackMediaSources?.length) {
+                renderVideoSelections(view, self._currentPlaybackMediaSources);
+                renderAudioSelections(view, self._currentPlaybackMediaSources);
+                renderSubtitleSelections(view, self._currentPlaybackMediaSources);
+            }
         }).catch(function (err) {
+            if (!active || destroyed || request !== versionRequest) return;
             console.error('failed to load alternate version item', err);
         });
     }

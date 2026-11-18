@@ -4,6 +4,8 @@ const loadZone = new WeakSet<HTMLElement>();
 const pendingImages = new WeakMap<HTMLElement, PendingImage>();
 const readyImages: PendingImage[] = [];
 let framePending = false;
+let nextImage = 0;
+const MAX_INSPECTIONS_PER_FRAME = 32;
 
 export function setInLoadZone(target: HTMLElement, inside: boolean) {
     if (inside) {
@@ -26,8 +28,10 @@ function hidePlaceholder(target: HTMLElement) {
 
 function applyNextImage() {
     framePending = false;
-    while (readyImages.length) {
-        const request = readyImages.shift()!;
+    let inspected = 0;
+    while (nextImage < readyImages.length && inspected < MAX_INSPECTIONS_PER_FRAME) {
+        const request = readyImages[nextImage++];
+        inspected++;
         const { target, url, requireLoadZone } = request;
         if (pendingImages.get(target) !== request) {
             continue;
@@ -48,7 +52,12 @@ function applyNextImage() {
         hidePlaceholder(target);
         break;
     }
-    if (readyImages.length) scheduleFrame();
+    if (nextImage < readyImages.length) {
+        scheduleFrame();
+    } else {
+        readyImages.length = 0;
+        nextImage = 0;
+    }
 }
 
 function scheduleFrame() {

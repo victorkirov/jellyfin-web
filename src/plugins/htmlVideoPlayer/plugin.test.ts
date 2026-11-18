@@ -173,3 +173,18 @@ it('creates and reuses fullscreen video without an animation completion event', 
     expect(document.querySelector<HTMLElement>('.videoPlayerContainer')?.style.animation).toBe('');
     expect(await player.createMediaElement(options)).toBe(element);
 });
+
+describe('browser picture in picture', () => {
+    it('does not advertise or enter the unsupported Windows view mode', () => {
+        const enterViewMode = vi.fn();
+        vi.stubGlobal('Windows', { UI: { ViewManagement: {
+            ApplicationView: { getForCurrentView: () => ({ isViewModeSupported: () => true, tryEnterViewModeAsync: enterViewMode }) },
+            ApplicationViewMode: { compactOverlay: 1, default: 0 }
+        } } });
+        const player = new HtmlVideoPlayer();
+        expect(HtmlVideoPlayer.getSupportedFeatures()).not.toContain('PictureInPicture');
+        player.setPictureInPictureEnabled(true);
+        expect(player.isPictureInPictureEnabled()).toBe(false);
+        expect(enterViewMode).not.toHaveBeenCalled();
+    });
+});
