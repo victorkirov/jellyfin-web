@@ -1,17 +1,22 @@
 import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { UserSettings } from 'scripts/settings/userSettings';
 import PlaybackSettings from './playbackSettings';
 import SubtitleSettings from '../subtitlesettings/subtitlesettings';
 import appSettings from '../../scripts/settings/appSettings';
 import Events from '../../utils/events';
 import focusManager from '../../lib/focusManager';
+import loading from '../loading/loading';
+
+const pending = vi.hoisted(() => ({ endpoint: vi.fn(), multiServer: true }));
 
 vi.mock('lib/jellyfin-apiclient', () => ({ ServerConnections: { getApiClient: () => ({
     getUser: () => Promise.resolve({ Id: 'user', Policy: { EnableVideoPlaybackTranscoding: true, EnableAudioPlaybackTranscoding: true } }),
+    getEndpointInfo: pending.endpoint,
     getCurrentUserId: () => 'user'
 }) } }));
-vi.mock('components/apphost', () => ({ appHost: { supports: () => true } }));
+vi.mock('components/apphost', () => ({ appHost: { supports: (feature: string) => feature !== 'multiserver' || pending.multiServer } }));
 vi.mock('lib/layoutManager', () => ({ default: { tv: true } }));
 vi.mock('scripts/browser', () => ({ default: { web0s: true, safari: true } }));
 vi.mock('lib/scrollManager', () => ({ default: { isEnabled: () => false } }));
@@ -59,12 +64,12 @@ function formValues(element: HTMLElement) {
     }));
 }
 
-async function mount(Component: typeof PlaybackSettings | typeof SubtitleSettings, userSettings: ReturnType<typeof settings>) {
+async function mount(Component: typeof PlaybackSettings | typeof SubtitleSettings, userSettings: ReturnType<typeof settings>, autoFocus = false) {
     const element = document.createElement('div');
     document.body.appendChild(element);
     const slider = HTMLInputElement.prototype as HTMLInputElement & { enableKeyboardDragging?: () => void };
     slider.enableKeyboardDragging = vi.fn();
-    const instance = new Component({ element, userSettings, userId: 'user', enableSaveButton: true });
+    const instance = new Component({ element, userSettings: userSettings as unknown as UserSettings, userId: 'user', enableSaveButton: true, autoFocus });
     await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
@@ -74,6 +79,8 @@ async function mount(Component: typeof PlaybackSettings | typeof SubtitleSetting
 
 beforeEach(() => {
     document.body.innerHTML = '';
+    pending.multiServer = true;
+    pending.endpoint.mockResolvedValue({ IsInNetwork: true });
     // jsdom has no layout; expose the visibility measurement used by focusManager.
     vi.spyOn(HTMLElement.prototype, 'offsetParent', 'get').mockImplementation(function (this: HTMLElement) {
         return this.closest('.hide') ? null : document.body;
@@ -151,4 +158,71 @@ describe('TV settings disclosures', () => {
         expect(element.textContent).not.toContain('SubtitleAppearanceSettingsAlsoPassedToCastDevices');
         instance.destroy();
     });
+});
+
+it('waits for endpoint visibility and focuses the first quality control', async () => {
+    pending.multiServer = false;
+    let resolve!: (value: { IsInNetwork: boolean }) => void;
+    pending.endpoint.mockReturnValue(new Promise(done => {
+        resolve = done;
+    }));
+    const focus = vi.spyOn(focusManager, 'focus');
+    const { instance, element } = await mount(PlaybackSettings, settings(), true);
+    expect(focus).not.toHaveBeenCalled();
+    resolve({ IsInNetwork: true });
+    await vi.waitFor(() => expect(focus).toHaveBeenCalled());
+    expect(document.activeElement).toBe(element.querySelector('.selectVideoInNetworkQuality'));
+    instance.destroy();
+});
+
+it.each(['move', 'leave', 'destroy'] as const)('does not steal focus after the user chooses to %s during load', async action => {
+    pending.multiServer = false;
+    let resolve!: (value: { IsInNetwork: boolean }) => void;
+    pending.endpoint.mockReturnValue(new Promise(done => {
+        resolve = done;
+    }));
+    const focus = vi.spyOn(focusManager, 'focus');
+    const { instance, element } = await mount(PlaybackSettings, settings(), true);
+    if (action === 'move') element.querySelector<HTMLSelectElement>('#selectAllowedAudioChannels')!.focus();
+    if (action === 'leave') element.remove();
+    if (action === 'destroy') instance.destroy();
+    resolve({ IsInNetwork: true });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(focus).not.toHaveBeenCalled();
+    if (action !== 'destroy') instance.destroy();
+});
+
+it('preserves restored focus when the cached view reloads its data', async () => {
+    const userSettings = settings();
+    const { instance, element } = await mount(PlaybackSettings, userSettings, true);
+    await vi.waitFor(() => expect(document.activeElement).toBe(element.querySelector('.selectVideoInNetworkQuality')));
+    element.querySelector<HTMLButtonElement>('.btnSettingsAdvanced')!.click();
+    const restoredControl = element.querySelector<HTMLSelectElement>('#selectAudioNormalization')!;
+    restoredControl.focus();
+    await instance.loadData();
+    expect(userSettings.setUserInfo).toHaveBeenCalledTimes(2);
+    expect(document.activeElement).toBe(restoredControl);
+    instance.destroy();
+});
+
+it.each(['destroy', 'detach'] as const)('hides the loading spinner after the view is removed by %s during user settings load', async action => {
+    const userSettings = settings();
+    let finishLoading!: () => void;
+    userSettings.setUserInfo.mockReturnValueOnce(new Promise<void>(resolve => {
+        finishLoading = resolve;
+    }));
+    const element = document.createElement('div');
+    document.body.appendChild(element);
+    const instance = new PlaybackSettings({ element, userId: 'user', userSettings: userSettings as unknown as UserSettings });
+    vi.mocked(loading.hide).mockClear();
+    await Promise.resolve();
+    expect(userSettings.setUserInfo).toHaveBeenCalledTimes(1);
+    expect(loading.hide).not.toHaveBeenCalled();
+    if (action === 'destroy') instance.destroy();
+    else element.remove();
+    finishLoading();
+    await Promise.resolve();
+    expect(loading.hide).toHaveBeenCalledTimes(1);
+    if (action !== 'destroy') instance.destroy();
 });

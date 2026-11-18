@@ -35,6 +35,13 @@
     z-index: 1;
 }
 
+.layout-tv .emby-button.show-focus.block:focus,
+.layout-tv .emby-button.show-focus.emby-collapsible-button:focus,
+.layout-tv .emby-button.show-focus.listItem:focus,
+.layout-tv .emby-button.show-focus.listItem-border:focus {
+    transform: none;
+}
+
 .emby-button::-moz-focus-inner {
     border: 0;
 }

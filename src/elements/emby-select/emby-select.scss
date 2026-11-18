@@ -55,15 +55,6 @@
     padding-right: 0;
 }
 
-.emby-select-focusscale {
-    transform-origin: center center;
-}
-
-.emby-select-focusscale:focus {
-    transform: scale(1.04);
-    z-index: 1;
-}
-
 .emby-select + .fieldDescription {
     margin-top: 0.25em;
 }

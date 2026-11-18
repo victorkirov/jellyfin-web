@@ -22,7 +22,6 @@ import template from './displaySettings.template.html';
 import '../select/emby-select';
 import '../../elements/emby-checkbox/emby-checkbox';
 import '../buttons/emby-button';
-import '../../elements/emby-textarea/emby-textarea';
 
 function loadScreensavers(context: HTMLElement, userSettings: UserSettings) {
     const selectScreensaver = context.querySelector<HTMLSelectElement>('.selectScreensaver')!;
@@ -91,10 +90,6 @@ function loadForm(context: HTMLElement, userSettings: UserSettings) {
     context.querySelector<HTMLInputElement>('#chkThemeVideo')!.checked = userSettings.enableThemeVideos();
     context.querySelector<HTMLInputElement>('#chkBlurhash')!.checked = userSettings.enableBlurhash();
     context.querySelector<HTMLInputElement>('#chkBackdrops')!.checked = userSettings.enableBackdrops();
-    context.querySelector<HTMLInputElement>('#chkDetailsBanner')!.checked = userSettings.detailsBanner();
-
-    context.querySelector<HTMLInputElement>('#chkDisableCustomCss')!.checked = userSettings.disableCustomCss();
-    context.querySelector<HTMLTextAreaElement>('#txtLocalCustomCss')!.value = userSettings.customCss()!;
 
     context.querySelector<HTMLSelectElement>('#selectLanguage')!.value = userSettings.language() || '';
     context.querySelector<HTMLSelectElement>('.selectDateTimeLocale')!.value = userSettings.dateTimeLocale() || '';
@@ -129,10 +124,6 @@ function saveUser(context: HTMLElement, userSettingsInstance: UserSettings) {
 
     userSettingsInstance.enableBlurhash(context.querySelector<HTMLInputElement>('#chkBlurhash')!.checked);
     userSettingsInstance.enableBackdrops(context.querySelector<HTMLInputElement>('#chkBackdrops')!.checked);
-    userSettingsInstance.detailsBanner(context.querySelector<HTMLInputElement>('#chkDetailsBanner')!.checked);
-
-    userSettingsInstance.disableCustomCss(context.querySelector<HTMLInputElement>('#chkDisableCustomCss')!.checked);
-    userSettingsInstance.customCss(context.querySelector<HTMLTextAreaElement>('#txtLocalCustomCss')!.value);
 }
 
 function save(instance: DisplaySettings, context: HTMLElement, userSettings: UserSettings, enableSaveConfirmation?: boolean) {

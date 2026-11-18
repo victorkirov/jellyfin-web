@@ -171,16 +171,18 @@ a[data-role="button"],
 }
 
 .button-submit {
-    background: var(--jf-palette-primary-main, $primary-main);
-    color: var(--jf-palette-primary-contrastText, $primary-contrastText);
+    background: var(--jf-palette-Button-inheritContainedBg, $button-inheritContainedBg);
+    color: var(--jf-palette-text-primary, $text-primary);
+    box-shadow: inset 0 0 0 0.12em var(--jf-palette-primary-main, $primary-main);
 
     &:hover {
-        background: var(--jf-palette-primary-dark, $primary-dark);
+        background: transparent;
     }
 
     &:focus {
         background: var(--jf-palette-secondary-main, $secondary-main);
         color: var(--jf-palette-secondary-contrastText, $secondary-contrastText);
+        box-shadow: none;
     }
 }
 

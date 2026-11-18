@@ -53,6 +53,11 @@
             cursor: none !important;
         }
 
+        /* webcomponents-lite injects a body fade; TV startup must stay static. */
+        body {
+            transition: none !important;
+        }
+
         html {
             background-color: #101010;
             color: rgba(255, 255, 255, 0.7);

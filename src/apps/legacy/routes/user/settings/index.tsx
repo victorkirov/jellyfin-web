@@ -1,5 +1,5 @@
 import type { UserDto } from '@jellyfin/sdk/lib/generated-client/models/user-dto';
-import React, { useEffect, useMemo, useState, type FC } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState, type FC } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { appHost } from 'components/apphost';
@@ -13,8 +13,11 @@ import { useUsers } from 'hooks/useUsers';
 import globalize from 'lib/globalize';
 import Dashboard from 'components/dashboard';
 import shell from 'scripts/shell';
+import focusManager from 'lib/focusManager';
+import 'components/listview/listview.scss';
 
 const UserSettingsPage: FC = () => {
+    const menu = useRef<HTMLDivElement>(null);
     const { user: currentUser } = useApi();
     const [ searchParams ] = useSearchParams();
     const {
@@ -38,6 +41,15 @@ const UserSettingsPage: FC = () => {
         }
     }, [ currentUser, userId, users ]);
 
+    useLayoutEffect(() => {
+        const list = menu.current;
+        const page = list?.closest('.page');
+        if (!list || !page) return;
+        const onShow = () => focusManager.focus(list.querySelector<HTMLElement>('.lnkPlaybackPreferences'));
+        page.addEventListener('viewshow', onShow);
+        return () => page.removeEventListener('viewshow', onShow);
+    }, [user, isQuickConnectEnabledPending]);
+
     if (!userId || !user || isQuickConnectEnabledPending) {
         return (
             <Loading />
@@ -49,11 +61,11 @@ const UserSettingsPage: FC = () => {
             id='myPreferencesMenuPage'
             className='libraryPage userPreferencesPage noSecondaryNavPage mainAnimatedPage'
             title={globalize.translate('Settings')}
-            shouldAutoFocus
         >
             <div className='padded-left padded-right padded-bottom-page padded-top'>
                 <div
-                    className='readOnlyContent'
+                    ref={menu}
+                    className='readOnlyContent focuscontainer-x'
                     style={{
                         margin: '0 auto'
                     }}
@@ -65,7 +77,7 @@ const UserSettingsPage: FC = () => {
                                 paddingLeft: '0.25em'
                             }}
                         >
-                            {user.Name}
+                            {globalize.translate('SettingsThisTV')}
                         </h2>
 
                         <LinkButton
@@ -177,7 +189,7 @@ const UserSettingsPage: FC = () => {
                                     paddingLeft: '0.25em'
                                 }}
                             >
-                                {globalize.translate('HeaderUser')}
+                                {globalize.translate('SettingsAccount', user.Name || '')}
                             </h2>
 
                             {appHost.supports(AppFeature.MultiServer) && (
