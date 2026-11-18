@@ -3,11 +3,11 @@
     <div class="pageTabContent" id="seriesTab" data-index="0">
         <div class="libraryRail focuscontainer-y">
             <div class="alphaPicker"></div>
-            <button is="paper-icon-button-light" class="btnSort autoSize" title="${Sort}"><span class="material-icons sort_by_alpha" aria-hidden="true"></span></button>
+            <button is="paper-icon-button-light" class="btnSort autoSize" title="${Sort}"><span class="material-icons sort_by_alpha" aria-hidden="true"></span><span class="libraryRailLabel" aria-hidden="true">${Sort}</span></button>
             <div class="btnFilter-wrapper">
-                <button is="paper-icon-button-light" class="btnFilter autoSize" title="${Filter}"><span class="material-icons filter_alt" aria-hidden="true"></span></button>
+                <button is="paper-icon-button-light" class="btnFilter autoSize" title="${Filter}"><span class="material-icons filter_alt" aria-hidden="true"></span><span class="libraryRailLabel" aria-hidden="true">${Filter}</span></button>
             </div>
-            <button is="paper-icon-button-light" class="btnSelectView autoSize" title="${ButtonSelectView}"><span class="material-icons view_comfy" aria-hidden="true"></span></button>
+            <button is="paper-icon-button-light" class="btnSelectView autoSize" title="${ButtonSelectView}"><span class="material-icons view_comfy" aria-hidden="true"></span><span class="libraryRailLabel" aria-hidden="true">${LibraryViewLabel}</span></button>
             <div class="paging"></div>
         </div>
         <div is="emby-itemscontainer" class="itemsContainer focuscontainer-x padded-left padded-right"></div>
@@ -46,7 +46,7 @@
         </div>
         <div class="noItemsMessage centerMessage" style="display: none;">
             <h1>${MessageNothingHere}</h1>
-            <p>${MessagePleaseEnsureInternetMetadata}</p>
+            <p>${LibraryNoUpcomingEpisodes}</p>
         </div>
     </div>
     <div class="pageTabContent" id="genresTab" data-index="3">
@@ -57,11 +57,11 @@
     </div>
     <div class="pageTabContent" id="episodesTab" data-index="5">
         <div class="libraryRail focuscontainer-y">
-            <button is="paper-icon-button-light" class="btnSort autoSize" title="${Sort}"><span class="material-icons sort_by_alpha" aria-hidden="true"></span></button>
+            <button is="paper-icon-button-light" class="btnSort autoSize" title="${Sort}"><span class="material-icons sort_by_alpha" aria-hidden="true"></span><span class="libraryRailLabel" aria-hidden="true">${Sort}</span></button>
             <div class="btnFilter-wrapper">
-                <button is="paper-icon-button-light" class="btnFilter autoSize" title="${Filter}"><span class="material-icons filter_alt" aria-hidden="true"></span></button>
+                <button is="paper-icon-button-light" class="btnFilter autoSize" title="${Filter}"><span class="material-icons filter_alt" aria-hidden="true"></span><span class="libraryRailLabel" aria-hidden="true">${Filter}</span></button>
             </div>
-            <button is="paper-icon-button-light" class="btnSelectView autoSize" title="${ButtonSelectView}"><span class="material-icons view_comfy" aria-hidden="true"></span></button>
+            <button is="paper-icon-button-light" class="btnSelectView autoSize" title="${ButtonSelectView}"><span class="material-icons view_comfy" aria-hidden="true"></span><span class="libraryRailLabel" aria-hidden="true">${LibraryViewLabel}</span></button>
             <div class="paging"></div>
         </div>
         <div is="emby-itemscontainer" class="itemsContainer focuscontainer-x vertical-wrap padded-left padded-right">

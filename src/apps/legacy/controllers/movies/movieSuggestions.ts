@@ -1,3 +1,4 @@
+import { createLibraryInitialFocus } from '../libraryRail';
 import * as userSettings from 'scripts/settings/userSettings';
 import type { LibraryApiGetLatestMediaRequest } from '@jellyfin/sdk/lib/generated-client/api/library-api';
 import type { LibraryResult } from '../libraryControllerTypes';
@@ -30,7 +31,7 @@ function loadLatest(page: HTMLElement, userId: string, parentId?: string) {
         enableImageTypes: ['Primary', 'Backdrop', 'Banner', 'Thumb']
     };
     const api = ServerConnections.getApi(window.ApiClient.serverId());
-    void queryClient.fetchQuery(getLatestMediaQuery(api, options)).then(function (items) {
+    return queryClient.fetchQuery(getLatestMediaQuery(api, options)).then(function (items) {
         const allowBottomPadding = !enableScrollX();
         const container = page.querySelector<HTMLElement>('#recentlyAddedItems')!;
         cardBuilder.buildCards(items, {
@@ -43,9 +44,6 @@ function loadLatest(page: HTMLElement, userId: string, parentId?: string) {
             showYear: true,
             centerText: true
         });
-
-        // FIXME: Wait for all sections to load
-        autoFocus(page);
     });
 }
 
@@ -65,7 +63,7 @@ function loadResume(page: HTMLElement, userId: string, parentId?: string) {
         EnableImageTypes: 'Primary,Backdrop,Banner,Thumb',
         EnableTotalRecordCount: false
     };
-    void window.ApiClient.getItems(userId, options).then(function (response) {
+    return window.ApiClient.getItems(userId, options).then(function (response) {
         const result = response as LibraryResult;
         if (result.Items.length) {
             page.querySelector<HTMLElement>('#resumableSection')!.classList.remove('hide');
@@ -87,9 +85,6 @@ function loadResume(page: HTMLElement, userId: string, parentId?: string) {
             showYear: true,
             centerText: true
         });
-
-        // FIXME: Wait for all sections to load
-        autoFocus(page);
     });
 }
 
@@ -165,7 +160,7 @@ function loadSuggestions(page: HTMLElement, userId: string, parentId?: string) {
         ImageTypeLimit: 1,
         EnableImageTypes: 'Primary,Backdrop,Banner,Thumb'
     });
-    void window.ApiClient.getJSON(url).then(function (recommendations: Parameters<typeof getRecommendationHtml>[0][]) {
+    return window.ApiClient.getJSON(url).then(function (recommendations: Parameters<typeof getRecommendationHtml>[0][]) {
         if (!recommendations.length) {
             page.querySelector<HTMLElement>('.noItemsMessage')!.classList.remove('hide');
             page.querySelector<HTMLElement>('.recommendations')!.innerHTML = '';
@@ -177,15 +172,6 @@ function loadSuggestions(page: HTMLElement, userId: string, parentId?: string) {
         const recs = page.querySelector<HTMLElement>('.recommendations')!;
         recs.innerHTML = html;
         imageLoader.lazyChildren(recs);
-
-        // FIXME: Wait for all sections to load
-        autoFocus(page);
-    });
-}
-
-function autoFocus(page: HTMLElement) {
-    void import('components/autoFocuser').then(({ default: autoFocuser }) => {
-        autoFocuser.autoFocus(page);
     });
 }
 
@@ -217,12 +203,21 @@ export function initSuggestedTab(_page: HTMLElement, tabContent: HTMLElement) {
     }
 }
 
-export function loadSuggestionsTab(_view: HTMLElement, params: RecommendedParams, tabContent: HTMLElement) {
+export function loadSuggestionsTab(view: HTMLElement, params: RecommendedParams, tabContent: HTMLElement) {
     const parentId = params.topParentId;
     const userId = window.ApiClient.getCurrentUserId();
-    loadResume(tabContent, userId, parentId);
-    loadLatest(tabContent, userId, parentId);
-    loadSuggestions(tabContent, userId, parentId);
+    const focus = createLibraryInitialFocus(view, tabContent);
+    const resume = loadResume(tabContent, userId, parentId).catch(console.error);
+    const latest = loadLatest(tabContent, userId, parentId).catch(console.error);
+    const suggestions = loadSuggestions(tabContent, userId, parentId).catch(console.error);
+    // Resolve in display order while keeping the requests concurrent.
+    return resume.then(() => {
+        if (tabContent.querySelector('#resumableItems .card')) return;
+        return latest.then(() => {
+            if (tabContent.querySelector('#recentlyAddedItems .card')) return;
+            return suggestions;
+        });
+    }).then(focus);
 }
 
 export function getTabs() {

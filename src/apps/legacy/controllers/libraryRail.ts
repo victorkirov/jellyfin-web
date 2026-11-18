@@ -32,12 +32,30 @@ export function focusLibraryContent(view: HTMLElement) {
     const railControl = pagingFocus.get(view);
     const rail = view.querySelector<HTMLElement>('.libraryRail');
     const target = railControl && rail?.querySelector<HTMLElement>(railControl + ':not(:disabled)');
-    if (target) focusManager.focus(target);
-    else if (!focusManager.autoFocus(view.querySelector('.itemsContainer') || view) && rail) focusManager.autoFocus(rail);
+    if (target) {
+        focusManager.focus(target);
+    } else {
+        const card = firstLibraryCard(view);
+        if (card) focusManager.focus(card);
+        else if (rail) focusManager.autoFocus(rail);
+    }
 }
 
 function cardTarget(card: HTMLElement) {
     return card.matches('a,button,.focusable') ? card : card.querySelector<HTMLElement>('a,button,.focusable');
+}
+
+function firstLibraryCard(view: HTMLElement) {
+    const cards = view.querySelectorAll<HTMLElement>('.itemsContainer .card,.itemsContainer .listItem');
+    const card = Array.from(cards).find(element => element.offsetParent !== null);
+    return card && cardTarget(card);
+}
+
+type TabMemory = { card?: HTMLElement; scrollY?: number };
+type ColumnMemory = { card: HTMLElement; column: number };
+
+function hasTabMemory(tab: HTMLElement) {
+    return tab.id === 'studiosTab' || Boolean(tab.querySelector('.libraryRail'));
 }
 
 function rowCards(container: HTMLElement) {
@@ -46,7 +64,8 @@ function rowCards(container: HTMLElement) {
 
 /** Page-local arrow boundaries; no per-card listeners or observers. */
 export function bindLibraryRail(view: HTMLElement) {
-    const memories = new Map<HTMLElement, { card?: HTMLElement; firstRow?: HTMLElement }>();
+    const memories = new Map<HTMLElement, TabMemory>();
+    const columns = new WeakMap<HTMLElement, ColumnMemory>();
     function memory(tab: HTMLElement) {
         let value = memories.get(tab);
         if (!value) {
@@ -60,14 +79,17 @@ export function bindLibraryRail(view: HTMLElement) {
     }
     function returnToGrid(tab: HTMLElement, remembered?: HTMLElement) {
         const container = tab.querySelector<HTMLElement>('.itemsContainer');
-        if (remembered && container?.contains(remembered)) focusManager.focus(cardTarget(remembered));
-        else focusLibraryContent(tab);
+        if (remembered && tab.contains(remembered)) focusManager.focus(cardTarget(remembered));
+        else if (firstLibraryCard(tab)) focusLibraryContent(tab);
+        else if (container) focusManager.autoFocus(tab.querySelector('.libraryRail') || container);
     }
     function tabDown(event: Event) {
         const tab = Array.from(view.querySelectorAll<HTMLElement>('.pageTabContent')).find(element => element.offsetParent !== null);
-        if (!tab?.querySelector('.libraryRail')) return;
+        if (!tab || !hasTabMemory(tab)) return;
         event.preventDefault();
-        returnToGrid(tab, memory(tab).firstRow);
+        const saved = memory(tab);
+        returnToGrid(tab, saved.card);
+        if (saved.card && tab.contains(saved.card) && saved.scrollY != null) window.scrollTo(0, saved.scrollY);
     }
     const onCommand: EventListener = event => {
         const command = (event as CustomEvent<{ command: string }>).detail.command;
@@ -83,12 +105,13 @@ export function bindLibraryRail(view: HTMLElement) {
         if (rail?.contains(source)) {
             if (command === 'right') {
                 event.preventDefault();
-                returnToGrid(tab, memory(tab).card);
+                if (firstLibraryCard(tab)) returnToGrid(tab, memory(tab).card);
                 return;
             }
             target = railTarget(source, command, visibleButtons(rail));
+            if (target?.classList.contains('emby-tab-button-active')) memory(tab).scrollY = window.pageYOffset;
         } else {
-            target = gridBoundary(source, tab, command, rail, memory(tab));
+            target = gridBoundary(source, tab, command, rail, memory(tab), columns);
         }
         if (target) {
             event.preventDefault();
@@ -97,7 +120,10 @@ export function bindLibraryRail(view: HTMLElement) {
     };
     view.addEventListener('alphavaluechanged', event => {
         const tab = (event.target as HTMLElement).closest<HTMLElement>('.pageTabContent');
-        if (tab?.querySelector('.libraryRail')) letterFocus.add(tab);
+        if (tab?.querySelector('.libraryRail')) {
+            letterFocus.add(tab);
+            memories.delete(tab);
+        }
     }, true);
     view.addEventListener('alphavalueconfirmed', event => {
         const target = event.target as HTMLElement;
@@ -122,10 +148,10 @@ export function bindLibraryRail(view: HTMLElement) {
     view.addEventListener('viewdestroy', () => setListening(false));
 }
 
-function gridBoundary(source: HTMLElement, tab: HTMLElement, command: string, rail: HTMLElement | null, memory: { card?: HTMLElement; firstRow?: HTMLElement }) {
+function gridBoundary(source: HTMLElement, tab: HTMLElement, command: string, rail: HTMLElement | null, memory: TabMemory, columns: WeakMap<HTMLElement, ColumnMemory>) {
     const container = source.closest<HTMLElement>('.itemsContainer');
     const card = source.closest<HTMLElement>('.card,.listItem');
-    if (!container || !card) return bottomPagingBoundary(source, tab, command);
+    if (!container || !card) return bottomPagingBoundary(source, tab, command, memory);
     // Dynamic Genres/Suggestions rows also stay within their horizontal container.
     if (!container.classList.contains('focuscontainer-x')) container.classList.add('focuscontainer-x');
     const previous = card.previousElementSibling as HTMLElement | null;
@@ -133,13 +159,16 @@ function gridBoundary(source: HTMLElement, tab: HTMLElement, command: string, ra
     const first = container.firstElementChild as HTMLElement | null;
     if (command === 'left' && (!previous || previous.offsetTop !== card.offsetTop)) {
         memory.card = card;
-        return rail?.querySelector<HTMLElement>('.alphaPickerTrigger:not([disabled])')?.offsetParent ? rail.querySelector<HTMLElement>('.alphaPickerTrigger') : rail && Array.from(rail.querySelectorAll<HTMLButtonElement>('button')).find(button => !button.disabled && button.offsetParent !== null) || source;
+        return rail && Array.from(rail.querySelectorAll<HTMLButtonElement>('button')).find(button => !button.disabled && button.offsetParent !== null) || source;
     }
     if (command === 'right' && (!next || next.offsetTop !== card.offsetTop)) return source;
-    if (rail && command === 'up' && first?.offsetTop === card.offsetTop) {
-        memory.firstRow = card;
+    if (hasTabMemory(tab) && command === 'up' && first?.offsetTop === card.offsetTop && container.contains(firstLibraryCard(tab) || null)) {
+        memory.card = card;
+        memory.scrollY = window.pageYOffset;
         return document.querySelector<HTMLElement>('.emby-tab-button-active');
     }
+    const vertical = verticalGridTarget(container, card, command, columns);
+    if (vertical) return vertical;
     if (rail && command === 'down') {
         const last = container.lastElementChild as HTMLElement | null;
         if (last?.offsetTop === card.offsetTop) {
@@ -151,8 +180,37 @@ function gridBoundary(source: HTMLElement, tab: HTMLElement, command: string, ra
     return null;
 }
 
-function bottomPagingBoundary(source: HTMLElement, tab: HTMLElement, command: string) {
-    if (command !== 'up' || !source.closest('.paging')) return null;
+function verticalGridTarget(container: HTMLElement, card: HTMLElement, command: string, columns: WeakMap<HTMLElement, ColumnMemory>) {
+    if (command === 'left' || command === 'right') columns.delete(container);
+    if (command === 'up' || command === 'down') {
+        const cards = rowCards(container);
+        const row = cards.filter(element => element.offsetTop === card.offsetTop);
+        let preferred = columns.get(container);
+        if (!preferred || preferred.card !== card || !container.contains(preferred.card)) {
+            preferred = { card, column: row.indexOf(card) };
+        }
+        const adjacent = command === 'down' ? cards.find(element => element.offsetTop > card.offsetTop) :
+            cards.slice().reverse().find(element => element.offsetTop < card.offsetTop);
+        if (adjacent) {
+            const nextRow = cards.filter(element => element.offsetTop === adjacent.offsetTop);
+            const target = nextRow[Math.min(preferred.column, nextRow.length - 1)];
+            columns.set(container, { card: target, column: preferred.column });
+            return cardTarget(target);
+        }
+    }
+    return null;
+}
+
+function bottomPagingBoundary(source: HTMLElement, tab: HTMLElement, command: string, memory: TabMemory) {
+    const paging = source.closest('.paging');
+    if (!paging) return null;
+    if (command === 'down') return source;
+    if (command === 'left' || command === 'right') {
+        const selector = command === 'left' ? '.btnPreviousPage' : '.btnNextPage';
+        return paging.querySelector<HTMLElement>(selector + ':not(:disabled):not([aria-disabled="true"])') || source;
+    }
+    if (command !== 'up') return null;
+    if (memory.card && tab.contains(memory.card)) return cardTarget(memory.card);
     const container = tab.querySelector<HTMLElement>('.itemsContainer');
     if (!container) return null;
     const cards = rowCards(container);
@@ -167,7 +225,9 @@ function bottomPagingBoundary(source: HTMLElement, tab: HTMLElement, command: st
 function railTarget(source: HTMLElement, command: string, buttons: HTMLButtonElement[]) {
     const index = buttons.indexOf(source as HTMLButtonElement);
     if (command === 'left') return source;
-    if (command === 'up') return buttons[Math.max(0, index - 1)];
+    if (command === 'up') return index === 0 ? document.querySelector<HTMLElement>('.emby-tab-button-active') : buttons[index - 1];
     if (command === 'down') return buttons[Math.min(buttons.length - 1, index + 1)];
     return null;
 }
+
+export { createInitialContentFocus as createLibraryInitialFocus } from 'components/initialContentFocus';

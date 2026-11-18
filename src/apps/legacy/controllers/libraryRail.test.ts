@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { bindLibraryRail, focusLibraryContent } from './libraryRail';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+import { bindLibraryRail, focusLibraryContent, createLibraryInitialFocus, focusLibraryRefresh } from './libraryRail';
 import { bindLibraryPaging } from './libraryPaging';
 import inputManager from 'scripts/inputManager';
 
@@ -15,10 +15,21 @@ vi.mock('lib/focusManager', () => ({ default: {
         return target;
     }
 } }));
-vi.mock('scripts/libraryBrowser', () => ({ default: { getQueryPagingHtml: ({ startIndex, limit, totalRecordCount }: { startIndex: number; limit: number; totalRecordCount: number }) => '<button class="btnPreviousPage" ' + (startIndex ? '' : 'disabled') + '>Previous</button><button class="btnNextPage" ' + (startIndex + limit >= totalRecordCount ? 'disabled' : '') + '>Next</button>' } }));
+vi.mock('scripts/libraryBrowser', async () => {
+    const { getQueryPagingHtml } = await import('scripts/libraryPagingMarkup');
+    return { default: { getQueryPagingHtml } };
+});
+vi.mock('lib/scrollManager', () => ({ default: { isEnabled: () => false } }));
 vi.mock('scripts/settings/userSettings', () => ({}));
 vi.mock('lib/globalize', () => ({ default: { translate: (label: string) => label } }));
 let view: HTMLElement;
+
+beforeEach(() => {
+    vi.spyOn(HTMLElement.prototype, 'offsetParent', 'get').mockImplementation(function (this: HTMLElement) {
+        return this.parentElement;
+    });
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+});
 
 afterEach(() => {
     view?.dispatchEvent(new Event('viewdestroy'));
@@ -101,11 +112,12 @@ describe('approved library focus walks', () => {
         tab.querySelector('.alphaPickerTrigger')!.dispatchEvent(new CustomEvent('alphavalueconfirmed', { bubbles: true }));
         expect(document.activeElement).toBe(cards[0]);
     });
-    it('12: rail follows DOM order, clamps at ends and ignores Back', () => {
-        const { tab, jump } = setup();
+    it('12: rail follows DOM order, reaches the tab above and ignores Back', () => {
+        const { tab, jump, activeTab } = setup();
         jump!.focus();
         key('up');
-        expect(document.activeElement).toBe(jump);
+        expect(document.activeElement).toBe(activeTab);
+        jump!.focus();
         for (const selector of ['.btnSort', '.btnFilter', '.btnSelectView']) {
             key('down');
             expect(document.activeElement).toBe(tab.querySelector(selector));
@@ -188,6 +200,7 @@ describe('approved library focus walks', () => {
         const { tab, activeTab } = setup(false, 0);
         activeTab.textContent = 'Suggestions';
         tab.innerHTML = '<div class="hide" id="resumableSection"><div class="itemsContainer" id="resumableItems"></div></div><div class="itemsContainer"><a href="#" class="card">Latest title</a></div>';
+        Object.defineProperty(tab.querySelector('.card'), 'offsetParent', { value: document.body });
         activeTab.focus();
         expect(key('down')).toBe(false);
     });
@@ -212,4 +225,186 @@ describe('approved library focus walks', () => {
         key('right');
         expect(document.activeElement).toBe(cards[0]);
     });
+});
+
+describe('SR4 library boundary regressions', () => {
+    it('2/15: bottom paging stays on Down and at horizontal ends; Up restores the card', () => {
+        const { tab, cards } = setup();
+        bindLibraryPaging({ view: tab, query: { StartIndex: 66, Limit: 66 }, totalRecordCount: 255, isLoading: () => false, getRequestId: () => 1, refresh: vi.fn() });
+        cards[64].focus();
+        key('down');
+        const next = document.activeElement;
+        expect(key('down')).toBe(true);
+        expect(document.activeElement).toBe(next);
+        key('right');
+        expect(document.activeElement).toBe(next);
+        key('left');
+        expect(document.activeElement).toBe(tab.querySelectorAll('.btnPreviousPage')[1]);
+        key('left');
+        expect(document.activeElement).toBe(tab.querySelectorAll('.btnPreviousPage')[1]);
+        key('up');
+        expect(document.activeElement).toBe(cards[64]);
+    });
+    it('7: deep card to Jump to tab and Down returns to the same card and scrollY', () => {
+        const { cards, activeTab } = setup();
+        Object.defineProperty(window, 'pageYOffset', { configurable: true, value: 5358 });
+        const scroll = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+        cards[60].focus();
+        key('left');
+        key('up');
+        expect(document.activeElement).toBe(activeTab);
+        key('down');
+        expect(document.activeElement).toBe(cards[60]);
+        expect(scroll).toHaveBeenLastCalledWith(0, 5358);
+    });
+    it('15: a short last row preserves the preferred column for Up', () => {
+        const { cards } = setup(true, 15);
+        cards[11].focus();
+        expect(key('down')).toBe(true);
+        expect(document.activeElement).toBe(cards[14]);
+        key('up');
+        expect(document.activeElement).toBe(cards[11]);
+        key('up');
+        expect(document.activeElement).toBe(cards[5]);
+    });
+    it('15: replacing cards discards the old preferred column and remembered paging target', () => {
+        const { cards, tab } = setup(true, 15);
+        cards[11].focus();
+        key('down');
+        const container = tab.querySelector('.itemsContainer')!;
+        const replacement = cards.map(card => card.cloneNode(true) as HTMLElement);
+        container.innerHTML = '';
+        replacement.forEach(card => {
+            container.appendChild(card);
+        });
+        replacement.forEach((card, index) => {
+            Object.defineProperty(card, 'offsetTop', { value: Math.floor(index / 6) * 500 });
+        });
+        replacement[7].focus();
+        key('down');
+        expect(document.activeElement).toBe(replacement[13]);
+        key('up');
+        expect(document.activeElement).toBe(replacement[7]);
+    });
+    it('20: Networks has the same tab return memory without a rail', () => {
+        const { tab, cards, activeTab } = setup(false);
+        tab.id = 'studiosTab';
+        cards[4].focus();
+        key('up');
+        expect(document.activeElement).toBe(activeTab);
+        key('down');
+        expect(document.activeElement).toBe(cards[4]);
+    });
+});
+
+it('4/6/13: rail paging keeps labelled slots on all list states and hides zero counts', () => {
+    const { tab, jump } = setup();
+    for (const totalRecordCount of [255, 3, 0]) {
+        const refresh = vi.fn();
+        bindLibraryPaging({ view: tab, query: { StartIndex: 0, Limit: 66 }, totalRecordCount, isLoading: () => false, getRequestId: () => 1, refresh });
+        const buttons = tab.querySelectorAll<HTMLButtonElement>('.libraryRail .paging button');
+        expect(buttons).toHaveLength(2);
+        expect(Array.from(buttons).map(button => button.querySelector('.libraryRailLabel')?.textContent)).toEqual(['Previous', 'Next']);
+        jump!.focus();
+        key('down');
+        key('down');
+        key('down');
+        key('down');
+        expect(document.activeElement).toBe(buttons[0]);
+        buttons[0].click();
+        expect(refresh).not.toHaveBeenCalled();
+        if (totalRecordCount < 66) {
+            expect(buttons[1].getAttribute('aria-disabled')).toBe('true');
+            buttons[1].click();
+            expect(refresh).not.toHaveBeenCalled();
+        }
+        if (!totalRecordCount) expect(tab.querySelectorAll('.listPaging > span:not(.hide)')).toHaveLength(0);
+    }
+});
+
+it('9: initial focus chooses the first visible section once, and navigation cancels late focus', () => {
+    const { tab, cards, jump } = setup();
+    const finish = createLibraryInitialFocus(view, tab);
+    finish();
+    expect(document.activeElement).toBe(cards[0]);
+    cards[5].focus();
+    finish();
+    expect(document.activeElement).toBe(cards[5]);
+    const late = createLibraryInitialFocus(view, tab);
+    jump!.focus();
+    late();
+    expect(document.activeElement).toBe(jump);
+    const hidden = createLibraryInitialFocus(view, tab);
+    view.dispatchEvent(new Event('viewbeforehide'));
+    hidden();
+    expect(document.activeElement).toBe(jump);
+});
+
+it('15: horizontal browsing resets the preferred column even when it returns to the short-row card', () => {
+    const { cards } = setup(true, 15);
+    cards[11].focus();
+    key('down');
+    expect(document.activeElement).toBe(cards[14]);
+    expect(key('left')).toBe(false);
+    cards[13].focus();
+    expect(key('right')).toBe(false);
+    cards[14].focus();
+    key('up');
+    expect(document.activeElement).toBe(cards[8]);
+});
+
+it('review 1: Genres tab Down reaches its first heading and first-card Up returns to that heading', async () => {
+    const { tab, cards, activeTab } = setup(false, 2);
+    const header = document.createElement('a');
+    header.href = '#genre';
+    header.className = 'sectionTitleTextButton btnMoreFromGenre';
+    header.textContent = 'Action';
+    tab.insertBefore(header, tab.firstChild);
+    const targets = [activeTab, header, ...cards];
+    targets.forEach((target, index) => {
+        const top = Math.min(index, 2) * 100;
+        vi.spyOn(target, 'getBoundingClientRect').mockReturnValue({ x: 100, y: top, left: 100, top, right: 200, bottom: top + 40, width: 100, height: 40, toJSON: () => ({}) });
+    });
+    const { default: spatial } = await vi.importActual<typeof import('lib/focusManager')>('lib/focusManager');
+    function walk(command: 'up' | 'down') {
+        if (!key(command)) {
+            const source = document.activeElement as HTMLElement;
+            if (command === 'down') spatial.moveDown(source, { container: document.body, focusableElements: targets });
+            else spatial.moveUp(source, { container: document.body, focusableElements: targets });
+        }
+    }
+    activeTab.focus();
+    walk('down');
+    expect(document.activeElement).toBe(header);
+    walk('down');
+    expect(document.activeElement).toBe(cards[0]);
+    walk('up');
+    expect(document.activeElement).toBe(header);
+});
+
+it('review 2: an empty letter refresh and repeated selection stay on Jump', () => {
+    const { tab, jump } = setup(true, 0);
+    jump!.focus();
+    jump!.dispatchEvent(new CustomEvent('alphavaluechanged', { bubbles: true }));
+    expect(focusLibraryRefresh(tab)).toBe(true);
+    expect(document.activeElement).toBe(jump);
+    jump!.dispatchEvent(new CustomEvent('alphavalueconfirmed', { bubbles: true }));
+    expect(document.activeElement).toBe(jump);
+    expect(window.scrollTo).not.toHaveBeenCalled();
+});
+
+it('review 2: the initial empty-tab decision focuses the active tab instead of Jump', () => {
+    const { tab, activeTab } = setup(true, 0);
+    activeTab.focus();
+    createLibraryInitialFocus(view, tab)();
+    expect(document.activeElement).toBe(activeTab);
+});
+
+it('review 4: redundant focusin on the starting tab does not cancel its initial content focus', () => {
+    const { tab, activeTab, cards } = setup();
+    activeTab.focus();
+    const finish = createLibraryInitialFocus(view, tab);
+    activeTab.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+    finish();
+    expect(document.activeElement).toBe(cards[0]);
 });

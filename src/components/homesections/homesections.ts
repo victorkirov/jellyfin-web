@@ -8,6 +8,7 @@ import ServerConnections from 'lib/jellyfin-apiclient/ServerConnections';
 import { queryClient } from 'utils/query/queryClient';
 
 import { deferSection } from './deferSection';
+import { destroyHomeRowFocus, pauseHomeRowFocus, resumeHomeRowFocus } from './homeRowFocus';
 
 import { loadSection } from './sectionComposition';
 import type { HomeContainer, HomeRow, ResumeOptions, HomeSettings } from './homeLifecycle';
@@ -97,6 +98,7 @@ function clearDeferredSections(elem: HomeContainer) {
 }
 
 export function destroySections(elem: HomeContainer) {
+    destroyHomeRowFocus(elem);
     clearDeferredSections(elem);
     const elems = elem.querySelectorAll<HomeRow>('.itemsContainer');
     for (const e of elems) {
@@ -109,6 +111,7 @@ export function destroySections(elem: HomeContainer) {
 }
 
 export function pause(elem: HomeContainer) {
+    pauseHomeRowFocus(elem);
     clearDeferredSections(elem);
     const elems = elem.querySelectorAll<HomeRow>('.itemsContainer');
     for (const e of elems) {
@@ -117,6 +120,7 @@ export function pause(elem: HomeContainer) {
 }
 
 export function resume(elem: HomeContainer, options: ResumeOptions) {
+    resumeHomeRowFocus(elem);
     clearDeferredSections(elem);
     const elems = elem.querySelectorAll<HomeRow>('.itemsContainer');
     const promises: Promise<unknown>[] = [];

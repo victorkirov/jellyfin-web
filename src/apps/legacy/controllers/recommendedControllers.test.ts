@@ -243,6 +243,7 @@ it('retains recommendation heading escaping and legacy missing-name failures', a
     let renderRecommendations!: (recommendations: Recommendation[]) => void;
     api.getJSON.mockReturnValueOnce({ then: (render: typeof renderRecommendations) => {
         renderRecommendations = render;
+        return Promise.resolve();
     } });
     const view = makeView(Movies);
     try {
@@ -258,6 +259,31 @@ it('retains recommendation heading escaping and legacy missing-name failures', a
         }
         renderRecommendations([{ RecommendationType: 'Unknown', Items: [] }]);
         expect(view.querySelector('.recommendations h2')?.textContent).toBe('');
+    } finally {
+        view.dispatchEvent(new Event('viewbeforehide'));
+        view.dispatchEvent(new Event('viewdestroy'));
+    }
+});
+
+it('review 3: leaving Suggestions while rows load does not refetch them on return', async () => {
+    let resolveResume!: (result: { Items: never[] }) => void;
+    api.getItems.mockReturnValue(new Promise(done => {
+        resolveResume = done;
+    }));
+    const view = makeView(Movies);
+    try {
+        select(1);
+        await vi.waitFor(() => expect(api.getItems).toHaveBeenCalledTimes(1));
+        select(0);
+        await vi.waitFor(() => expect(mocks.children[0]?.renderTab).toHaveBeenCalledTimes(1));
+        resolveResume({ Items: [] });
+        await vi.waitFor(() => expect(cardBuilder.buildCards).toHaveBeenCalledTimes(2));
+        await vi.dynamicImportSettled();
+        select(1);
+        await vi.dynamicImportSettled();
+        expect(api.getItems).toHaveBeenCalledTimes(1);
+        expect(api.getJSON).toHaveBeenCalledTimes(1);
+        expect(cardBuilder.buildCards).toHaveBeenCalledTimes(2);
     } finally {
         view.dispatchEvent(new Event('viewbeforehide'));
         view.dispatchEvent(new Event('viewdestroy'));

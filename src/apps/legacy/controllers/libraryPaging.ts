@@ -43,19 +43,7 @@ export function bindLibraryPaging({ view, query, totalRecordCount, isLoading, ge
         sortButton: false,
         filterButton: false
     });
-    for (const element of view.querySelectorAll('.paging')) {
-        element.innerHTML = pagingHtml;
-        for (const button of element.querySelectorAll('.btnPreviousPage,.btnNextPage')) {
-            const label = globalize.translate(button.classList.contains('btnNextPage') ? 'Next' : 'Previous');
-            button.setAttribute('aria-label', label);
-            button.setAttribute('title', label);
-            // Keep rail paging focusable at either end so repeated presses never eject focus.
-            if (element.closest('.libraryRail') && button.hasAttribute('disabled')) {
-                button.removeAttribute('disabled');
-                button.setAttribute('aria-disabled', 'true');
-            }
-        }
-    }
+    for (const element of view.querySelectorAll('.paging')) renderPaging(element, pagingHtml, totalRecordCount);
     function changePage(direction: number, control: Element) {
         if (isLoading() || (!query.Limit || query.Limit <= 0)) return;
         const previousStartIndex = query.StartIndex;
@@ -83,5 +71,30 @@ export function bindLibraryPaging({ view, query, totalRecordCount, isLoading, ge
     }
     for (const element of view.querySelectorAll('.btnPreviousPage')) {
         element.addEventListener('click', () => changePage(-1, element));
+    }
+}
+
+function railPagingButtons() {
+    return '<div><button is="paper-icon-button-light" class="btnPreviousPage autoSize" disabled><span class="material-icons arrow_back" aria-hidden="true"></span></button>'
+        + '<button is="paper-icon-button-light" class="btnNextPage autoSize" disabled><span class="material-icons arrow_forward" aria-hidden="true"></span></button></div>';
+}
+
+function renderPaging(element: Element, pagingHtml: string, totalRecordCount?: number) {
+    element.innerHTML = pagingHtml;
+    const rail = element.closest('.libraryRail');
+    if (totalRecordCount === 0) element.querySelector('.listPaging > span')?.classList.add('hide');
+    if (rail && !element.querySelector('.btnPreviousPage')) {
+        element.querySelector('.listPaging')?.insertAdjacentHTML('beforeend', railPagingButtons());
+    }
+    for (const button of element.querySelectorAll('.btnPreviousPage,.btnNextPage')) {
+        const label = globalize.translate(button.classList.contains('btnNextPage') ? 'Next' : 'Previous');
+        button.setAttribute('aria-label', label);
+        button.setAttribute('title', label);
+        // Keep rail paging focusable at either end so repeated presses never eject focus.
+        if (rail) button.insertAdjacentHTML('beforeend', '<span class="libraryRailLabel" aria-hidden="true">' + label + '</span>');
+        if (rail && button.hasAttribute('disabled')) {
+            button.removeAttribute('disabled');
+            button.setAttribute('aria-disabled', 'true');
+        }
     }
 }

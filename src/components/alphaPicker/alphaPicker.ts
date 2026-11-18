@@ -36,7 +36,7 @@ export class AlphaPicker {
         const element = options.element;
         if (options.mode !== 'keyboard') {
             element.classList.add('alphaPicker-jump');
-            element.innerHTML = '<button is="emby-button" class="raised alphaPickerTrigger" aria-label="' + globalize.translate('JumpToLetter') + '" aria-haspopup="dialog" aria-expanded="false">' + 'A–Z</button>';
+            element.innerHTML = '<button is="emby-button" class="raised alphaPickerTrigger" aria-label="' + globalize.translate('JumpToLetter') + ': A–Z" aria-haspopup="dialog" aria-expanded="false">' + 'A–Z</button>';
             const trigger = element.querySelector<HTMLButtonElement>('button')!;
             const openDialog = () => {
                 if (this.dialog) return;
@@ -101,6 +101,7 @@ export class AlphaPicker {
         const trigger = element.querySelector('.alphaPickerTrigger');
         if (trigger) {
             trigger.textContent = this._currentValue || 'A–Z';
+            trigger.setAttribute('aria-label', globalize.translate('JumpToLetter') + ': ' + trigger.textContent);
         }
 
         if (applyValue) {

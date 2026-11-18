@@ -137,3 +137,19 @@ describe('Library jump dialog', () => {
         picker.destroy();
     });
 });
+
+it('19: letter selection and All update the trigger accessible name without guessing missing letters', async () => {
+    const { picker, element, button } = createPicker();
+    button.click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    const trigger = element.querySelector<HTMLButtonElement>('button')!;
+    expect(trigger.getAttribute('aria-label')).toBe('JumpToLetter: A');
+    trigger.click();
+    const all = document.querySelector<HTMLButtonElement>('.alphaPickerDialog [data-value=""]')!;
+    all.focus();
+    expect(document.activeElement).toBe(all);
+    all.click();
+    expect(trigger.textContent).toBe('A–Z');
+    expect(trigger.getAttribute('aria-label')).toBe('JumpToLetter: A–Z');
+    picker.destroy();
+});

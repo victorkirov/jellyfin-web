@@ -108,7 +108,7 @@ export default class RecommendedPage {
 
         this.renderTab = () => {
             const tabContent = view.querySelector<HTMLElement>(".pageTabContent[data-index='" + suggestionsTabIndex + "']")!;
-            loadSuggestionsTab(view, params, tabContent);
+            void loadSuggestionsTab(view, params, tabContent);
         };
 
         view.addEventListener('viewshow', () => {

@@ -1,19 +1,26 @@
+@use '../../../themes/_base/palette';
+
 .layout-tv .libraryRail {
     position: fixed;
     left: 0.67em;
     top: 9.4em;
     width: 3.63em;
     z-index: 1;
+    background: palette.$background-default;
 
     button {
         display: block;
         box-sizing: border-box;
         width: 3.63rem;
-        height: 3.63rem;
+        height: 3.25rem;
         margin: 0;
-        padding: 0;
+        padding: 0 0 0.7rem;
+        position: relative;
         border-radius: 0.2em;
     }
+
+    // Transparent fixed buttons can lose their icon paint during scrolling.
+    .paper-icon-button-light { background: palette.$background-default; }
 
     .alphaPicker-jump { margin: 0; }
 
@@ -42,7 +49,7 @@
     left: 0;
     width: 7em;
     text-align: left;
-    font-size: 0.75em;
+    font-size: 0.85em;
     margin-bottom: 0.5em;
 }
 
@@ -58,4 +65,14 @@
 
 .layout-tv .libraryRail button[aria-disabled="true"]:focus {
     opacity: 1;
+}
+
+
+.layout-tv .libraryRail .paging + .btnPlayAll,
+.layout-tv .libraryRail .paging + .btnShuffle {
+    margin-top: 1em;
+}
+
+.layout-tv .libraryRail .alphaPickerTrigger {
+    padding-bottom: 0;
 }

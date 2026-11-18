@@ -1,5 +1,6 @@
 import type { ApiClient } from 'jellyfin-apiclient';
 import { beforeEach, expect, it, vi } from 'vitest';
+import focusManager from 'lib/focusManager';
 import FavoritesTab from 'apps/legacy/controllers/favorites';
 import { loadSections } from './favoriteitems';
 
@@ -24,7 +25,8 @@ vi.mock('components/itemscontainer/emby-itemscontainer', () => ({}));
 vi.mock('elements/emby-scroller/emby-scroller', () => ({}));
 vi.mock('lib/layoutManager', () => ({ default: { tv: true } }));
 vi.mock('lib/globalize', () => ({ default: { translate: (key: string) => key } }));
-vi.mock('lib/focusManager', () => ({ default: { autoFocus: vi.fn() } }));
+vi.mock('lib/focusManager', () => ({ default: { autoFocus: vi.fn(), focus: vi.fn((target: HTMLElement) => target?.focus()) } }));
+vi.mock('scripts/inputManager', () => ({ default: { on: vi.fn(), off: vi.fn() } }));
 vi.mock('utils/dom', () => ({ default: { getWindowSize: () => ({ innerWidth: 1920 }), parentWithClass: (element: Element) => element.parentElement?.parentElement } }));
 vi.mock('./images/imageLoader', () => ({ default: { lazyChildren: vi.fn() } }));
 vi.mock('./loading/loading', () => ({ default: { show: vi.fn(), hide: mocks.hide } }));
@@ -108,4 +110,43 @@ it('uses shared card-option changes in both preview and full-page callers', asyn
     }
     expect(mocks.cardOptions).toHaveBeenCalledTimes(2);
     tab.destroy();
+});
+
+it('9/13: empty Home Favorites focuses its active tab with one useful message', async () => {
+    vi.spyOn(HTMLElement.prototype, 'offsetParent', 'get').mockImplementation(function (this: HTMLElement) {
+        return this.parentElement;
+    });
+    document.body.innerHTML = '<button class="emby-tab-button-active">Favorites</button><section><div class="sections"></div></section>';
+    const view = document.querySelector<HTMLElement>('section')!;
+    const tab = new FavoritesTab(view, {});
+    for (const row of view.querySelectorAll<HTMLElement>('.itemsContainer')) Object.assign(row, { resume: () => Promise.resolve(), pause: vi.fn() });
+    await tab.onResume({ autoFocus: true });
+    await vi.waitFor(() => expect(document.activeElement).toBe(document.querySelector('button')));
+    expect(focusManager.focus).toHaveBeenCalledTimes(1);
+    expect(view.querySelector('.noFavoritesMessage:not(.hide)')?.textContent).toBe('LibraryNoFavorites');
+    tab.destroy();
+    document.body.innerHTML = '';
+});
+
+it('9: Home Favorites does not steal focus after navigation during row loading', async () => {
+    vi.spyOn(HTMLElement.prototype, 'offsetParent', 'get').mockImplementation(function (this: HTMLElement) {
+        return this.parentElement;
+    });
+    document.body.innerHTML = '<button class="emby-tab-button-active">Favorites</button><section><div class="sections"></div></section>';
+    const view = document.querySelector<HTMLElement>('section')!;
+    const tab = new FavoritesTab(view, {});
+    let resolve!: () => void;
+    const pending = new Promise<void>(done => {
+        resolve = done;
+    });
+    for (const row of view.querySelectorAll<HTMLElement>('.itemsContainer')) Object.assign(row, { resume: () => pending, pause: vi.fn() });
+    const loading = tab.onResume({ autoFocus: true });
+    document.querySelector<HTMLButtonElement>('button')!.focus();
+    resolve();
+    await loading;
+    await Promise.resolve();
+    expect(focusManager.focus).not.toHaveBeenCalled();
+    expect(focusManager.autoFocus).not.toHaveBeenCalled();
+    tab.destroy();
+    document.body.innerHTML = '';
 });

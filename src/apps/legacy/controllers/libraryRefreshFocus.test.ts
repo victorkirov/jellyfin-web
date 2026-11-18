@@ -14,7 +14,7 @@ vi.mock('scripts/settings/userSettings', () => ({
 vi.mock('components/loading/loading', () => ({ default: { show: vi.fn(), hide: vi.fn() } }));
 vi.mock('components/images/imageLoader', () => ({ default: { lazyChildren: vi.fn() } }));
 vi.mock('components/listview/listview', () => ({ default: { getListViewHtml: () => '<a class="card" href="#">Title</a>' } }));
-vi.mock('components/cardbuilder/cardBuilder', () => ({ default: { getCardsHtml: () => '<a class="card" href="#">Title</a>' } }));
+vi.mock('components/cardbuilder/cardBuilder', () => ({ default: { getCardsHtml: ({ items }: { items: unknown[] }) => items.length ? '<a class="card" href="#">Title</a>' : '' } }));
 vi.mock('components/alphaPicker/alphaPicker', () => {
     class Picker {
         updateControls() {
@@ -56,6 +56,9 @@ const result: Result = { Items: [{ Name: 'Title' }], TotalRecordCount: 1 };
 
 beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(HTMLElement.prototype, 'offsetParent', 'get').mockImplementation(function (this: HTMLElement) {
+        return this.parentElement;
+    });
     vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
     vi.stubGlobal('ApiClient', { getCurrentUserId: () => 'user', getItems: vi.fn().mockResolvedValue(result) });
 });
@@ -66,7 +69,7 @@ afterEach(() => {
     document.body.innerHTML = '';
 });
 
-function setup(kind: string) {
+function setup(kind: string, mode = 'movies') {
     view = document.createElement('main');
     view.innerHTML = '<section class="pageTabContent"><div class="libraryRail"><div class="alphaPicker"></div><button class="btnSort">Sort</button><button class="btnFilter">Filter</button><button class="btnSelectView">View</button><button class="btnPlayAll">Play all</button><div class="paging"></div></div><div class="itemsContainer"></div></section>';
     document.body.appendChild(view);
@@ -87,7 +90,7 @@ function setup(kind: string) {
         } });
         refresh = state.refresh;
     } else {
-        const controller = kind === 'Movies' ? new Movies(view, { topParentId: 'library' }, tab, { mode: 'movies' }) : new Shows(view, { topParentId: 'library' }, tab);
+        const controller = kind === 'Movies' ? new Movies(view, { topParentId: 'library' }, tab, { mode }) : new Shows(view, { topParentId: 'library' }, tab);
         controller.initTab?.();
         refresh = controller.renderTab;
     }
@@ -132,4 +135,26 @@ it('focuses the matching grid after a non-bubbling letter event reaches the shar
     tab.querySelector('.alphaPicker')!.dispatchEvent(new CustomEvent('alphavaluechanged', { detail: { value: 'D' } }));
     await settle(refresh);
     expect(document.activeElement).toBe(tab.querySelector('.card'));
+});
+
+it('9/13: empty Movies Favorites focuses the active tab, and late empty refresh preserves navigation', async () => {
+    const activeTab = document.createElement('button');
+    activeTab.className = 'emby-tab-button-active';
+    document.body.appendChild(activeTab);
+    const getItems = vi.mocked(window.ApiClient.getItems);
+    getItems.mockResolvedValue({ Items: [], TotalRecordCount: 0 });
+    const { tab, refresh } = setup('Movies', 'favorites');
+    await settle(refresh);
+    expect(document.activeElement).toBe(activeTab);
+    let resolve!: (response: Result) => void;
+    getItems.mockReturnValue(new Promise(done => {
+        resolve = done;
+    }));
+    const pending = refresh();
+    const sort = tab.querySelector<HTMLButtonElement>('.btnSort')!;
+    sort.focus();
+    resolve({ Items: [], TotalRecordCount: 0 });
+    await pending;
+    await vi.dynamicImportSettled();
+    expect(document.activeElement).toBe(sort);
 });

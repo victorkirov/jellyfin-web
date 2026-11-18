@@ -82,3 +82,21 @@ it('keeps rail filter labels on one line with ellipsis', () => {
     expect(label.overflow).toBe('hidden');
     expect(label.textOverflow).toBe('ellipsis');
 });
+
+it('paints a solid rail backing so unfocused controls remain visible after deep scrolling', () => {
+    const style = document.createElement('style');
+    style.textContent = compile('src/apps/legacy/controllers/libraryRail.scss').css;
+    document.head.appendChild(style);
+    document.documentElement.classList.add('layout-tv');
+    document.body.innerHTML = '<div class="libraryRail"></div>';
+    expect(getComputedStyle(document.querySelector('.libraryRail')!).backgroundColor).toBe('rgb(16, 16, 16)');
+});
+
+it('gives each fixed rail icon button an opaque backing for its own paint context', () => {
+    const style = document.createElement('style');
+    style.textContent = compile('src/apps/legacy/controllers/libraryRail.scss').css;
+    document.head.appendChild(style);
+    document.documentElement.classList.add('layout-tv');
+    document.body.innerHTML = '<div class="libraryRail"><button class="paper-icon-button-light"><span class="material-icons">sort</span><span class="libraryRailLabel">Sort</span></button></div>';
+    expect(getComputedStyle(document.querySelector('button')!).backgroundColor).toBe('rgb(16, 16, 16)');
+});

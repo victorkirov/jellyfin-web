@@ -1,4 +1,4 @@
-import { focusLibraryRefresh, isLibraryDialogFocused } from '../libraryRail';
+import { focusLibraryRefresh, isLibraryDialogFocused, createLibraryInitialFocus } from '../libraryRail';
 import { getMovieItemsHtml, getMovieSortOptions } from './movieItems';
 import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client';
 import type { LibraryQuery } from '../libraryControllerTypes';
@@ -84,7 +84,9 @@ export default class LibraryTab {
             tabContent.querySelector('.btnPlayAll')?.classList.toggle('hide', result.TotalRecordCount < 1);
             tabContent.querySelector('.btnShuffle')?.classList.toggle('hide', result.TotalRecordCount < 1);
 
-            if (focusLibraryRefresh(tabContent)) return;
+            const emptyFavorites = options.mode === 'favorites' && result.TotalRecordCount === 0;
+            tabContent.querySelector('.noFavoritesMessage')?.classList.toggle('hide', !emptyFavorites);
+            if (focusLibraryRefresh(tabContent) || emptyFavorites) return;
             const request = requestId;
             void import('components/autoFocuser').then(({ default: autoFocuser }) => {
                 if (request === requestId && active && itemsContainer && !isLibraryDialogFocused()) autoFocuser.autoFocus(tabContent);
@@ -212,7 +214,10 @@ export default class LibraryTab {
 
         this.renderTab = () => {
             this.alphaPicker?.updateControls(query);
-            return itemsContainer!.refreshItems();
+            const focus = createLibraryInitialFocus(view, tabContent);
+            return itemsContainer!.refreshItems().then(() => {
+                if (options.mode === 'favorites' && !itemsContainer?.querySelector('.card,.listItem')) focus();
+            }).finally(focus.cancel);
         };
 
         function pause() {

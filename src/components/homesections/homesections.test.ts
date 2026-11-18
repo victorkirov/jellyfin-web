@@ -1,14 +1,20 @@
 import type { ApiClient } from 'jellyfin-apiclient';
 import type { HomeSettings } from './homeLifecycle';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { loadSections, pause, resume } from './homesections';
+import { destroySections, loadSections, pause, resume } from './homesections';
 import { loadLibraryButtons } from './sections/libraryButtons';
 import { loadLibraryTiles } from './sections/libraryTiles';
 import { loadResume } from './sections/resume';
 import { deferSection } from './deferSection';
+import inputManager from 'scripts/inputManager';
 
 const emptyLibraries = vi.hoisted(() => ({ fetchQuery: vi.fn(), translate: vi.fn((key: string) => key) }));
 
+vi.mock('scripts/inputManager', () => ({ default: {
+    on: vi.fn((scope: EventTarget, listener: EventListener) => scope.addEventListener('command', listener)),
+    off: vi.fn((scope: EventTarget, listener: EventListener) => scope.removeEventListener('command', listener))
+} }));
+vi.mock('lib/focusManager', () => ({ default: { focus: (element: HTMLElement) => element.focus() } }));
 vi.mock('./deferSection', () => ({ deferSection: vi.fn(() => vi.fn()) }));
 vi.mock('lib/layoutManager', () => ({ default: { tv: true } }));
 vi.mock('hooks/api/useUserViews', () => ({ getUserViewsQuery: vi.fn() }));
@@ -166,4 +172,77 @@ it('does not compose or resume sections after a pending views lookup is invalida
     await pending;
     expect(container.innerHTML).toBe('');
     expect(loadLibraryButtons).not.toHaveBeenCalled();
+});
+
+function command(name: string) {
+    const event = new CustomEvent('command', { detail: { command: name }, bubbles: true, cancelable: true });
+    document.activeElement!.dispatchEvent(event);
+    return event.defaultPrevented;
+}
+
+async function focusRows() {
+    const { root, rows } = setup();
+    rows[0].innerHTML = '<a href="#" class="homeLibraryButton">Movies</a><a href="#" class="homeLibraryButton">Shows</a><a href="#" class="homeLibraryButton">Music</a>';
+    rows[1].innerHTML = '<a href="#" class="card">Continue first</a><a href="#" class="card">Continue second</a>';
+    for (const element of [root, ...root.querySelectorAll<HTMLElement>('*')]) {
+        Object.defineProperty(element, 'offsetParent', { value: document.body, configurable: true });
+    }
+    await resume(root, {});
+    return { root, rows, library: rows[0].children[2] as HTMLElement, resumeCard: rows[1].children[1] as HTMLElement };
+}
+
+describe('Home row return focus walk', () => {
+    it('returns from Continue Watching to the remembered library button, then back to the remembered card', async () => {
+        const { root, library, resumeCard } = await focusRows();
+        library.focus();
+        expect(command('down')).toBe(false);
+        resumeCard.focus();
+        expect(command('up')).toBe(true);
+        expect(document.activeElement).toBe(library);
+        expect(command('down')).toBe(true);
+        expect(document.activeElement).toBe(resumeCard);
+        destroySections(root);
+    });
+
+    it('keeps geometry in charge when the remembered library button was refreshed', async () => {
+        const { root, library, resumeCard, rows } = await focusRows();
+        library.focus();
+        command('down');
+        rows[0].innerHTML = '<a href="#" class="homeLibraryButton">Replacement</a>';
+        resumeCard.focus();
+        expect(command('up')).toBe(false);
+        expect(document.activeElement).toBe(resumeCard);
+        destroySections(root);
+    });
+
+    it('does not intercept arrows within a wrapped library row', async () => {
+        const { root, rows, library, resumeCard } = await focusRows();
+        library.focus();
+        command('down');
+        resumeCard.focus();
+        command('up');
+        const firstLibrary = rows[0].children[0] as HTMLElement;
+        Object.defineProperty(library, 'offsetTop', { value: 100 });
+        firstLibrary.focus();
+        expect(command('down')).toBe(false);
+        destroySections(root);
+    });
+
+    it('pauses listeners and retains row memory through resume without duplicate listeners', async () => {
+        const { root, library, resumeCard } = await focusRows();
+        library.focus();
+        command('down');
+        pause(root);
+        resumeCard.focus();
+        expect(command('up')).toBe(false);
+        await resume(root, {});
+        await resume(root, {});
+        expect(command('up')).toBe(true);
+        expect(document.activeElement).toBe(library);
+        expect(inputManager.on).toHaveBeenCalledTimes(2);
+        destroySections(root);
+        expect(inputManager.off).toHaveBeenCalledTimes(2);
+        resumeCard.focus();
+        expect(command('up')).toBe(false);
+    });
 });

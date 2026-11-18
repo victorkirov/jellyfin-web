@@ -2,7 +2,8 @@
     position: relative;
 }
 
-.filterIndicator {
+.filterIndicator,
+.libraryRailLabel {
     color: inherit;
     display: block;
     font-size: 0.7em;
@@ -11,9 +12,11 @@
     pointer-events: none;
 }
 
-.libraryRail .btnFilterWithIndicator .filterIndicator {
+.libraryRail .btnFilterWithIndicator .filterIndicator,
+.libraryRail .libraryRailLabel {
     position: absolute;
-    bottom: 0.15em;
+    bottom: 0.35em;
+    font-size: 0.6rem;
     left: 0;
     width: 100%;
     line-height: 1.1;
@@ -23,7 +26,7 @@
 }
 
 .libraryRail .btnFilterWithIndicator .btnFilter {
-    padding-bottom: 0.8em;
+    padding-bottom: 0.7rem;
 }
 
 
@@ -43,4 +46,8 @@
 
 .resetFilters .material-icons {
     margin-right: 3px;
+}
+
+.libraryRail .btnFilterWithIndicator .libraryRailLabel {
+    display: none;
 }

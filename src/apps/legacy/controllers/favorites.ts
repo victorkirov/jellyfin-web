@@ -9,7 +9,7 @@ import type { ApiClient } from 'jellyfin-apiclient';
 import type { ItemDto } from 'types/base/models/item-dto';
 import type { BaseItemDtoQueryResult } from '@jellyfin/sdk/lib/generated-client/models/base-item-dto-query-result';
 import { getFullFavoriteSections, getFavoriteCardOptions, type FavoriteSection } from 'components/favoriteSectionCatalog';
-import focusManager from 'lib/focusManager';
+import { createLibraryInitialFocus } from './libraryRail';
 import layoutManager from 'lib/layoutManager';
 import { appRouter } from 'components/router/appRouter';
 import dom from 'utils/dom';
@@ -138,6 +138,7 @@ function createSections(instance: FavoritesTab, elem: HTMLElement, apiClient: Ap
         html += '</div>';
     }
 
+    html += '<p class="noFavoritesMessage hide padded-left padded-right">' + globalize.translate('LibraryNoFavorites') + '</p>';
     elem.innerHTML = html;
     (window as unknown as Window & { CustomElements: { upgradeSubtree: (element: Element) => void } }).CustomElements.upgradeSubtree(elem);
 
@@ -165,6 +166,7 @@ class FavoritesTab {
     params: unknown;
     apiClient: ApiClient | null | undefined;
     sectionsContainer: HTMLElement | null;
+    private initialFocus?: ReturnType<typeof createLibraryInitialFocus>;
 
     constructor(view: HTMLElement, params: unknown) {
         this.view = view;
@@ -177,20 +179,27 @@ class FavoritesTab {
     onResume(options: FavoriteResumeOptions) {
         const promises = [];
         const view = this.view!;
+        this.initialFocus?.cancel();
+        const focus = this.initialFocus = createLibraryInitialFocus(view.closest<HTMLElement>('.page') || view, view);
         const elems = this.sectionsContainer!.querySelectorAll<FavoriteItemsContainer>('.itemsContainer');
 
         for (const elem of elems) {
             promises.push(elem.resume(options));
         }
 
-        void Promise.all(promises).then(function () {
-            if (options.autoFocus) {
-                focusManager.autoFocus(view);
-            }
+        return Promise.all(promises).then(function () {
+            const empty = !view.querySelector('.itemsContainer .card,.itemsContainer .listItem');
+            view.querySelector('.noFavoritesMessage')?.classList.toggle('hide', !empty);
+            if (options.autoFocus || empty) focus();
+            else focus.cancel();
+        }).catch(error => {
+            focus.cancel();
+            console.error(error);
         });
     }
 
     onPause() {
+        this.initialFocus?.cancel();
         if (this.sectionsContainer) {
             Array.from(this.sectionsContainer!.querySelectorAll<FavoriteItemsContainer>('.itemsContainer'))
                 .forEach(e => { e.pause(); });
@@ -198,6 +207,7 @@ class FavoritesTab {
     }
 
     destroy() {
+        this.initialFocus?.cancel();
         this.view = null;
         this.params = null;
         this.apiClient = null;

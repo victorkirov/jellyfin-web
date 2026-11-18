@@ -1,69 +1,39 @@
+import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client';
 import cardBuilder from 'components/cardbuilder/cardBuilder';
 import { getBackdropShape } from 'components/cardbuilder/utils/shape';
 import imageLoader from 'components/images/imageLoader';
 import layoutManager from 'lib/layoutManager';
-import loading from 'components/loading/loading';
 import datetime from 'scripts/datetime';
 import globalize from 'lib/globalize';
-
-import 'components/itemscontainer/emby-itemscontainer';
-
-import 'styles/scrollstyles.scss';
-
-function getUpcomingPromise(context, params) {
-    loading.show();
-    const query = {
-        Limit: 48,
-        Fields: 'AirTime',
-        UserId: ApiClient.getCurrentUserId(),
-        ImageTypeLimit: 1,
-        EnableImageTypes: 'Primary,Backdrop,Banner,Thumb',
-        EnableTotalRecordCount: false
-    };
-    query.ParentId = params.topParentId;
-    return ApiClient.getJSON(ApiClient.getUrl('Shows/Upcoming', query));
-}
-
-function loadUpcoming(context, params, promise) {
-    promise.then(function (result) {
-        const items = result.Items;
-
-        if (items.length) {
-            context.querySelector('.noItemsMessage').style.display = 'none';
-        } else {
-            context.querySelector('.noItemsMessage').style.display = 'block';
-        }
-
-        renderUpcoming(context.querySelector('#upcomingItems'), items);
-        loading.hide();
-    });
-}
 
 function enableScrollX() {
     return true;
 }
 
-function renderUpcoming(elem, items) {
-    const groups = [];
-    let currentGroupName;
-    let currentGroup = [];
+function getDateText(item: BaseItemDto) {
+    if (item.PremiereDate) {
+        try {
+            const premiereDate = datetime.parseISO8601Date(item.PremiereDate, true);
+            return datetime.isRelativeDay(premiereDate, -1) ? globalize.translate('Yesterday') : datetime.toLocaleDateString(premiereDate, {
+                weekday: 'long',
+                month: 'short',
+                day: 'numeric'
+            });
+        } catch (err) {
+            console.error('error parsing timestamp for upcoming tv shows', err);
+        }
+    }
+    return '';
+}
+
+export function renderUpcoming(elem: HTMLElement, items: BaseItemDto[]) {
+    const groups: { name: string | undefined; items: BaseItemDto[] }[] = [];
+    let currentGroupName: string | undefined;
+    let currentGroup: BaseItemDto[] = [];
 
     for (let i = 0, length = items.length; i < length; i++) {
         const item = items[i];
-        let dateText = '';
-
-        if (item.PremiereDate) {
-            try {
-                const premiereDate = datetime.parseISO8601Date(item.PremiereDate, true);
-                dateText = datetime.isRelativeDay(premiereDate, -1) ? globalize.translate('Yesterday') : datetime.toLocaleDateString(premiereDate, {
-                    weekday: 'long',
-                    month: 'short',
-                    day: 'numeric'
-                });
-            } catch (err) {
-                console.error('error parsing timestamp for upcoming tv shows', err);
-            }
-        }
+        const dateText = getDateText(item);
 
         if (dateText != currentGroupName) {
             currentGroupName = dateText;
@@ -121,18 +91,5 @@ function renderUpcoming(elem, items) {
 
     elem.innerHTML = html;
     imageLoader.lazyChildren(elem);
-}
-
-export default function (view, params, tabContent) {
-    let upcomingPromise;
-    const self = this;
-
-    self.preRender = function () {
-        upcomingPromise = getUpcomingPromise(view, params);
-    };
-
-    self.renderTab = function () {
-        loadUpcoming(tabContent, params, upcomingPromise);
-    };
 }
 
