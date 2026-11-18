@@ -284,10 +284,10 @@ button::-moz-focus-inner {
     right: 0;
 }
 
-// Keep artwork top-aligned when equal-height button cards have different caption lengths.
+// Keep artwork top-aligned when cards in a row have different caption lengths. Do not stretch the
+// button and do not make it a flex container: Chromium 38 then sizes the card to its caption width.
 .itemsContainer > button.card {
-    display: flex;
-    flex-direction: column;
+    align-self: flex-start;
 }
 
 .cardText {

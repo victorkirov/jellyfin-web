@@ -70,8 +70,9 @@ it('separates heading hierarchy from muted metadata', () => {
 });
 
 it('keeps two-line caption capacity without reserving a blank title line above metadata', () => {
-    expect(declarations('.itemsContainer > button.card').display).toBe('flex');
-    expect(declarations('.itemsContainer > button.card')['flex-direction']).toBe('column');
+    // Chromium 38 shrinks a flex-column button's content to its caption width, so cards must stay block buttons.
+    expect(declarations('.itemsContainer > button.card')['align-self']).toBe('flex-start');
+    expect(declarations('.itemsContainer > button.card').display).toBeUndefined();
     const title = declarations('.cardText-first > bdi');
     expect(title['-webkit-line-clamp']).toBe('2');
     expect(title['max-height']).toBe('2.5em');
