@@ -1,6 +1,12 @@
+// Only the left edge is pulled out to align the first button. A negative right margin made the row wider
+// than the screen, so focusing a control near the right edge scrolled the whole page sideways.
 .homeLibraryButtonContainer {
     margin-left: -0.5em;
-    margin-right: -0.5em;
+
+    [dir="rtl"] & {
+        margin-left: 0;
+        margin-right: -0.5em;
+    }
 }
 
 .homeLibraryButton {

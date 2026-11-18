@@ -13,7 +13,8 @@ beforeAll(() => {
         'src/elements/emby-slider/emby-slider.scss',
         'src/styles/fonts.sized.scss',
         'src/styles/librarybrowser.scss',
-        'src/components/cardbuilder/card.scss'
+        'src/components/cardbuilder/card.scss',
+        'src/components/homesections/homesections.scss'
     ].map(path => compile(path).css).join('\n');
 });
 
@@ -85,4 +86,9 @@ it('keeps two-line caption capacity without reserving a blank title line above m
 it('aligns header container boxes with the content inset', () => {
     expect(declarations('.headerTop').padding).toBe('0.8em 3.3%');
     expect(declarations('.headerLeft > .headerButton')['margin-left']).toBe('0');
+});
+
+it('keeps the Home library button row inside the screen width', () => {
+    expect(declarations('.homeLibraryButtonContainer')['margin-left']).toBe('-0.5em');
+    expect(declarations('.homeLibraryButtonContainer')['margin-right']).toBeUndefined();
 });
