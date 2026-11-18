@@ -167,6 +167,7 @@ function initializeDetails(self: DetailsController, view: DetailsPage, params: D
         }).catch((error) => {
             if (!active || destroyed || request !== initialRequest) return;
             currentItem = null;
+            libraryMenu.setTitle('');
             getElement(view, '.detailPageWrapperContainer').classList.add('hide');
             getElement(view, '.detailLoadError').classList.remove('hide');
             hideLoading();

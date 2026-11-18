@@ -8,6 +8,7 @@ import ItemDetails from './index';
 import focusManager from 'lib/focusManager';
 import autoFocuser from 'components/autoFocuser';
 import { deferSection } from 'components/homesections/deferSection';
+import libraryMenu from 'scripts/libraryMenu';
 import toast from 'components/toast/toast';
 import cardBuilder from 'components/cardbuilder/cardBuilder';
 import { requestActionBarLayout } from './actionBarLayout';
@@ -335,6 +336,8 @@ describe('Details request failures', () => {
         const defaults = queryClient.getDefaultOptions();
         queryClient.setDefaultOptions({ ...defaults, queries: { ...defaults.queries, retry: false } });
         onTestFinished(() => queryClient.setDefaultOptions(defaults));
+        libraryMenu.setTitle('Settings');
+        vi.mocked(libraryMenu.setTitle).mockClear();
         failOnce();
         const page = getElement(document, '#itemDetailPage');
         fixture.item = { Id: 'failing-movie', Type: 'Movie', MediaType: 'Video', ServerId: 'server', UserData: { Key: 'test' } };
@@ -343,6 +346,7 @@ describe('Details request failures', () => {
         await vi.waitFor(() => expect(hideLoading).toHaveBeenCalled());
         expect(getElement(page, '.btnPlay').classList.contains('hide')).toBe(true);
         expect(getElement(page, '.detailLoadError').classList.contains('hide')).toBe(false);
+        expect(libraryMenu.setTitle).toHaveBeenLastCalledWith('');
         expect(getElement(page, '.detailPageWrapperContainer').classList.contains('hide')).toBe(true);
         expect(focusManager.focus).toHaveBeenLastCalledWith(getElement(page, '.btnDetailsBack'));
         getElement(page, '.btnDetailsBack').click();

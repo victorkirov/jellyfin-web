@@ -1,7 +1,7 @@
 import globalize from 'lib/globalize';
 
 type PagingOptions = {
-    startIndex: number; limit?: number; totalRecordCount?: number;
+    stackCount?: boolean; startIndex: number; limit?: number; totalRecordCount?: number;
     viewButton?: boolean; filterButton?: boolean; sortButton?: boolean; addLayoutButton?: boolean;
     layouts?: string; currentLayout?: string; showLimit?: boolean; updatePageSizeSetting?: boolean;
 };
@@ -18,7 +18,8 @@ export function getQueryPagingHtml (options: PagingOptions) {
     html += '<div class="listPaging">';
 
     html += '<span style="vertical-align:middle;">';
-    html += globalize.translate('ListPaging', recordsStart, recordsEnd, totalRecordCount);
+    const count = globalize.translate('ListPaging', recordsStart, recordsEnd, totalRecordCount);
+    html += options.stackCount ? stackPagingCount(count, [recordsStart, recordsEnd, totalRecordCount]) : count;
     html += '</span>';
 
     if (showControls || options.viewButton || options.filterButton || options.sortButton || options.addLayoutButton) {
@@ -36,6 +37,16 @@ export function getQueryPagingHtml (options: PagingOptions) {
 
     html += '</div>';
     return html;
+}
+
+function stackPagingCount(text: string, values: [number, number, number]) {
+    const template = globalize.translate('ListPaging');
+    const start = template.indexOf('{0}');
+    const end = template.indexOf('{1}');
+    if (start < 0 || end < start) return text;
+    const range = template.slice(start, end + 3).replace(/\{([0-2])\}/g, (_placeholder, index: string) =>
+        values[Number(index)].toLocaleString(globalize.getCurrentLocale()));
+    return text.replace(range, '<span class="libraryRailRange">' + range + '</span><br>');
 }
 
 function getOptionButtonsHtml(options: PagingOptions) {

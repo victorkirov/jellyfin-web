@@ -804,7 +804,7 @@ button::-moz-focus-inner {
 // A shared caption leaves every card's measured size unchanged.
 .focusedCardCaption {
     position: fixed;
-    top: 4em;
+    bottom: 1.5em;
     left: 2.4em;
     right: 2.4em;
     z-index: 1100;

@@ -9,7 +9,7 @@ import type { ApiClient } from 'jellyfin-apiclient';
 import type { ItemDto } from 'types/base/models/item-dto';
 import type { BaseItemDtoQueryResult } from '@jellyfin/sdk/lib/generated-client/models/base-item-dto-query-result';
 import { getFullFavoriteSections, getFavoriteCardOptions, type FavoriteSection } from 'components/favoriteSectionCatalog';
-import { createLibraryInitialFocus } from './libraryRail';
+import { bindLibraryRail, createLibraryInitialFocus } from './libraryRail';
 import layoutManager from 'lib/layoutManager';
 import { appRouter } from 'components/router/appRouter';
 import dom from 'utils/dom';
@@ -169,6 +169,7 @@ class FavoritesTab {
     private initialFocus?: ReturnType<typeof createLibraryInitialFocus>;
 
     constructor(view: HTMLElement, params: unknown) {
+        bindLibraryRail(view.closest<HTMLElement>('.page') || view, true);
         this.view = view;
         this.params = params;
         this.apiClient = ServerConnections.currentApiClient();

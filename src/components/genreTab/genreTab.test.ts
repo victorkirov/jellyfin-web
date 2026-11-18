@@ -145,6 +145,53 @@ describe('genre initial focus walk', () => {
         });
     });
 
+    it.each(['stay', 'focus move', 'view hide', 'view destroy', 'tab change'])('finishes a pending row focus only when still owned: %s', async action => {
+        api.getGenres.mockResolvedValue({ Items: [{ Id: 'next', Name: 'Next' }] });
+        const result = deferred<{ Items: { Id: string }[] }>();
+        api.getItems.mockReturnValue(result.promise);
+        const { view, content } = await openGenres();
+        const row = content.querySelector<HTMLElement>('.itemsContainer')!;
+        row.tabIndex = -1;
+        row.focus();
+        revealRow(row);
+        if (action === 'focus move') document.querySelector<HTMLButtonElement>('#other')!.focus();
+        if (action === 'view hide') view.dispatchEvent(new Event('viewbeforehide'));
+        if (action === 'view destroy') view.dispatchEvent(new Event('viewdestroy'));
+        if (action === 'tab change') content.classList.remove('is-active');
+        result.resolve({ Items: [{ Id: 'next-card' }] });
+        await Promise.resolve();
+        await Promise.resolve();
+        if (action === 'stay') expect(document.activeElement).toBe(row.querySelector('.card'));
+        else expect(focusManager.focus).not.toHaveBeenCalled();
+    });
+
+    it.each(['empty', 'failure'])('returns pending focus to the row title after %s', async state => {
+        vi.spyOn(console, 'error').mockReturnValue(undefined);
+        api.getGenres.mockResolvedValue({ Items: [{ Id: 'next', Name: 'Next' }] });
+        if (state === 'empty') api.getItems.mockResolvedValue({ Items: [] });
+        else api.getItems.mockRejectedValue(new Error('row unavailable'));
+        const { content } = await openGenres();
+        const row = content.querySelector<HTMLElement>('.itemsContainer')!;
+        row.tabIndex = -1;
+        row.focus();
+        revealRow(row);
+        await vi.waitFor(() => expect(document.activeElement).toBe(content.querySelector('.more')));
+    });
+
+    it.each(['empty', 'failure'])('clears the pending marker when an unfocused row finishes: %s', async state => {
+        vi.spyOn(console, 'error').mockReturnValue(undefined);
+        const result = deferred<{ Items: { Id: string }[] }>();
+        api.getItems.mockReturnValue(state === 'failure' ? result.promise.then(() => {
+            throw new Error('row unavailable');
+        }) : result.promise);
+        const { content } = await openGenres();
+        const row = content.querySelector<HTMLElement>('.itemsContainer')!;
+        revealRow(row);
+        expect(row.dataset.loading).toBe('true');
+        result.resolve({ Items: [] });
+        await vi.waitFor(() => expect(row.dataset.loading).toBeUndefined());
+    });
+
     it('focuses the first genre card once when lazy rows resolve out of order', async () => {
         api.getGenres.mockResolvedValue({ Items: [{ Id: 'first', Name: 'First' }, { Id: 'second', Name: 'Second' }, { Id: 'third', Name: 'Third' }] });
         const first = deferred<{ Items: { Id: string }[] }>();

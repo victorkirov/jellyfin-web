@@ -1,6 +1,7 @@
 import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client';
 import { createInitialContentFocus } from '../initialContentFocus';
 import { buildGenreCards, getGenreRowsHtml, type GenreOptions, type GenreParams } from './genreMarkup';
+import focusManager from 'lib/focusManager';
 import lazyLoader from 'components/lazyLoader/lazyLoaderIntersectionObserver';
 import loading from 'components/loading/loading';
 import * as userSettings from 'scripts/settings/userSettings';
@@ -22,6 +23,16 @@ export default function GenreTab(this: GenreTabController, view: HTMLElement, pa
     let initialFocus: ReturnType<typeof createInitialContentFocus> | undefined;
     let firstRow: HTMLElement | null = null;
     let generation = 0;
+    let active = true;
+    view.addEventListener('viewbeforehide', () => {
+        active = false;
+    });
+    view.addEventListener('viewdestroy', () => {
+        active = false;
+    });
+    view.addEventListener('viewshow', () => {
+        active = true;
+    });
 
     function getPageData() {
         const key = getSavedQueryKey();
@@ -63,6 +74,12 @@ export default function GenreTab(this: GenreTabController, view: HTMLElement, pa
         return true;
     }
 
+    function finishRowFocus(row: HTMLElement) {
+        if (!active || tabContent.offsetParent === null || document.activeElement !== row) return;
+        const target = row.querySelector<HTMLElement>('.card') || row.closest('.verticalSection')?.querySelector<HTMLElement>('.more');
+        if (target) focusManager.focus(target);
+    }
+
     const fillItemsContainer = (entry: IntersectionObserverEntry, observer: IntersectionObserver) => {
         if (!entry.isIntersecting) {
             return;
@@ -72,6 +89,7 @@ export default function GenreTab(this: GenreTabController, view: HTMLElement, pa
         observer.unobserve(elem);
         if (!tabContent.contains(elem)) return;
 
+        elem.dataset.loading = 'true';
         const id = elem.getAttribute('data-id');
         const viewStyle = this.getCurrentViewStyle();
         let limit = viewStyle == 'Thumb' || viewStyle == 'ThumbCard' ? 5 : 9;
@@ -95,13 +113,17 @@ export default function GenreTab(this: GenreTabController, view: HTMLElement, pa
             ParentId: params.topParentId
         };
         void window.ApiClient.getItems(window.ApiClient.getCurrentUserId(), query).then(function (result) {
+            delete elem.dataset.loading;
             if (!tabContent.contains(elem)) return;
             buildGenreCards(elem, result.Items!, viewStyle, options);
+            finishRowFocus(elem);
             if (result.Items!.length >= query.Limit) {
                 tabContent.querySelector('.btnMoreFromGenre' + id + ' .material-icons')!.classList.remove('hide');
             }
             if (elem === firstRow) initialFocus?.();
         }).catch(error => {
+            delete elem.dataset.loading;
+            finishRowFocus(elem);
             if (elem === firstRow) initialFocus?.cancel();
             console.error(error);
         });

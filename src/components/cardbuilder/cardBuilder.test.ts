@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { compile } from 'sass';
 import { getCardFooterText } from './cardCaptions';
 import { buildCards, getCardsHtml, onUserDataChanged, onTimerCreated, onTimerCancelled, onSeriesTimerCancelled } from './cardBuilder';
@@ -243,6 +243,44 @@ describe('named footer context', () => {
 });
 
 describe('shared focused card caption', () => {
+    beforeEach(() => {
+        vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(60);
+        vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(90);
+    });
+
+    it('clears for a title that fits, including after a clipped card', () => {
+        document.body.innerHTML = getCardsHtml([{ Id: 'long', Name: title, Type: 'Movie' }, { Id: 'short', Name: 'Short', Type: 'Movie' }], options);
+        const cards = document.querySelectorAll<HTMLButtonElement>('.card');
+        cards[0].focus();
+        expect(document.querySelector('.focusedCardCaption')?.textContent).toBe(title);
+        vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(60);
+        cards[1].focus();
+        expect(document.querySelector('.focusedCardCaption')?.textContent || '').toBe('');
+    });
+
+    it('rechecks a just-inserted title once after layout, without stealing later focus', () => {
+        const frames: FrameRequestCallback[] = [];
+        vi.spyOn(window, 'requestAnimationFrame').mockImplementation(callback => {
+            frames.push(callback);
+            return 1;
+        });
+        vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(0);
+        document.body.innerHTML = getCardsHtml([{ Id: 'long', Name: title, Type: 'Movie' }], options) + '<input>';
+        document.querySelector<HTMLButtonElement>('.card')!.focus();
+        expect(document.querySelector('.focusedCardCaption')?.textContent || '').toBe('');
+        vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(60);
+        frames[0](0);
+        expect(document.querySelector('.focusedCardCaption')?.textContent).toBe(title);
+        document.querySelector<HTMLInputElement>('input')!.focus();
+        frames[0](0);
+        expect(document.querySelector('.focusedCardCaption')?.textContent || '').toBe('');
+    });
+
+    it('uses both displayed episode titles when either is clipped', () => {
+        document.body.innerHTML = '<button class="card" data-type="Episode" aria-label="Episode"><div class="cardText-first"><bdi>Series</bdi></div><div class="cardText-secondary"><bdi>Episode</bdi></div></button>';
+        document.querySelector<HTMLButtonElement>('button')!.focus();
+        expect(document.querySelector('.focusedCardCaption')?.textContent).toBe('Series: Episode');
+    });
     const title = 'Curious George: A Very Monkey Christmas <full & untruncated>';
     const options = { shape: 'square', width: 200, disableIndicators: true, showTitle: true };
 
@@ -289,6 +327,8 @@ it('keeps the restored card caption when the outgoing page finishes hiding', () 
     document.body.innerHTML = '<div class="outgoingPage"></div><div class="restoredPage">' + getCardsHtml([
         { Id: 'restored', Name: 'A restored title that remains fully visible', Type: 'Movie' }
     ], { shape: 'square', width: 200, disableIndicators: true, showTitle: true }) + '</div>';
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(60);
+    vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(90);
     document.querySelector<HTMLButtonElement>('.card')!.focus();
     document.querySelector('.outgoingPage')!.dispatchEvent(new Event('pagehide', { bubbles: true }));
     expect(document.querySelector('.focusedCardCaption')?.textContent).toBe('A restored title that remains fully visible');

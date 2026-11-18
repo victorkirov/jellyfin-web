@@ -1,3 +1,4 @@
+import { bindLibraryRail } from './libraryRail';
 import type { ApiClient } from 'jellyfin-apiclient';
 
 import * as userSettings from 'scripts/settings/userSettings';
@@ -20,6 +21,7 @@ class HomeTab {
     private initialization?: Promise<void>;
     private needsInitialRefresh = false;
     constructor(view: HTMLElement, params: unknown) {
+        bindLibraryRail(view.closest<HTMLElement>('.page') || view, true);
         this.view = view;
         this.params = params;
         this.apiClient = ServerConnections.currentApiClient() || null;

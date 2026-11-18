@@ -21,7 +21,11 @@ vi.mock('scripts/libraryBrowser', async () => {
 });
 vi.mock('lib/scrollManager', () => ({ default: { isEnabled: () => false } }));
 vi.mock('scripts/settings/userSettings', () => ({}));
-vi.mock('lib/globalize', () => ({ default: { translate: (label: string) => label } }));
+vi.mock('lib/globalize', () => ({ default: {
+    getCurrentLocale: () => 'en-US',
+    translate: (label: string, ...values: (string | number)[]) => values.reduce<string>((text, value, index) =>
+        text.replace('{' + index + '}', String(value)), label === 'ListPaging' ? '{0}-{1} of {2}' : label)
+} }));
 let view: HTMLElement;
 
 beforeEach(() => {
@@ -407,4 +411,89 @@ it('review 4: redundant focusin on the starting tab does not cancel its initial 
     activeTab.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
     finish();
     expect(document.activeElement).toBe(cards[0]);
+});
+
+it('SR5 count keeps the range on its own line inside the rail', () => {
+    const { tab } = setup();
+    bindLibraryPaging({ view: tab, query: { StartIndex: 0, Limit: 100 }, totalRecordCount: 255, isLoading: () => false, getRequestId: () => 1, refresh: vi.fn() });
+    const count = tab.querySelector('.libraryRail .listPaging > span')!;
+    expect(count.querySelector('br')).not.toBeNull();
+    expect(count.querySelector('.libraryRailRange')?.textContent).toBe('1-100');
+    expect(tab.querySelectorAll('.paging:not(.libraryRail .paging) .libraryRailRange')).toHaveLength(0);
+});
+
+it.each(['homeTab', 'genresTab'])('SR5 restores the exact element after Up leaves %s', tabId => {
+    const { tab, cards, activeTab } = setup(false, 3);
+    tab.id = tabId;
+    cards[2].focus();
+    key('up');
+    // The normal spatial handler moves focus after the page command handler.
+    activeTab.focus();
+    key('down');
+    expect(document.activeElement).toBe(cards[2]);
+    cards[2].remove();
+    activeTab.focus();
+    expect(key('down')).toBe(false);
+});
+
+it('SR5 remembers a genre heading when spatial Up leaves it for the active tab', () => {
+    const { tab, activeTab } = setup(false, 0);
+    tab.innerHTML = '<a href="#" class="more">Action</a>';
+    const heading = tab.querySelector<HTMLElement>('a')!;
+    heading.focus();
+    key('up');
+    activeTab.focus();
+    key('down');
+    expect(document.activeElement).toBe(heading);
+});
+
+it('SR5 Genres Down goes directly to the next row and Up exposes that row title', () => {
+    const { tab } = setup(false, 0);
+    tab.id = 'genresTab';
+    tab.innerHTML = [0, 1, 2].map(index => `<section class="verticalSection"><a href="#" class="more">Genre ${index}</a><div class="itemsContainer"><a href="#" class="card">${index}a</a><a href="#" class="card">${index}b</a></div></section>`).join('');
+    const rows = tab.querySelectorAll('.itemsContainer');
+    const headings = tab.querySelectorAll<HTMLElement>('.more');
+    const second = rows[0].querySelectorAll<HTMLElement>('.card')[1];
+    second.focus();
+    key('down');
+    expect(document.activeElement).toBe(rows[1].querySelectorAll('.card')[1]);
+    key('up');
+    expect(document.activeElement).toBe(headings[1]);
+    key('down');
+    expect(document.activeElement).toBe(rows[1].querySelector('.card'));
+    key('down');
+    expect(document.activeElement).toBe(rows[2].querySelector('.card'));
+});
+
+it.each(['empty', 'failed'])('R6 review skips an already %s genre row to later cards', state => {
+    const { tab } = setup(false, 0);
+    tab.id = 'genresTab';
+    tab.innerHTML = '<section class="verticalSection"><a href="#" class="more">First</a><div class="itemsContainer"><a href="#" class="card">First card</a></div></section>'
+        + `<section class="verticalSection"><a href="#" class="more">${state}</a><div class="itemsContainer"></div></section>`
+        + '<section class="verticalSection"><a href="#" class="more">Last</a><div class="itemsContainer"><a href="#" class="card">Last card</a></div></section>';
+    const cards = tab.querySelectorAll<HTMLElement>('.card');
+    cards[0].focus();
+    key('down');
+    expect(document.activeElement).toBe(cards[1]);
+});
+
+it('R6 review uses the next row title when settled empty rows have no later cards', () => {
+    const { tab } = setup(false, 0);
+    tab.id = 'genresTab';
+    tab.innerHTML = '<section class="verticalSection"><a href="#" class="more">First</a><div class="itemsContainer"><a href="#" class="card">First card</a></div></section>'
+        + '<section class="verticalSection"><a href="#" class="more">Empty</a><div class="itemsContainer"></div></section>'
+        + '<section class="verticalSection"><a href="#" class="more">Also empty</a><div class="itemsContainer"></div></section>';
+    tab.querySelector<HTMLElement>('.card')!.focus();
+    key('down');
+    expect(document.activeElement).toBe(tab.querySelectorAll('.more')[1]);
+});
+
+it('R6 review focuses an empty genre container only while its load is pending', () => {
+    const { tab } = setup(false, 0);
+    tab.id = 'genresTab';
+    tab.innerHTML = '<section class="verticalSection"><a href="#" class="more">First</a><div class="itemsContainer"><a href="#" class="card">First card</a></div></section>'
+        + '<section class="verticalSection"><a href="#" class="more">Loading</a><div class="itemsContainer" data-loading="true"></div></section>';
+    tab.querySelector<HTMLElement>('.card')!.focus();
+    key('down');
+    expect(document.activeElement).toBe(tab.querySelectorAll('.itemsContainer')[1]);
 });

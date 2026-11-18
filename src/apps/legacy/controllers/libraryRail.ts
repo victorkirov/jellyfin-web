@@ -4,6 +4,7 @@ import './libraryRail.scss';
 
 const letterFocus = new WeakSet<HTMLElement>();
 const pagingFocus = new WeakMap<HTMLElement, string>();
+const boundViews = new WeakSet<HTMLElement>();
 
 export function rememberLibraryPaging(view: HTMLElement, control: Element) {
     let selector = '';
@@ -63,7 +64,20 @@ function rowCards(container: HTMLElement) {
 }
 
 /** Page-local arrow boundaries; no per-card listeners or observers. */
-export function bindLibraryRail(view: HTMLElement) {
+export function bindLibraryRail(view: HTMLElement, initiallyVisible = false) {
+    if (boundViews.has(view)) return;
+    boundViews.add(view);
+    let leavingContent: { tab: HTMLElement; element: HTMLElement; scrollY: number; command: string } | undefined;
+    function onFocus(event: FocusEvent) {
+        const leaving = leavingContent;
+        leavingContent = undefined;
+        if (!leaving || leaving.command !== 'up' || hasTabMemory(leaving.tab)) return;
+        if (event.target instanceof HTMLElement && event.target.classList.contains('emby-tab-button-active')) {
+            const saved = memory(leaving.tab);
+            saved.card = leaving.element;
+            saved.scrollY = leaving.scrollY;
+        }
+    }
     const memories = new Map<HTMLElement, TabMemory>();
     const columns = new WeakMap<HTMLElement, ColumnMemory>();
     function memory(tab: HTMLElement) {
@@ -85,13 +99,16 @@ export function bindLibraryRail(view: HTMLElement) {
     }
     function tabDown(event: Event) {
         const tab = Array.from(view.querySelectorAll<HTMLElement>('.pageTabContent')).find(element => element.offsetParent !== null);
-        if (!tab || !hasTabMemory(tab)) return;
-        event.preventDefault();
+        if (!tab) return;
         const saved = memory(tab);
-        returnToGrid(tab, saved.card);
-        if (saved.card && tab.contains(saved.card) && saved.scrollY != null) window.scrollTo(0, saved.scrollY);
+        const remembered = saved.card && tab.contains(saved.card) && saved.card.offsetParent !== null;
+        if (!remembered && !hasTabMemory(tab)) return;
+        event.preventDefault();
+        returnToGrid(tab, remembered ? saved.card : undefined);
+        if (remembered && saved.scrollY != null) window.scrollTo(0, saved.scrollY);
     }
     const onCommand: EventListener = event => {
+        leavingContent = undefined;
         const command = (event as CustomEvent<{ command: string }>).detail.command;
         const source = event.target;
         if (!(source instanceof HTMLElement)) return;
@@ -101,6 +118,7 @@ export function bindLibraryRail(view: HTMLElement) {
         }
         const tab = source.closest<HTMLElement>('.pageTabContent');
         if (!tab || !view.contains(tab)) return;
+        leavingContent = { tab, element: source, scrollY: window.pageYOffset, command };
         const rail = tab.querySelector<HTMLElement>('.libraryRail');
         if (rail?.contains(source)) {
             if (command === 'right') {
@@ -111,7 +129,7 @@ export function bindLibraryRail(view: HTMLElement) {
             target = railTarget(source, command, visibleButtons(rail));
             if (target?.classList.contains('emby-tab-button-active')) memory(tab).scrollY = window.pageYOffset;
         } else {
-            target = gridBoundary(source, tab, command, rail, memory(tab), columns);
+            target = genreRowBoundary(source, tab, command) || gridBoundary(source, tab, command, rail, memory(tab), columns);
         }
         if (target) {
             event.preventDefault();
@@ -134,8 +152,14 @@ export function bindLibraryRail(view: HTMLElement) {
     function setListening(enabled: boolean) {
         if (listening === enabled) return;
         listening = enabled;
-        if (enabled) inputManager.on(window, onCommand);
-        else inputManager.off(window, onCommand);
+        if (enabled) {
+            inputManager.on(window, onCommand);
+            document.addEventListener('focusin', onFocus);
+        } else {
+            inputManager.off(window, onCommand);
+            document.removeEventListener('focusin', onFocus);
+            leavingContent = undefined;
+        }
     }
     view.addEventListener('viewshow', () => setListening(true));
     view.addEventListener('viewbeforehide', () => {
@@ -146,6 +170,37 @@ export function bindLibraryRail(view: HTMLElement) {
         }
     });
     view.addEventListener('viewdestroy', () => setListening(false));
+    setListening(initiallyVisible);
+}
+
+function genreRowBoundary(source: HTMLElement, tab: HTMLElement, command: string) {
+    if (tab.id !== 'genresTab') return null;
+    const section = source.closest<HTMLElement>('.verticalSection');
+    if (!section) return null;
+    const container = section.querySelector<HTMLElement>('.itemsContainer');
+    const card = source.closest<HTMLElement>('.card');
+    if (command === 'up' && card) return section.querySelector<HTMLElement>('.more');
+    if (command !== 'down') return null;
+    if (!card) return firstLibraryCard(section);
+    return nextGenreRowTarget(section, rowCards(container!).indexOf(card)) || source;
+}
+
+function nextGenreRowTarget(section: HTMLElement, column: number) {
+    const nextSection = section.nextElementSibling;
+    let candidate = nextSection;
+    while (candidate) {
+        const row = candidate.querySelector<HTMLElement>('.itemsContainer');
+        if (row) {
+            const cards = rowCards(row);
+            if (cards.length) return cardTarget(cards[Math.min(column, cards.length - 1)]);
+            if (row.dataset.loading === 'true') {
+                row.tabIndex = -1;
+                return row;
+            }
+        }
+        candidate = candidate.nextElementSibling;
+    }
+    return nextSection?.querySelector<HTMLElement>('.more');
 }
 
 function gridBoundary(source: HTMLElement, tab: HTMLElement, command: string, rail: HTMLElement | null, memory: TabMemory, columns: WeakMap<HTMLElement, ColumnMemory>) {

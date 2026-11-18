@@ -33,7 +33,7 @@ export function bindLibraryPaging({ view, query, totalRecordCount, isLoading, ge
     view: HTMLElement; query: LibraryQuery; totalRecordCount?: number; isLoading(): boolean;
     getRequestId(): number; refresh(): unknown; focus?(): void;
 }) {
-    const pagingHtml = libraryBrowser.getQueryPagingHtml({
+    const pagingOptions = {
         startIndex: query.StartIndex,
         limit: query.Limit,
         totalRecordCount,
@@ -42,8 +42,11 @@ export function bindLibraryPaging({ view, query, totalRecordCount, isLoading, ge
         addLayoutButton: false,
         sortButton: false,
         filterButton: false
-    });
-    for (const element of view.querySelectorAll('.paging')) renderPaging(element, pagingHtml, totalRecordCount);
+    };
+    for (const element of view.querySelectorAll('.paging')) {
+        const pagingHtml = libraryBrowser.getQueryPagingHtml({ ...pagingOptions, stackCount: Boolean(element.closest('.libraryRail')) });
+        renderPaging(element, pagingHtml, totalRecordCount);
+    }
     function changePage(direction: number, control: Element) {
         if (isLoading() || (!query.Limit || query.Limit <= 0)) return;
         const previousStartIndex = query.StartIndex;
